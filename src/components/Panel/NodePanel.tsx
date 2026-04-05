@@ -372,27 +372,39 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
           </div>
         )}
 
-        {/* Seedance Duration (slider) */}
+        {/* Seedance Duration */}
         {params.includes("sdDuration") && (
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Duration</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (4-15)">i</span>
+              <span className="text-zinc-500 text-xs cursor-help" title={isSeedance15 ? "Duracao: 4, 8 ou 12 segundos" : "Duracao do video em segundos (4-15)"}>i</span>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min={4}
-                max={15}
-                step={1}
+            {isSeedance15 ? (
+              <select
                 value={sdDuration}
                 onChange={(e) => update({ sdDuration: parseInt(e.target.value) })}
-                className="flex-1 accent-purple-500"
-              />
-              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
-                {sdDuration}
-              </span>
-            </div>
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+              >
+                <option value={4}>4s</option>
+                <option value={8}>8s</option>
+                <option value={12}>12s</option>
+              </select>
+            ) : (
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={4}
+                  max={15}
+                  step={1}
+                  value={sdDuration}
+                  onChange={(e) => update({ sdDuration: parseInt(e.target.value) })}
+                  className="flex-1 accent-purple-500"
+                />
+                <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
+                  {sdDuration}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
