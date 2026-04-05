@@ -82,6 +82,7 @@ interface CreateSeedanceInput {
   generateAudio?: boolean;
   webSearch?: boolean;
   seed?: number | null;
+  fixedLens?: boolean;
 }
 
 // Upload para Asset Library da ByteDance (obrigatorio para imagens de pessoas)
@@ -141,6 +142,9 @@ export async function createSeedanceTask(
   }
   if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
     inputBody.reference_image_urls = input.referenceImageUrls;
+  }
+  if (input.fixedLens != null) {
+    inputBody.fixed_lens = input.fixedLens;
   }
 
   const response = await fetch(`${API_BASE}/createTask`, {

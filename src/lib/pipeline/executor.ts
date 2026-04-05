@@ -36,6 +36,8 @@ interface PipelineData {
   // GPT Image
   gptQuality?: string;
   gptBackground?: string;
+  // Seedance 1.5 Pro
+  fixedLens?: boolean;
   // LLM Chain
   llmChain?: LLMChain;
 }
@@ -75,6 +77,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.klingDuration = (modelNode.data.klingDuration as number) || 5;
   result.gptQuality = (modelNode.data.gptQuality as string) || "medium";
   result.gptBackground = (modelNode.data.gptBackground as string) || "opaque";
+  result.fixedLens = (modelNode.data.fixedLens as boolean) ?? false;
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -379,6 +382,7 @@ export async function startGeneration(
     referenceImageUrls?: string[];
     gptQuality?: string;
     gptBackground?: string;
+    fixedLens?: boolean;
     cost?: number;
   }
 ): Promise<string> {
@@ -469,6 +473,32 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(veoText); } catch { throw new Error(`Resposta invalida do servidor: ${veoText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao de video");
+    return data.taskId;
+  }
+
+  // Seedance V1.5 Pro
+  if (options?.model === "seedance15") {
+    const response = await fetch("/api/generate-seedance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        sdModel: "bytedance/seedance-1-5-pro",
+        firstFrameUrl: publicUrls[0] || undefined,
+        lastFrameUrl: publicUrls[1] || undefined,
+        resolution: options?.sdResolution || "720p",
+        aspectRatio: options?.aspectRatio || "16:9",
+        duration: options?.sdDuration || 8,
+        generateAudio: options?.generateAudio ?? true,
+        fixedLens: options?.fixedLens ?? false,
+        seed: options?.seed ?? undefined,
+        cost: options?.cost,
+      }),
+    });
+    const sd15Text = await response.text();
+    let data;
+    try { data = JSON.parse(sd15Text); } catch { throw new Error(`Resposta invalida do servidor: ${sd15Text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedance 1.5 Pro");
     return data.taskId;
   }
 

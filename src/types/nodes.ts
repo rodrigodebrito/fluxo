@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "seedance15" | "gpt-image-txt" | "gpt-image-img";
 
 export interface ModelInfo {
   id: AIModel;
@@ -56,6 +56,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     ],
     params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "seed", "runs"],
     dynamicReferences: true, // suporta reference_image_urls (até 9)
+  },
+  {
+    id: "seedance15",
+    name: "Seedance V1.5 Pro",
+    type: "video",
+    description: "Video IA cinema-quality (ByteDance)",
+    costPerRun: 28,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
+      { id: "image-2", label: "Last Frame", required: false },
+    ],
+    params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "fixedLens", "seed", "runs"],
   },
   {
     id: "kling",

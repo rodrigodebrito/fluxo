@@ -1,15 +1,3 @@
-import { NextResponse } from "next/server";
-
-// Seedance temporariamente indisponivel
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function POST(_request: Request) {
-  return NextResponse.json(
-    { error: "Seedance esta temporariamente indisponivel. Tente novamente mais tarde." },
-    { status: 503 }
-  );
-}
-
-/*
 import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits } from "@/lib/auth-guard";
@@ -45,17 +33,22 @@ async function registerAndWaitAsset(apiKey: string, url: string): Promise<string
 }
 
 export async function POST(request: NextRequest) {
-  // Seedance temporariamente indisponivel
-  return NextResponse.json(
-    { error: "Seedance esta temporariamente indisponivel. Tente novamente mais tarde." },
-    { status: 503 }
-  );
-
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
   const body = await request.json();
-  const { hasCredits, cost } = await verifyCredits(user.id, "seedance", body.cost);
+
+  // Block Seedance 2.0 (still disabled)
+  const sdModel = body.sdModel || "bytedance/seedance-2";
+  if (sdModel.includes("seedance-2")) {
+    return NextResponse.json(
+      { error: "Seedance 2.0 esta temporariamente indisponivel." },
+      { status: 503 }
+    );
+  }
+
+  const costModel = sdModel.includes("seedance-1") ? "seedance15" : "seedance";
+  const { hasCredits, cost } = await verifyCredits(user.id, costModel, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -63,7 +56,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
-  const { prompt, sdModel, firstFrameUrl, lastFrameUrl, referenceImageUrls, resolution, aspectRatio, duration, generateAudio, webSearch, seed } = body;
+  const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, resolution, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
@@ -91,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const result = await createSeedanceTask(apiKey, {
       prompt,
-      sdModel: sdModel || "bytedance/seedance-2",
+      sdModel,
       firstFrameUrl: processedFirstFrame,
       lastFrameUrl: processedLastFrame,
       referenceImageUrls: processedRefUrls,
@@ -101,6 +94,7 @@ export async function POST(request: NextRequest) {
       generateAudio,
       webSearch,
       seed,
+      fixedLens,
     });
 
     if (result.code !== 200 || !result.data) {
@@ -110,7 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "seedance", cost);
+    await chargeCredits(user.id, costModel, cost);
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {
@@ -118,4 +112,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-*/

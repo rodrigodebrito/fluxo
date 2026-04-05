@@ -86,6 +86,7 @@ export function getModelCost(model: string): number {
     case "kling": return 70;
     case "gpt-image-txt": return 4;
     case "gpt-image-img": return 4;
+    case "seedance15": return 28;
     case "llm": return 1;
     default: return 18;
   }
