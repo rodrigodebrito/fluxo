@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
-  const body_peek = await request.clone().json();
-  const { hasCredits, cost } = await verifyCredits(user.id, "seedance", body_peek.cost);
+  const body = await request.json();
+  const { hasCredits, cost } = await verifyCredits(user.id, "seedance", body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
-  const body = await request.json();
   const { prompt, sdModel, firstFrameUrl, lastFrameUrl, referenceImageUrls, resolution, aspectRatio, duration, generateAudio, webSearch, seed } = body;
 
   if (!prompt) {

@@ -6,8 +6,8 @@ export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
-  const body_peek = await request.clone().json();
-  const { hasCredits, cost } = await verifyCredits(user.id, "nano-banana-pro", body_peek.cost);
+  const body = await request.json();
+  const { hasCredits, cost } = await verifyCredits(user.id, "nano-banana-pro", body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await request.json();
   const { prompt, imageInput, aspectRatio, resolution, outputFormat, seed } = body;
 
   if (!prompt) {
