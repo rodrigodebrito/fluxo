@@ -54,7 +54,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "anyLLM":
       return { label: "Any LLM", llmModel: "gpt-4o-mini", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
     case "router":
-      return { label: "Router", outputCount: 3 };
+      return { label: "Router", outputCount: 2 };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -570,8 +570,20 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           filtered
         );
       });
+
+      // Auto-expand router: when connecting FROM a router output, add another output if needed
+      if (sourceNode.type === "router") {
+        const currentOutputCount = (sourceNode.data.outputCount as number) || 2;
+        const usedOutputs = edgesRef.current.filter((e) => e.source === sourceId && e.sourceHandle?.startsWith("output-")).length;
+        // +1 because the new edge hasn't been committed to edgesRef yet
+        if (usedOutputs + 1 >= currentOutputCount) {
+          setNodes((nds) => nds.map((n) =>
+            n.id === sourceId ? { ...n, data: { ...n.data, outputCount: currentOutputCount + 1 } } : n
+          ));
+        }
+      }
     },
-    [setEdges]
+    [setEdges, setNodes]
   );
 
   // onConnect: chamado quando ReactFlow aceita uma conexão nativa (handle→handle)
