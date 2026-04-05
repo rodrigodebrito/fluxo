@@ -5,6 +5,7 @@ import OutputNode from "./OutputNode";
 import KlingElementNode from "./KlingElementNode";
 import LastFrameNode from "./LastFrameNode";
 import VideoConcatNode from "./VideoConcatNode";
+import AnyLLMNode from "./AnyLLMNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -14,4 +15,5 @@ export const nodeTypes = {
   klingElement: KlingElementNode,
   lastFrame: LastFrameNode,
   videoConcat: VideoConcatNode,
+  anyLLM: AnyLLMNode,
 };

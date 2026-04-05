@@ -23,6 +23,7 @@ import {
   extractPipelineData,
   startGeneration,
   pollTaskStatus,
+  runLLMChain,
 } from "@/lib/pipeline/executor";
 
 // Dados padrão para cada tipo de nó
@@ -50,6 +51,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Last Frame", frameUrl: "", sourceVideoUrl: "", images: [] };
     case "videoConcat":
       return { label: "Video Concat", inputCount: 2, resultUrl: "" };
+    case "anyLLM":
+      return { label: "Any LLM", llmModel: "gpt-4o-mini", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -266,8 +269,48 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       else if (sourceNode.type === "lastFrame") edgeColor = "#f59e0b";
       else if (sourceNode.type === "videoConcat") edgeColor = "#f97316";
       else if (sourceNode.type === "model") edgeColor = "#22c55e";
+      else if (sourceNode.type === "anyLLM") edgeColor = "#f59e0b";
 
       let finalTargetHandle = targetHandleId;
+
+      // Prompt → anyLLM: auto-route to prompt or system-prompt handle
+      if (sourceNode.type === "prompt" && targetNode.type === "anyLLM") {
+        if (finalTargetHandle === "system-prompt") {
+          // user explicitly chose system-prompt
+        } else {
+          // Check if prompt handle is occupied
+          const promptOccupied = edgesRef.current.some(
+            (e) => e.target === targetId && e.targetHandle === "prompt"
+          );
+          finalTargetHandle = promptOccupied ? "system-prompt" : "prompt";
+        }
+      }
+
+      // ImageInput → anyLLM: route to image handles
+      if (sourceNode.type === "imageInput" && targetNode.type === "anyLLM") {
+        const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+            .map((e) => e.targetHandle)
+        );
+        if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+          // user chose specific handle
+        } else {
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= imageInputCount; i++) {
+            const handleId = `image-${i}`;
+            if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
+
+      // AnyLLM → model: text output goes to prompt handle
+      if (sourceNode.type === "anyLLM" && targetNode.type === "model") {
+        finalTargetHandle = "prompt";
+      }
 
       // Prompt → model: respeitar negative-prompt se o usuário conectou nele, senão usar "prompt"
       if (sourceNode.type === "prompt" && targetNode.type === "model") {
@@ -524,7 +567,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (targetNodeId && targetNodeId !== connectingFrom.current.nodeId) {
           const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
 
-          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat")) {
+          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat" || targetNode.type === "anyLLM")) {
             // Verificar se a conexão já foi feita pelo onConnect (evitar duplicata)
             const alreadyConnected = edgesRef.current.some(
               (e) => e.source === connectingFrom.current!.nodeId && e.target === targetNodeId
@@ -607,6 +650,24 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     const currentNodes = nodesRef.current;
     const currentEdges = edgesRef.current;
     const pipeline = extractPipelineData(currentNodes, currentEdges, modelNodeId);
+
+    // If there's an LLM chain, run it first to get the prompt
+    if (pipeline.llmChain && !pipeline.prompt) {
+      const llmNodeId = pipeline.llmChain.llmNodeId;
+      // Mark LLM node as running
+      setNodes((nds) => nds.map((n) => n.id === llmNodeId ? { ...n, data: { ...n.data, isRunning: true, generatedText: "" } } : n));
+      try {
+        const llmText = await runLLMChain(pipeline.llmChain);
+        pipeline.prompt = llmText;
+        // Update LLM node with generated text
+        setNodes((nds) => nds.map((n) => n.id === llmNodeId ? { ...n, data: { ...n.data, isRunning: false, generatedText: llmText } } : n));
+        window.dispatchEvent(new Event("fluxo-credits-update"));
+      } catch (err) {
+        setNodes((nds) => nds.map((n) => n.id === llmNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n));
+        alert("Erro no LLM: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+        return;
+      }
+    }
 
     if (!pipeline.prompt) {
       alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
@@ -799,10 +860,108 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     };
     window.addEventListener("fluxo-duplicate-node", duplicateHandler);
 
+    // Run LLM standalone (Any LLM node "Run Model" button)
+    const llmHandler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.nodeId) return;
+      const currentNodes = nodesRef.current;
+      const currentEdges = edgesRef.current;
+      const llmNode = currentNodes.find((n) => n.id === detail.nodeId && n.type === "anyLLM");
+      if (!llmNode) return;
+
+      // Collect prompt from connected prompt node
+      let prompt = "";
+      let systemPrompt = "";
+      const imageUrls: string[] = [];
+
+      for (const edge of currentEdges) {
+        if (edge.target !== llmNode.id) continue;
+        const sourceNode = currentNodes.find((n) => n.id === edge.source);
+        if (!sourceNode) continue;
+
+        if (sourceNode.type === "prompt" && edge.targetHandle === "prompt") {
+          prompt = (sourceNode.data.text as string) || "";
+        } else if (sourceNode.type === "prompt" && edge.targetHandle === "system-prompt") {
+          systemPrompt = (sourceNode.data.text as string) || "";
+        } else if (sourceNode.type === "imageInput" && edge.targetHandle?.startsWith("image-")) {
+          const images = (sourceNode.data.images as Array<{ url: string; name: string }>) || [];
+          imageUrls.push(...images.map((img) => img.url).filter(Boolean));
+        }
+      }
+
+      if (!prompt) {
+        alert("Conecte um no de Prompt ao handle 'Prompt' do Any LLM.");
+        return;
+      }
+
+      // Mark as running
+      setNodes((nds) => nds.map((n) => n.id === llmNode.id ? { ...n, data: { ...n.data, isRunning: true, generatedText: "" } } : n));
+
+      try {
+        // Upload images if any
+        let publicImageUrls: string[] = [];
+        if (imageUrls.length > 0) {
+          const currentOrigin = window.location.origin;
+          const blobsToUpload: string[] = [];
+          for (const url of imageUrls) {
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+              publicImageUrls.push(url);
+            } else if (url.startsWith("blob:")) {
+              if (!url.startsWith(`blob:${currentOrigin}/`)) {
+                throw new Error("Imagens expiradas. Remova e adicione as imagens novamente.");
+              }
+              blobsToUpload.push(url);
+            }
+          }
+          if (blobsToUpload.length > 0) {
+            const formData = new FormData();
+            for (const blobUrl of blobsToUpload) {
+              const resp = await fetch(blobUrl);
+              const blob = await resp.blob();
+              formData.append("files", blob, `image.${blob.type.split("/")[1] || "png"}`);
+            }
+            const uploadResp = await fetch("/api/upload", { method: "POST", body: formData });
+            const uploadText = await uploadResp.text();
+            let uploadData;
+            try { uploadData = JSON.parse(uploadText); } catch { throw new Error("Erro no upload das imagens"); }
+            if (!uploadResp.ok) throw new Error(uploadData.error || "Erro no upload");
+            publicImageUrls = [...publicImageUrls, ...uploadData.urls];
+          }
+        }
+
+        const response = await fetch("/api/generate-llm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            systemPrompt: systemPrompt || undefined,
+            model: (llmNode.data.llmModel as string) || "gpt-4o-mini",
+            temperature: (llmNode.data.temperature as number) ?? 0.7,
+            imageUrls: publicImageUrls.length > 0 ? publicImageUrls : undefined,
+            cost: 1,
+          }),
+        });
+
+        const respText = await response.text();
+        let data;
+        try { data = JSON.parse(respText); } catch { throw new Error(`Resposta invalida: ${respText.slice(0, 200)}`); }
+        if (!response.ok) throw new Error(data.error || "Erro ao gerar texto");
+
+        setNodes((nds) => nds.map((n) => n.id === llmNode.id ? { ...n, data: { ...n.data, isRunning: false, generatedText: data.text } } : n));
+        window.dispatchEvent(new Event("fluxo-credits-update"));
+      } catch (err) {
+        console.error("Erro no LLM:", err);
+        alert("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+        setNodes((nds) => nds.map((n) => n.id === llmNode.id ? { ...n, data: { ...n.data, isRunning: false } } : n));
+      }
+    };
+    window.addEventListener("fluxo-run-llm", llmHandler);
+
     return () => {
       window.removeEventListener("fluxo-run-pipeline", handler);
       window.removeEventListener("fluxo-cancel-pipeline", cancelHandler);
       window.removeEventListener("fluxo-duplicate-node", duplicateHandler);
+      window.removeEventListener("fluxo-run-llm", llmHandler);
     };
   }, [executePipeline, cancelPipeline, setNodes]);
 
@@ -1034,6 +1193,7 @@ const MENU_STRUCTURE: MenuItem[] = [
     children: [
       { type: "prompt", label: "Prompt" },
       { type: "imageInput", label: "File Input" },
+      { type: "anyLLM", label: "Any LLM" },
       { type: "lastFrame", label: "Last Frame" },
       { type: "videoConcat", label: "Video Concat" },
     ],

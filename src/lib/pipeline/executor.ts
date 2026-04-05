@@ -1,5 +1,14 @@
 import { type Node, type Edge } from "@xyflow/react";
 
+interface LLMChain {
+  prompt: string;
+  systemPrompt?: string;
+  imageUrls?: string[];
+  model: string;
+  temperature: number;
+  llmNodeId: string;
+}
+
 interface PipelineData {
   prompt: string;
   localImageUrls: string[];
@@ -27,6 +36,8 @@ interface PipelineData {
   // GPT Image
   gptQuality?: string;
   gptBackground?: string;
+  // LLM Chain
+  llmChain?: LLMChain;
 }
 
 // Percorre os nós conectados e coleta os dados do pipeline
@@ -81,6 +92,47 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
 
       if (sourceNode.type === "prompt" && edge.targetHandle === "negative-prompt") {
         negativePrompt = (sourceNode.data.text as string) || "";
+        continue;
+      }
+
+      // AnyLLM → Model: detect LLM chain
+      if (sourceNode.type === "anyLLM" && edge.targetHandle === "prompt") {
+        // If LLM already has generated text, use it directly
+        const existingText = (sourceNode.data.generatedText as string) || "";
+        if (existingText) {
+          result.prompt = existingText;
+        } else {
+          // Collect the LLM node's inputs to run it as part of the pipeline
+          let llmPrompt = "";
+          let llmSystemPrompt = "";
+          const llmImageUrls: string[] = [];
+
+          for (const llmEdge of edges) {
+            if (llmEdge.target !== sourceNode.id) continue;
+            const llmSource = nodes.find((n) => n.id === llmEdge.source);
+            if (!llmSource) continue;
+
+            if (llmSource.type === "prompt" && llmEdge.targetHandle === "prompt") {
+              llmPrompt = (llmSource.data.text as string) || "";
+            } else if (llmSource.type === "prompt" && llmEdge.targetHandle === "system-prompt") {
+              llmSystemPrompt = (llmSource.data.text as string) || "";
+            } else if (llmSource.type === "imageInput" && llmEdge.targetHandle?.startsWith("image-")) {
+              const imgs = (llmSource.data.images as Array<{ url: string; name: string }>) || [];
+              llmImageUrls.push(...imgs.map((img) => img.url).filter(Boolean));
+            }
+          }
+
+          if (llmPrompt) {
+            result.llmChain = {
+              prompt: llmPrompt,
+              systemPrompt: llmSystemPrompt || undefined,
+              imageUrls: llmImageUrls.length > 0 ? llmImageUrls : undefined,
+              model: (sourceNode.data.llmModel as string) || "gpt-4o-mini",
+              temperature: (sourceNode.data.temperature as number) ?? 0.7,
+              llmNodeId: sourceNode.id,
+            };
+          }
+        }
         continue;
       }
 
@@ -173,6 +225,33 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   }
 
   return result;
+}
+
+// Executa LLM chain antes da geracao de imagem/video
+export async function runLLMChain(chain: LLMChain): Promise<string> {
+  let publicImageUrls: string[] | undefined;
+  if (chain.imageUrls && chain.imageUrls.length > 0) {
+    publicImageUrls = await uploadImages(chain.imageUrls);
+  }
+
+  const response = await fetch("/api/generate-llm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: chain.prompt,
+      systemPrompt: chain.systemPrompt,
+      model: chain.model,
+      temperature: chain.temperature,
+      imageUrls: publicImageUrls && publicImageUrls.length > 0 ? publicImageUrls : undefined,
+      cost: 1,
+    }),
+  });
+
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do LLM: ${text.slice(0, 200)}`); }
+  if (!response.ok) throw new Error(data.error || "Erro ao gerar texto com LLM");
+  return data.text;
 }
 
 // Faz upload das imagens locais (blob) e retorna URLs públicas
