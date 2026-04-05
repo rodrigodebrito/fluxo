@@ -132,6 +132,7 @@ export default function AnyLLMNode({ id, data }: NodeProps) {
           >
             <option value="gpt-4o-mini">GPT-4o Mini</option>
             <option value="gpt-4o">GPT-4o</option>
+            <option value="openai/gpt-5-chat">GPT-5</option>
           </select>
           <div className="flex items-center gap-1">
             <span className="text-[9px] text-zinc-500">Temp:</span>
