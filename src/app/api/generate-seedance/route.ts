@@ -33,6 +33,12 @@ async function registerAndWaitAsset(apiKey: string, url: string): Promise<string
 }
 
 export async function POST(request: NextRequest) {
+  // Seedance temporariamente indisponivel
+  return NextResponse.json(
+    { error: "Seedance esta temporariamente indisponivel. Tente novamente mais tarde." },
+    { status: 503 }
+  );
+
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
