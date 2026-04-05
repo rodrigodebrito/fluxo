@@ -115,7 +115,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         onRun={handleRun}
         workflowName={workflowName}
         onNameChange={setWorkflowName}
-        onBack={() => router.push("/")}
+        onBack={() => router.push("/dashboard")}
       />
       {/* Main editor area */}
       <div className="flex-1 relative">
