@@ -122,29 +122,46 @@ export async function createSeedanceTask(
   apiKey: string,
   input: CreateSeedanceInput
 ): Promise<CreateTaskResponse> {
+  const isSeedance15 = input.sdModel?.includes("seedance-1");
+
   const inputBody: Record<string, unknown> = {
     prompt: input.prompt,
     aspect_ratio: input.aspectRatio || "16:9",
     resolution: input.resolution || "720p",
     duration: input.duration || 8,
     generate_audio: input.generateAudio ?? true,
-    web_search: input.webSearch ?? false,
   };
 
-  if (input.firstFrameUrl) {
-    inputBody.first_frame_url = input.firstFrameUrl;
+  if (isSeedance15) {
+    // Seedance 1.5 Pro uses input_urls (array) and fixed_lens
+    const urls: string[] = [];
+    if (input.firstFrameUrl) urls.push(input.firstFrameUrl);
+    if (input.lastFrameUrl) urls.push(input.lastFrameUrl);
+    if (urls.length > 0) {
+      inputBody.input_urls = urls;
+    }
+    if (input.fixedLens != null) {
+      inputBody.fixed_lens = input.fixedLens;
+    }
+  } else {
+    // Seedance 2.0 uses first_frame_url, last_frame_url, web_search
+    inputBody.web_search = input.webSearch ?? false;
+    if (input.firstFrameUrl) {
+      inputBody.first_frame_url = input.firstFrameUrl;
+    }
+    if (input.lastFrameUrl) {
+      inputBody.last_frame_url = input.lastFrameUrl;
+    }
+    if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
+      inputBody.reference_image_urls = input.referenceImageUrls;
+    }
+    if (input.fixedLens != null) {
+      inputBody.fixed_lens = input.fixedLens;
+    }
   }
-  if (input.lastFrameUrl) {
-    inputBody.last_frame_url = input.lastFrameUrl;
-  }
+
   if (input.seed != null) {
     inputBody.seed = input.seed;
-  }
-  if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
-    inputBody.reference_image_urls = input.referenceImageUrls;
-  }
-  if (input.fixedLens != null) {
-    inputBody.fixed_lens = input.fixedLens;
   }
 
   const response = await fetch(`${API_BASE}/createTask`, {
