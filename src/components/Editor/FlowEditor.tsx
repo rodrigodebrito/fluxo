@@ -1,0 +1,1173 @@
+"use client";
+
+import { useCallback, useRef, useEffect, useState, DragEvent, forwardRef, useImperativeHandle } from "react";
+import {
+  ReactFlow,
+  Background,
+  Panel,
+  useReactFlow,
+  useViewport,
+  ConnectionMode,
+  SelectionMode,
+  addEdge,
+  useNodesState,
+  useEdgesState,
+  type Connection,
+  type Node,
+  type Edge,
+  BackgroundVariant,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { nodeTypes } from "../nodes";
+import {
+  extractPipelineData,
+  startGeneration,
+  pollTaskStatus,
+} from "@/lib/pipeline/executor";
+
+// Dados padrão para cada tipo de nó
+const getDefaultData = (type: string): Record<string, unknown> => {
+  switch (type) {
+    case "prompt":
+      return { label: "Prompt", text: "" };
+    case "imageInput":
+      return { label: "File", images: [] };
+    case "model":
+      return { label: "Modelo", model: "nano-banana-pro", isRunning: false, results: [], imageInputCount: 1 };
+    case "model-veo3":
+      return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "16:9", enhancePrompt: true };
+    case "model-seedance":
+      return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
+    case "model-kling":
+      return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
+    case "model-gpt-image-txt":
+      return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
+    case "model-gpt-image-img":
+      return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium" };
+    case "klingElement":
+      return { label: "Kling Element", elementName: "", elementDescription: "" };
+    case "lastFrame":
+      return { label: "Last Frame", frameUrl: "", sourceVideoUrl: "", images: [] };
+    case "videoConcat":
+      return { label: "Video Concat", inputCount: 2, resultUrl: "" };
+    case "output":
+      return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
+    default:
+      return { label: "Node" };
+  }
+};
+
+// Começa vazio
+const initialNodes: Node[] = [];
+const initialEdges: Edge[] = [];
+
+let nodeId = 1;
+
+export interface FlowEditorProps {
+  onNodeSelect?: (node: Node | null) => void;
+  onFlowChange?: () => void;
+}
+
+export interface FlowEditorHandle {
+  saveWorkflow: () => { nodes: Node[]; edges: Edge[] };
+  loadWorkflow: (data?: { nodes: Node[]; edges: Edge[] }) => void;
+  runPipeline: () => void;
+  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
+}
+
+const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEditor({ onNodeSelect, onFlowChange }, ref) {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reactFlowInstance = useRef<any>(null);
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const connectingFrom = useRef<{ nodeId: string; handleId: string | null } | null>(null);
+  const connectHandled = useRef(false); // flag: onConnect já tratou esta conexão
+  const abortControllers = useRef<Map<string, AbortController>>(new Map());
+
+  // Tool mode: "select" = default cursor/selection, "hand" = pan with left click
+  const [toolMode, setToolMode] = useState<"select" | "hand">("select");
+
+  // Undo/Redo history
+  const undoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const lastSnapshot = useRef<string>("");
+
+  const pushUndo = useCallback(() => {
+    const snap = JSON.stringify({ nodes: nodesRef.current, edges: edgesRef.current });
+    if (snap === lastSnapshot.current) return;
+    undoStack.current.push(JSON.parse(lastSnapshot.current || snap));
+    if (undoStack.current.length > 50) undoStack.current.shift();
+    redoStack.current = [];
+    lastSnapshot.current = snap;
+  }, []);
+
+  const undo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const current = { nodes: nodesRef.current, edges: edgesRef.current };
+    redoStack.current.push(JSON.parse(JSON.stringify(current)));
+    const prev = undoStack.current.pop()!;
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    lastSnapshot.current = JSON.stringify(prev);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const current = { nodes: nodesRef.current, edges: edgesRef.current };
+    undoStack.current.push(JSON.parse(JSON.stringify(current)));
+    const next = redoStack.current.pop()!;
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    lastSnapshot.current = JSON.stringify(next);
+  }, [setNodes, setEdges]);
+
+  // Context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
+  const [contextSearch, setContextSearch] = useState("");
+  // Track right-mouse-button drag for panning cursor
+  useEffect(() => {
+    const wrapper = reactFlowWrapper.current;
+    if (!wrapper) return;
+    let rightDown = false;
+    let startX = 0;
+    let startY = 0;
+
+    const onDown = (e: MouseEvent) => {
+      if (e.button === 2) {
+        rightDown = true;
+        startX = e.clientX;
+        startY = e.clientY;
+      }
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!rightDown) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > 3 || dy > 3) {
+        document.documentElement.classList.add("is-panning");
+      }
+    };
+    const onUp = (e: MouseEvent) => {
+      if (e.button === 2) {
+        rightDown = false;
+        document.documentElement.classList.remove("is-panning");
+      }
+    };
+
+    wrapper.addEventListener("mousedown", onDown, true);
+    window.addEventListener("mousemove", onMove, true);
+    window.addEventListener("mouseup", onUp, true);
+    return () => {
+      wrapper.removeEventListener("mousedown", onDown, true);
+      window.removeEventListener("mousemove", onMove, true);
+      window.removeEventListener("mouseup", onUp, true);
+      document.documentElement.classList.remove("is-panning");
+    };
+  }, []);
+
+  // Snapshot para undo quando nodes/edges mudam
+  useEffect(() => {
+    const snap = JSON.stringify({ nodes, edges });
+    if (!lastSnapshot.current) { lastSnapshot.current = snap; return; }
+    if (snap !== lastSnapshot.current) pushUndo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+
+  // Ctrl+Z / Ctrl+Y shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
+  const selectedNodeId = useRef<string | null>(null);
+
+  // Manter refs atualizados e notificar seleção
+  useEffect(() => {
+    nodesRef.current = nodes;
+    if (selectedNodeId.current && onNodeSelect) {
+      const updated = nodes.find((n) => n.id === selectedNodeId.current);
+      if (updated) onNodeSelect(updated);
+    }
+    onFlowChange?.();
+  }, [nodes, onNodeSelect, onFlowChange]);
+  useEffect(() => {
+    edgesRef.current = edges;
+    onFlowChange?.();
+  }, [edges, onFlowChange]);
+
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      // Forçar seleção visual do nó clicado
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }))
+      );
+      selectedNodeId.current = node.type === "model" ? node.id : null;
+      onNodeSelect?.(node.type === "model" ? node : null);
+    },
+    [onNodeSelect, setNodes]
+  );
+
+  const onPaneClick = useCallback(() => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+    selectedNodeId.current = null;
+    onNodeSelect?.(null);
+    setContextMenu(null);
+  }, [onNodeSelect, setNodes]);
+
+  // Context menu: right-click no canvas
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onPaneContextMenu = useCallback((event: any) => {
+    event.preventDefault();
+    if (!reactFlowInstance.current || !reactFlowWrapper.current) return;
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const flowPos = reactFlowInstance.current.screenToFlowPosition({
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+    });
+    setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top, flowX: flowPos.x, flowY: flowPos.y });
+    setContextSearch("");
+  }, []);
+
+  // Adicionar nó na posição do context menu
+  const addNodeFromContext = useCallback((type: string) => {
+    if (!contextMenu) return;
+    const nodeType = type.startsWith("model-") ? "model" : type;
+    const newNode: Node = {
+      id: String(nodeId++),
+      type: nodeType,
+      position: { x: contextMenu.flowX, y: contextMenu.flowY },
+      data: getDefaultData(type),
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setContextMenu(null);
+  }, [contextMenu, setNodes]);
+
+  // Helper: criar edge entre source e target com lógica de auto-routing
+  const createEdge = useCallback(
+    (sourceId: string, sourceHandleId: string | null, targetId: string, targetHandleId: string | null) => {
+      const sourceNode = nodesRef.current.find((n) => n.id === sourceId);
+      const targetNode = nodesRef.current.find((n) => n.id === targetId);
+      if (!sourceNode || !targetNode) return;
+
+      let edgeColor = "#22c55e";
+      if (sourceNode.type === "prompt") edgeColor = "#a855f7";
+      else if (sourceNode.type === "imageInput") edgeColor = "#06b6d4";
+      else if (sourceNode.type === "klingElement") edgeColor = "#f43f5e";
+      else if (sourceNode.type === "lastFrame") edgeColor = "#f59e0b";
+      else if (sourceNode.type === "videoConcat") edgeColor = "#f97316";
+      else if (sourceNode.type === "model") edgeColor = "#22c55e";
+
+      let finalTargetHandle = targetHandleId;
+
+      // Prompt → model: respeitar negative-prompt se o usuário conectou nele, senão usar "prompt"
+      if (sourceNode.type === "prompt" && targetNode.type === "model") {
+        if (finalTargetHandle !== "negative-prompt") {
+          finalTargetHandle = "prompt";
+        }
+      }
+
+      // Model → model: resultado vai como imagem de referência (encontrar handle livre)
+      if (sourceNode.type === "model" && targetNode.type === "model") {
+        // Respeitar ref-* e element-* handles
+        if (finalTargetHandle?.startsWith("ref-") || finalTargetHandle?.startsWith("element-")) {
+          // usar o escolhido
+        } else {
+          const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+          const occupiedHandles = new Set(
+            edgesRef.current
+              .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+              .map((e) => e.targetHandle)
+          );
+
+          if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+            // usar o escolhido
+          } else {
+            let freeHandle: string | null = null;
+            for (let i = 1; i <= imageInputCount; i++) {
+              const handleId = `image-${i}`;
+              if (!occupiedHandles.has(handleId)) {
+                freeHandle = handleId;
+                break;
+              }
+            }
+            if (!freeHandle) return;
+            finalTargetHandle = freeHandle;
+          }
+        }
+      }
+
+      // ImageInput → model: encontrar handle livre
+      if (sourceNode.type === "imageInput" && targetNode.type === "model") {
+        // Se o usuário conectou diretamente a um ref-* ou element-* handle, respeitar
+        if (finalTargetHandle?.startsWith("ref-") || finalTargetHandle?.startsWith("element-")) {
+          // usar o que o usuário escolheu — não auto-route
+        } else {
+          const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+          const occupiedHandles = new Set(
+            edgesRef.current
+              .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+              .map((e) => e.targetHandle)
+          );
+
+          if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+            // usar o que o usuário escolheu
+          } else {
+            // Encontrar próximo livre
+            let freeHandle: string | null = null;
+            for (let i = 1; i <= imageInputCount; i++) {
+              const handleId = `image-${i}`;
+              if (!occupiedHandles.has(handleId)) {
+                freeHandle = handleId;
+                break;
+              }
+            }
+            if (!freeHandle) return;
+            finalTargetHandle = freeHandle;
+          }
+        }
+      }
+
+      // ImageInput → klingElement: encontrar handle livre (image-1 a image-4)
+      if (sourceNode.type === "imageInput" && targetNode.type === "klingElement") {
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+            .map((e) => e.targetHandle)
+        );
+        if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+          // usar o escolhido
+        } else {
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= 4; i++) {
+            const handleId = `image-${i}`;
+            if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
+
+      // Model → lastFrame: video output to video-in
+      if (sourceNode.type === "model" && targetNode.type === "lastFrame") {
+        finalTargetHandle = "video-in";
+      }
+
+      // LastFrame → model: image output to first free image handle
+      if (sourceNode.type === "lastFrame" && targetNode.type === "model") {
+        if (finalTargetHandle?.startsWith("ref-") || finalTargetHandle?.startsWith("element-")) {
+          // usar o escolhido
+        } else {
+          const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+          const occupiedHandles = new Set(
+            edgesRef.current
+              .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+              .map((e) => e.targetHandle)
+          );
+          if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+            // usar o escolhido
+          } else {
+            let freeHandle: string | null = null;
+            for (let i = 1; i <= imageInputCount; i++) {
+              const handleId = `image-${i}`;
+              if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+            }
+            if (!freeHandle) return;
+            finalTargetHandle = freeHandle;
+          }
+        }
+      }
+
+      // Model → videoConcat: encontrar handle video livre
+      if (sourceNode.type === "model" && targetNode.type === "videoConcat") {
+        const vidInputCount = (targetNode.data.inputCount as number) || 2;
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("video-"))
+            .map((e) => e.targetHandle)
+        );
+        if (finalTargetHandle?.startsWith("video-") && !occupiedHandles.has(finalTargetHandle)) {
+          // usar o escolhido
+        } else {
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= vidInputCount; i++) {
+            const handleId = `video-${i}`;
+            if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
+
+      // videoConcat → videoConcat: encadear concatenadores
+      if (sourceNode.type === "videoConcat" && targetNode.type === "videoConcat") {
+        const vidInputCount = (targetNode.data.inputCount as number) || 2;
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("video-"))
+            .map((e) => e.targetHandle)
+        );
+        let freeHandle: string | null = null;
+        for (let i = 1; i <= vidInputCount; i++) {
+          const handleId = `video-${i}`;
+          if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+        }
+        if (!freeHandle) return;
+        finalTargetHandle = freeHandle;
+      }
+
+      // KlingElement → model: encontrar handle element livre
+      if (sourceNode.type === "klingElement" && targetNode.type === "model") {
+        const elementCount = (targetNode.data.elementCount as number) || 0;
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("element-"))
+            .map((e) => e.targetHandle)
+        );
+        if (finalTargetHandle?.startsWith("element-") && !occupiedHandles.has(finalTargetHandle)) {
+          // usar o escolhido
+        } else {
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= elementCount; i++) {
+            const handleId = `element-${i}`;
+            if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
+
+      // Cor especial para negative-prompt
+      const finalEdgeColor = finalTargetHandle === "negative-prompt" ? "#ec4899" : edgeColor;
+
+      // Remover edge existente no mesmo handle e adicionar novo
+      setEdges((eds) => {
+        const filtered = eds.filter(
+          (e) => !(e.target === targetId && e.targetHandle === finalTargetHandle)
+        );
+        return addEdge(
+          {
+            source: sourceId,
+            target: targetId,
+            sourceHandle: sourceHandleId,
+            targetHandle: finalTargetHandle,
+            animated: true,
+            style: { stroke: finalEdgeColor },
+          },
+          filtered
+        );
+      });
+    },
+    [setEdges]
+  );
+
+  // onConnect: chamado quando ReactFlow aceita uma conexão nativa (handle→handle)
+  const onConnect = useCallback(
+    (params: Connection) => {
+      connectHandled.current = true; // marcar que onConnect já tratou
+      createEdge(
+        params.source,
+        params.sourceHandle ?? null,
+        params.target,
+        params.targetHandle ?? null
+      );
+    },
+    [createEdge]
+  );
+
+  // onConnectStart: guardar de onde a conexão começou
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onConnectStart = useCallback(
+    (_event: any, params: { nodeId: string | null; handleId: string | null }) => {
+      connectHandled.current = false; // resetar flag
+      if (params.nodeId) {
+        connectingFrom.current = { nodeId: params.nodeId, handleId: params.handleId };
+      }
+    },
+    []
+  );
+
+  // onConnectEnd: quando a conexão é solta (inclusive quando não acertou um handle)
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      if (!connectingFrom.current || !reactFlowInstance.current) return;
+
+      // Se onConnect já tratou esta conexão (acertou um handle), não duplicar
+      if (connectHandled.current) {
+        connectingFrom.current = null;
+        connectHandled.current = false;
+        return;
+      }
+
+      const fromNode = nodesRef.current.find((n) => n.id === connectingFrom.current!.nodeId);
+      if (!fromNode) return;
+
+      // Encontrar o nó alvo sob o cursor
+      const clientX = "changedTouches" in event ? event.changedTouches[0].clientX : event.clientX;
+      const clientY = "changedTouches" in event ? event.changedTouches[0].clientY : event.clientY;
+
+      const targetElement = document.elementFromPoint(clientX, clientY);
+
+      const targetNodeElement = targetElement?.closest(".react-flow__node");
+
+      if (targetNodeElement) {
+        const targetNodeId = targetNodeElement.getAttribute("data-id");
+        if (targetNodeId && targetNodeId !== connectingFrom.current.nodeId) {
+          const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
+
+          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat")) {
+            // Verificar se a conexão já foi feita pelo onConnect (evitar duplicata)
+            const alreadyConnected = edgesRef.current.some(
+              (e) => e.source === connectingFrom.current!.nodeId && e.target === targetNodeId
+            );
+            if (!alreadyConnected) {
+              createEdge(
+                connectingFrom.current.nodeId,
+                connectingFrom.current.handleId,
+                targetNodeId,
+                null
+              );
+            }
+          }
+        }
+      }
+
+      connectingFrom.current = null;
+    },
+    [createEdge]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onInit = useCallback((instance: any) => {
+    reactFlowInstance.current = instance;
+  }, []);
+
+  const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type || !reactFlowInstance.current || !reactFlowWrapper.current) return;
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = reactFlowInstance.current.screenToFlowPosition({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
+
+      // model-veo3 usa node type "model" mas com dados de veo3
+      const nodeType = type.startsWith("model-") ? "model" : type;
+
+      const newNode: Node = {
+        id: String(nodeId++),
+        type: nodeType,
+        position,
+        data: getDefaultData(type),
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes]
+  );
+
+  // Salvar workflow
+  const saveWorkflow = useCallback(() => {
+    return { nodes: nodesRef.current, edges: edgesRef.current };
+  }, []);
+
+  // Carregar workflow de dados externos
+  const loadWorkflow = useCallback((data?: { nodes: Node[]; edges: Edge[] }) => {
+    if (!data) return;
+    setNodes(data.nodes || []);
+    setEdges(data.edges || []);
+
+    const maxId = Math.max(
+      ...(data.nodes || []).map((n: Node) => parseInt(n.id) || 0),
+      0
+    );
+    nodeId = maxId + 1;
+  }, [setNodes, setEdges]);
+
+  // Run pipeline
+  const executePipeline = useCallback(async (modelNodeId?: string) => {
+    const currentNodes = nodesRef.current;
+    const currentEdges = edgesRef.current;
+    const pipeline = extractPipelineData(currentNodes, currentEdges, modelNodeId);
+
+    if (!pipeline.prompt) {
+      alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
+      return;
+    }
+
+    if (!pipeline.modelNodeId) {
+      alert("Nenhum nó de Modelo encontrado.");
+      return;
+    }
+
+    // Criar AbortController para este node
+    const ac = new AbortController();
+    abortControllers.current.set(pipeline.modelNodeId, ac);
+
+    // Marcar model como running
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === pipeline.modelNodeId
+          ? { ...n, data: { ...n.data, isRunning: true } }
+          : n
+      )
+    );
+
+    try {
+      const genOptions = {
+        model: pipeline.model,
+        resolution: pipeline.resolution,
+        aspectRatio: pipeline.aspectRatio,
+        seed: pipeline.seed,
+        veoModel: pipeline.veoModel,
+        enhancePrompt: pipeline.enhancePrompt,
+        sdModel: pipeline.sdModel,
+        sdResolution: pipeline.sdResolution,
+        sdDuration: pipeline.sdDuration,
+        generateAudio: pipeline.generateAudio,
+        webSearch: pipeline.webSearch,
+        klingMode: pipeline.klingMode,
+        klingDuration: pipeline.klingDuration,
+        klingElements: pipeline.klingElements,
+        referenceImageUrls: pipeline.referenceImageUrls,
+        gptQuality: pipeline.gptQuality,
+        gptBackground: pipeline.gptBackground,
+      };
+
+      const runCount = pipeline.runs;
+      const taskPromises = Array.from({ length: runCount }, () =>
+        startGeneration(pipeline.prompt, pipeline.localImageUrls, genOptions)
+      );
+
+      const taskIds = await Promise.all(taskPromises);
+
+      // Atualizar creditos na UI apos cobranca
+      window.dispatchEvent(new Event("fluxo-credits-update"));
+
+      // Veo usa endpoint diferente de polling, os outros usam recordInfo
+      const pollType = pipeline.model === "veo3" ? "video" : "image";
+      const resultPromises = taskIds.map((taskId) =>
+        pollTaskStatus(taskId, (progress) => {
+          console.log(`Task ${taskId} progresso:`, progress);
+        }, pollType as "image" | "video", ac.signal, pipeline.model)
+      );
+
+      const results = await Promise.all(resultPromises);
+
+      const allUrls: string[] = [];
+      const errors: string[] = [];
+
+      for (const result of results) {
+        if (result.error) errors.push(result.error);
+        allUrls.push(...result.resultUrls);
+      }
+
+      if (errors.length > 0 && allUrls.length === 0) {
+        alert("Erro na geração: " + errors[0]);
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === pipeline.modelNodeId
+              ? { ...n, data: { ...n.data, isRunning: false } }
+              : n
+          )
+        );
+        return;
+      }
+
+      if (allUrls.length > 0) {
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id === pipeline.modelNodeId) {
+              const prevResults = (n.data.results as string[]) || [];
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  isRunning: false,
+                  results: [...prevResults, ...allUrls],
+                },
+              };
+            }
+            return n;
+          })
+        );
+      }
+    } catch (err) {
+      if (ac.signal.aborted) {
+        // Cancelado pelo usuário — silencioso
+        console.log("[pipeline] Cancelado pelo usuário");
+      } else {
+        console.error("Erro no pipeline:", err);
+        alert("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+      }
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === pipeline.modelNodeId
+            ? { ...n, data: { ...n.data, isRunning: false } }
+            : n
+        )
+      );
+    } finally {
+      abortControllers.current.delete(pipeline.modelNodeId);
+    }
+  }, [setNodes]);
+
+  // Cancelar geração de um nó
+  const cancelPipeline = useCallback((modelNodeId: string) => {
+    const ac = abortControllers.current.get(modelNodeId);
+    if (ac) {
+      ac.abort();
+      abortControllers.current.delete(modelNodeId);
+    }
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === modelNodeId
+          ? { ...n, data: { ...n.data, isRunning: false } }
+          : n
+      )
+    );
+  }, [setNodes]);
+
+  // Ouvir evento "Run Model"
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      executePipeline(detail?.modelNodeId);
+    };
+    window.addEventListener("fluxo-run-pipeline", handler);
+
+    const cancelHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.modelNodeId) cancelPipeline(detail.modelNodeId);
+    };
+    window.addEventListener("fluxo-cancel-pipeline", cancelHandler);
+
+    const duplicateHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.nodeId) return;
+      const sourceNode = nodesRef.current.find((n) => n.id === detail.nodeId);
+      if (!sourceNode) return;
+      const newId = String(nodeId++);
+      const newNode = {
+        ...sourceNode,
+        id: newId,
+        position: { x: sourceNode.position.x + 30, y: sourceNode.position.y + 30 },
+        selected: false,
+        data: { ...sourceNode.data, results: [], isRunning: false, resultUrl: "", isLoading: false },
+      };
+      setNodes((nds) => [...nds, newNode]);
+    };
+    window.addEventListener("fluxo-duplicate-node", duplicateHandler);
+
+    return () => {
+      window.removeEventListener("fluxo-run-pipeline", handler);
+      window.removeEventListener("fluxo-cancel-pipeline", cancelHandler);
+      window.removeEventListener("fluxo-duplicate-node", duplicateHandler);
+    };
+  }, [executePipeline, cancelPipeline, setNodes]);
+
+  // Atualizar dados de um nó
+  const handleUpdateNodeData = useCallback(
+    (nodeId: string, data: Record<string, unknown>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
+        )
+      );
+    },
+    [setNodes]
+  );
+
+  // Expor funções via ref
+  useImperativeHandle(ref, () => ({
+    saveWorkflow,
+    loadWorkflow,
+    runPipeline: () => executePipeline(),
+    updateNodeData: handleUpdateNodeData,
+  }));
+
+  return (
+    <div
+      ref={reactFlowWrapper}
+      className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        onInit={onInit}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onPaneContextMenu={onPaneContextMenu}
+        nodeTypes={nodeTypes}
+        connectionMode={ConnectionMode.Loose}
+        selectionMode={SelectionMode.Partial}
+        selectionOnDrag={toolMode === "select"}
+        panOnDrag={toolMode === "hand" ? [0, 2] : [2]}
+        panOnScroll
+        zoomOnScroll={false}
+        zoomOnPinch
+        zoomActivationKeyCode="Control"
+        deleteKeyCode={["Backspace", "Delete"]}
+        elementsSelectable
+        edgesFocusable
+        multiSelectionKeyCode="Shift"
+        fitView
+        fitViewOptions={{ maxZoom: 1 }}
+        minZoom={0.05}
+        maxZoom={3}
+        proOptions={{ hideAttribution: true }}
+        className="bg-zinc-950"
+        defaultEdgeOptions={{
+          animated: true,
+          interactionWidth: 20,
+          style: { strokeWidth: 2 },
+        }}
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="#333338"
+        />
+        <FlowToolbar
+          toolMode={toolMode}
+          onToolModeChange={setToolMode}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={undoStack.current.length > 0}
+          canRedo={redoStack.current.length > 0}
+        />
+      </ReactFlow>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          search={contextSearch}
+          onSearchChange={setContextSearch}
+          onSelect={addNodeFromContext}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </div>
+  );
+});
+
+// === Context Menu Component ===
+
+interface MenuItem {
+  type?: string;
+  label: string;
+  children?: MenuItem[];
+}
+
+// === Flow Toolbar (bottom-center) ===
+
+function FlowToolbar({
+  toolMode, onToolModeChange, onUndo, onRedo,
+}: {
+  toolMode: "select" | "hand";
+  onToolModeChange: (mode: "select" | "hand") => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}) {
+  const { zoomIn, zoomOut, fitView, zoomTo } = useReactFlow();
+  const { zoom } = useViewport();
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const zoomRef = useRef<HTMLDivElement>(null);
+
+  // Close zoom menu on click outside
+  useEffect(() => {
+    if (!zoomMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (zoomRef.current && !zoomRef.current.contains(e.target as HTMLElement)) setZoomMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [zoomMenuOpen]);
+
+  const zoomPercent = Math.round(zoom * 100);
+
+  const btnClass = (active?: boolean) =>
+    `w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+      active
+        ? "bg-yellow-400 text-zinc-900"
+        : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+    }`;
+
+  return (
+    <Panel position="bottom-center">
+      <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded-xl px-1.5 py-1 shadow-lg">
+        {/* Select tool */}
+        <button
+          onClick={() => onToolModeChange("select")}
+          className={btnClass(toolMode === "select")}
+          title="Select (V)"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 2l14 10.5-5.5 1.5L17 22l-3 1.5-4.5-8L4 18V2z" />
+          </svg>
+        </button>
+
+        {/* Hand tool */}
+        <button
+          onClick={() => onToolModeChange("hand")}
+          className={btnClass(toolMode === "hand")}
+          title="Hand (H)"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.05 4.575a1.575 1.575 0 10-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 013.15 0v1.5m-3.15 0l.075 5.925m3.075-5.925v2.925m0-2.925a1.575 1.575 0 013.15 0V8.25m-3.15-2.175a1.575 1.575 0 013.15 0v4.65m-3.15-4.65V6.15m0 9.6a6 6 0 01-6-6v-1.5m6 7.5v-3.15a6 6 0 00-6-6V6.15m12 4.5a1.575 1.575 0 013.15 0v2.1a6 6 0 01-6 6h-1.5" />
+          </svg>
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-zinc-700 mx-1" />
+
+        {/* Undo */}
+        <button onClick={onUndo} className={btnClass()} title="Undo (Ctrl+Z)">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+          </svg>
+        </button>
+
+        {/* Redo */}
+        <button onClick={onRedo} className={btnClass()} title="Redo (Ctrl+Y)">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" />
+          </svg>
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-zinc-700 mx-1" />
+
+        {/* Zoom display + dropdown */}
+        <div className="relative" ref={zoomRef}>
+          <button
+            onClick={() => setZoomMenuOpen(!zoomMenuOpen)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors min-w-[52px] justify-center"
+          >
+            <span className="font-medium">{zoomPercent}%</span>
+            <svg className={`w-3 h-3 transition-transform ${zoomMenuOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+
+          {zoomMenuOpen && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl w-[200px] py-1.5 overflow-hidden">
+              <button onClick={() => { zoomIn(); setZoomMenuOpen(false); }} className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between">
+                <span>Zoom in</span><span className="text-[11px] text-zinc-600">Ctrl +</span>
+              </button>
+              <button onClick={() => { zoomOut(); setZoomMenuOpen(false); }} className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between">
+                <span>Zoom out</span><span className="text-[11px] text-zinc-600">Ctrl −</span>
+              </button>
+              <div className="h-px bg-zinc-800 mx-2.5 my-1" />
+              <button onClick={() => { zoomTo(1); setZoomMenuOpen(false); }} className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between">
+                <span>Zoom to 100%</span><span className="text-[11px] text-zinc-600">Ctrl 0</span>
+              </button>
+              <button onClick={() => { fitView({ maxZoom: 1 }); setZoomMenuOpen(false); }} className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between">
+                <span>Zoom to fit</span><span className="text-[11px] text-zinc-600">Ctrl 1</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+// === Context Menu Component ===
+
+const MENU_STRUCTURE: MenuItem[] = [
+  {
+    label: "Tools",
+    children: [
+      { type: "prompt", label: "Prompt" },
+      { type: "imageInput", label: "File Input" },
+      { type: "lastFrame", label: "Last Frame" },
+      { type: "videoConcat", label: "Video Concat" },
+    ],
+  },
+  {
+    label: "Image models",
+    children: [
+      { type: "model", label: "Nano Banana Pro" },
+      { type: "model-gpt-image-txt", label: "GPT Image 1.5" },
+      { type: "model-gpt-image-img", label: "GPT Image 1.5 Edit" },
+    ],
+  },
+  {
+    label: "Video models",
+    children: [
+      { type: "model-veo3", label: "Veo 3.1 Image to Video" },
+      { type: "model-seedance", label: "Seedance 2.0" },
+      { type: "model-kling", label: "Kling 3" },
+      { type: "klingElement", label: "Kling Element" },
+    ],
+  },
+];
+
+// Flatten for search
+const ALL_ITEMS = MENU_STRUCTURE.flatMap((item) =>
+  item.children ? item.children.map((c) => ({ ...c, category: item.label })) : [{ ...item, category: "" }]
+);
+
+function ContextMenu({
+  x, y, search, onSearchChange, onSelect, onClose,
+}: {
+  x: number; y: number;
+  search: string;
+  onSearchChange: (v: string) => void;
+  onSelect: (type: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [hoveredSub, setHoveredSub] = useState<string | null>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const q = search.toLowerCase().trim();
+  const isSearching = q.length > 0;
+
+  // Search mode: flat list filtered
+  const searchResults = isSearching
+    ? ALL_ITEMS.filter((item) => item.label.toLowerCase().includes(q))
+    : [];
+
+  return (
+    <div ref={ref} className="absolute z-50" style={{ left: x, top: y }}>
+      {/* Main menu */}
+      <div className="bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl w-[220px] py-1.5 overflow-hidden">
+        {/* Search */}
+        <div className="px-2.5 pb-1.5 pt-1">
+          <div className="flex items-center gap-2 bg-zinc-800/80 border border-zinc-700 rounded-lg px-2.5 py-1.5">
+            <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search"
+              className="flex-1 bg-transparent text-[13px] text-zinc-300 placeholder-zinc-600 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="h-px bg-zinc-800 mx-2.5 my-1" />
+
+        {isSearching ? (
+          // Search results
+          <div className="max-h-[300px] overflow-y-auto">
+            {searchResults.length > 0 ? searchResults.map((item) => (
+              <button
+                key={item.type}
+                onClick={() => item.type && onSelect(item.type)}
+                className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-purple-500/20 hover:text-white transition-colors flex items-center justify-between"
+              >
+                <span>{item.label}</span>
+                {item.category && <span className="text-[10px] text-zinc-600">{item.category}</span>}
+              </button>
+            )) : (
+              <div className="px-4 py-4 text-xs text-zinc-600 text-center">No results</div>
+            )}
+          </div>
+        ) : (
+          // Menu with inline expanding categories
+          <div>
+            {MENU_STRUCTURE.map((item, i) => (
+              item.children ? (
+                <div key={item.label}>
+                  {/* Category header */}
+                  <button
+                    onClick={() => setHoveredSub(hoveredSub === item.label ? null : item.label)}
+                    className={`w-full text-left px-4 py-[7px] text-[13px] flex items-center justify-between transition-colors ${
+                      hoveredSub === item.label ? "bg-purple-500/20 text-white" : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <svg
+                      className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${hoveredSub === item.label ? "rotate-90" : ""}`}
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+
+                  {/* Expanded children */}
+                  {hoveredSub === item.label && (
+                    <div className="bg-zinc-800/30">
+                      {item.children.map((child) => (
+                        <button
+                          key={child.type}
+                          onClick={() => child.type && onSelect(child.type)}
+                          className="w-full text-left pl-8 pr-4 py-[7px] text-[13px] text-zinc-400 hover:bg-purple-500/20 hover:text-white transition-colors"
+                        >
+                          {child.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  key={item.type || i}
+                  onClick={() => item.type && onSelect(item.type)}
+                  className="w-full text-left px-4 py-[7px] text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                >
+                  {item.label}
+                </button>
+              )
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default FlowEditor;

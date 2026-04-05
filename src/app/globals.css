@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #09090b;
+  --foreground: #fafafa;
 }
 
 @theme inline {
@@ -12,15 +12,88 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
+
+/* ReactFlow custom styles for dark theme */
+.react-flow__edge-path {
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3;
+}
+
+.react-flow__handle {
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+}
+
+.react-flow__node {
+  transition: box-shadow 0.2s ease;
+}
+
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px #a855f7, 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+.react-flow__node:hover {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.react-flow__selection {
+  background: rgba(168, 85, 247, 0.08) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  border-radius: 8px;
+}
+
+.react-flow__pane {
+  cursor: default !important;
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing !important;
+}
+
+html.is-panning,
+html.is-panning *,
+html.is-panning .react-flow__pane,
+html.is-panning .react-flow__node,
+html.is-panning .react-flow__edge,
+html.is-panning .react-flow__handle {
+  cursor: grabbing !important;
+}
+
+.react-flow__pane.selection {
+  cursor: default !important;
+}
+
+.hand-mode .react-flow__pane {
+  cursor: grab !important;
+}
+
+.hand-mode .react-flow__pane:active,
+.hand-mode .react-flow__pane.dragging {
+  cursor: grabbing !important;
+}
+
+.react-flow__node {
+  cursor: pointer !important;
+}
+
+.react-flow__node.dragging {
+  cursor: grabbing !important;
 }
