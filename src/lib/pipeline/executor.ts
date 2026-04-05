@@ -237,6 +237,7 @@ export async function startGeneration(
     referenceImageUrls?: string[];
     gptQuality?: string;
     gptBackground?: string;
+    cost?: number;
   }
 ): Promise<string> {
   const publicUrls = await uploadImages(localImageUrls);
@@ -252,6 +253,7 @@ export async function startGeneration(
         aspectRatio: options?.aspectRatio || "1:1",
         quality: options?.gptQuality || "medium",
         background: options?.model === "gpt-image-txt" ? (options?.gptBackground || "opaque") : undefined,
+        cost: options?.cost,
       }),
     });
     const data = await response.json();
@@ -295,6 +297,7 @@ export async function startGeneration(
         aspectRatio: options?.aspectRatio || "16:9",
         sound: options?.generateAudio ?? false,
         elements: elements && elements.length > 0 ? elements : undefined,
+        cost: options?.cost,
       }),
     });
     const data = await response.json();
@@ -313,6 +316,7 @@ export async function startGeneration(
         model: options?.veoModel || "veo3_fast",
         aspectRatio: options?.aspectRatio || "16:9",
         seed: options?.seed ?? undefined,
+        cost: options?.cost,
       }),
     });
     const data = await response.json();
@@ -343,6 +347,7 @@ export async function startGeneration(
         generateAudio: options?.generateAudio ?? true,
         webSearch: options?.webSearch ?? false,
         seed: options?.seed ?? undefined,
+        cost: options?.cost,
       }),
     });
     const data = await response.json();
@@ -360,6 +365,7 @@ export async function startGeneration(
       resolution: options?.resolution || "1K",
       aspectRatio: options?.aspectRatio || "auto",
       seed: options?.seed ?? undefined,
+      cost: options?.cost,
     }),
   });
 
@@ -369,12 +375,12 @@ export async function startGeneration(
 }
 
 // Solicita reembolso de creditos quando geracao falha
-async function refundCredits(model: string, taskId: string) {
+async function refundCredits(model: string, taskId: string, cost?: number) {
   try {
     await fetch("/api/credits/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, taskId }),
+      body: JSON.stringify({ model, taskId, cost }),
     });
     // Notificar componente de creditos pra atualizar
     window.dispatchEvent(new Event("fluxo-credits-update"));
@@ -390,7 +396,8 @@ export async function pollTaskStatus(
   onProgress: (progress: number) => void,
   type: "image" | "video" = "image",
   signal?: AbortSignal,
-  model?: string
+  model?: string,
+  cost?: number
 ): Promise<{ resultUrls: string[]; error: string | null }> {
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
 
@@ -432,19 +439,19 @@ export async function pollTaskStatus(
 
       if (data.state === "fail") {
         // Devolver creditos quando geracao falha
-        if (model) await refundCredits(model, taskId);
+        if (model) await refundCredits(model, taskId, cost);
         return { resultUrls: [], error: data.error || "Geração falhou" };
       }
     } catch (err) {
       if (signal?.aborted) return { resultUrls: [], error: "Cancelado" };
       if (type === "video") { console.warn("Poll error, retrying...", err); continue; }
       // Devolver creditos em erro inesperado
-      if (model) await refundCredits(model, taskId);
+      if (model) await refundCredits(model, taskId, cost);
       throw err;
     }
   }
 
   // Timeout: devolver creditos
-  if (model) await refundCredits(model, taskId);
+  if (model) await refundCredits(model, taskId, cost);
   throw new Error("Timeout: geração demorou muito");
 }

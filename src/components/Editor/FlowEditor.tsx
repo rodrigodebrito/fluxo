@@ -632,6 +632,27 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     );
 
     try {
+      // Calcular custo dinamico (mesma logica do NodePanel)
+      let costPerRun = 18;
+      const m = pipeline.model;
+      if (m === "nano-banana-pro") costPerRun = pipeline.resolution === "4K" ? 24 : 18;
+      else if (m === "gpt-image-txt" || m === "gpt-image-img") costPerRun = pipeline.gptQuality === "high" ? 22 : 4;
+      else if (m === "veo3") {
+        if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
+        else if (pipeline.veoModel === "veo3") costPerRun = 250;
+        else costPerRun = 60;
+      } else if (m === "seedance") {
+        const is720 = pipeline.sdResolution === "720p";
+        const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
+        const perSec = isFast ? (is720 ? 33 : 15.5) : (is720 ? 41 : 19);
+        costPerRun = Math.round(perSec * (pipeline.sdDuration || 8));
+      } else if (m === "kling") {
+        const perSec = pipeline.klingMode === "pro"
+          ? (pipeline.generateAudio ? 27 : 18)
+          : (pipeline.generateAudio ? 20 : 14);
+        costPerRun = perSec * (pipeline.klingDuration || 5);
+      }
+
       const genOptions = {
         model: pipeline.model,
         resolution: pipeline.resolution,
@@ -650,6 +671,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         referenceImageUrls: pipeline.referenceImageUrls,
         gptQuality: pipeline.gptQuality,
         gptBackground: pipeline.gptBackground,
+        cost: costPerRun,
       };
 
       const runCount = pipeline.runs;
@@ -667,7 +689,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       const resultPromises = taskIds.map((taskId) =>
         pollTaskStatus(taskId, (progress) => {
           console.log(`Task ${taskId} progresso:`, progress);
-        }, pollType as "image" | "video", ac.signal, pipeline.model)
+        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun)
       );
 
       const results = await Promise.all(resultPromises);

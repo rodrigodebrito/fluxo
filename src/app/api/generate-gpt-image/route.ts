@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const { prompt, inputUrls, aspectRatio, quality, background } = body;
 
   const model = inputUrls?.length > 0 ? "gpt-image-img" : "gpt-image-txt";
-  const { hasCredits, cost } = await verifyCredits(user.id, model);
+  const { hasCredits, cost } = await verifyCredits(user.id, model, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, model);
+    await chargeCredits(user.id, model, cost);
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

@@ -77,15 +77,15 @@ export async function addCredits(
   return newCredits;
 }
 
-// Credit costs per model
+// Base credit costs per model (minimum)
 export function getModelCost(model: string): number {
   switch (model) {
-    case "nano-banana-pro": return 24;
-    case "veo3": return 100;
-    case "seedance": return 80;
-    case "kling": return 90;
-    case "gpt-image-txt": return 30;
-    case "gpt-image-img": return 35;
-    default: return 24;
+    case "nano-banana-pro": return 18;
+    case "veo3": return 60;
+    case "seedance": return 40;
+    case "kling": return 70;
+    case "gpt-image-txt": return 4;
+    case "gpt-image-img": return 4;
+    default: return 18;
   }
 }

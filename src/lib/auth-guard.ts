@@ -19,13 +19,13 @@ export function insufficientCreditsResponse(cost: number) {
   );
 }
 
-export async function verifyCredits(userId: string, model: string) {
-  const cost = getModelCost(model);
-  const hasCredits = await checkCredits(userId, cost);
-  return { hasCredits, cost };
+export async function verifyCredits(userId: string, model: string, cost?: number) {
+  const finalCost = cost || getModelCost(model);
+  const hasCredits = await checkCredits(userId, finalCost);
+  return { hasCredits, cost: finalCost };
 }
 
-export async function chargeCredits(userId: string, model: string) {
-  const cost = getModelCost(model);
-  return debitCredits(userId, cost, `generation_${model}`);
+export async function chargeCredits(userId: string, model: string, cost?: number) {
+  const finalCost = cost || getModelCost(model);
+  return debitCredits(userId, finalCost, `generation_${model}`);
 }

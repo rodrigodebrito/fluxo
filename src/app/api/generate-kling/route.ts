@@ -6,7 +6,8 @@ export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
-  const { hasCredits, cost } = await verifyCredits(user.id, "kling");
+  const body_peek = await request.clone().json();
+  const { hasCredits, cost } = await verifyCredits(user.id, "kling", body_peek.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "kling");
+    await chargeCredits(user.id, "kling", cost);
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

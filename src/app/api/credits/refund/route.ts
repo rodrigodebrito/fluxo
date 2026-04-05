@@ -7,14 +7,14 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorizedResponse();
 
   const body = await request.json();
-  const { model, taskId } = body;
+  const { model, taskId, cost } = body;
 
   if (!model || !taskId) {
     return NextResponse.json({ error: "model e taskId sao obrigatorios" }, { status: 400 });
   }
 
-  const cost = getModelCost(model);
-  const newCredits = await addCredits(user.id, cost, `refund_${model}_${taskId}`);
+  const refundAmount = cost || getModelCost(model);
+  const newCredits = await addCredits(user.id, refundAmount, `refund_${model}_${taskId}`);
 
-  return NextResponse.json({ credits: newCredits, refunded: cost });
+  return NextResponse.json({ credits: newCredits, refunded: refundAmount });
 }
