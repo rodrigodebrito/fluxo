@@ -6,6 +6,7 @@ import KlingElementNode from "./KlingElementNode";
 import LastFrameNode from "./LastFrameNode";
 import VideoConcatNode from "./VideoConcatNode";
 import AnyLLMNode from "./AnyLLMNode";
+import RouterNode from "./RouterNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -16,4 +17,5 @@ export const nodeTypes = {
   lastFrame: LastFrameNode,
   videoConcat: VideoConcatNode,
   anyLLM: AnyLLMNode,
+  router: RouterNode,
 };

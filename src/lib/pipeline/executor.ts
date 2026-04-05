@@ -85,9 +85,23 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
 
   let negativePrompt = "";
 
+  // Helper: resolve router pass-through — if source is a router, find the real source
+  function resolveSource(nodeId: string): Node | null {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return null;
+    if (node.type === "router") {
+      const inputEdge = edges.find((e) => e.target === node.id && e.targetHandle === "input");
+      if (inputEdge) return resolveSource(inputEdge.source);
+      return null;
+    }
+    return node;
+  }
+
   for (const edge of edges) {
     if (edge.target === modelNode.id) {
-      const sourceNode = nodes.find((n) => n.id === edge.source);
+      const rawSource = nodes.find((n) => n.id === edge.source);
+      // If source is a router, resolve to the actual source node
+      const sourceNode = rawSource?.type === "router" ? resolveSource(rawSource.id) : rawSource;
       if (!sourceNode) continue;
 
       if (sourceNode.type === "prompt" && edge.targetHandle === "negative-prompt") {

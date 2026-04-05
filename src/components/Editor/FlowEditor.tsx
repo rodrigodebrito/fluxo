@@ -53,6 +53,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Video Concat", inputCount: 2, resultUrl: "" };
     case "anyLLM":
       return { label: "Any LLM", llmModel: "gpt-4o-mini", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
+    case "router":
+      return { label: "Router", outputCount: 3 };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -270,8 +272,67 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       else if (sourceNode.type === "videoConcat") edgeColor = "#f97316";
       else if (sourceNode.type === "model") edgeColor = "#22c55e";
       else if (sourceNode.type === "anyLLM") edgeColor = "#f59e0b";
+      else if (sourceNode.type === "router") edgeColor = "#06b6d4";
 
       let finalTargetHandle = targetHandleId;
+
+      // Any → router: always go to "input" handle
+      if (targetNode.type === "router") {
+        finalTargetHandle = "input";
+      }
+
+      // Router → model: route to prompt or image handle based on source type
+      if (sourceNode.type === "router" && targetNode.type === "model") {
+        // Find what's connected to the router's input to determine behavior
+        const routerInputEdge = edgesRef.current.find((e) => e.target === sourceId && e.targetHandle === "input");
+        const routerSource = routerInputEdge ? nodesRef.current.find((n) => n.id === routerInputEdge.source) : null;
+
+        if (routerSource?.type === "prompt") {
+          if (finalTargetHandle !== "negative-prompt") {
+            finalTargetHandle = "prompt";
+          }
+        } else if (routerSource?.type === "imageInput" || routerSource?.type === "lastFrame" || routerSource?.type === "model") {
+          const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+          const occupiedHandles = new Set(
+            edgesRef.current
+              .filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-"))
+              .map((e) => e.targetHandle)
+          );
+          if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+            // user chose specific handle
+          } else {
+            let freeHandle: string | null = null;
+            for (let i = 1; i <= imageInputCount; i++) {
+              const handleId = `image-${i}`;
+              if (!occupiedHandles.has(handleId)) { freeHandle = handleId; break; }
+            }
+            if (!freeHandle) return;
+            finalTargetHandle = freeHandle;
+          }
+        }
+      }
+
+      // Router → anyLLM: route based on source type
+      if (sourceNode.type === "router" && targetNode.type === "anyLLM") {
+        const routerInputEdge = edgesRef.current.find((e) => e.target === sourceId && e.targetHandle === "input");
+        const routerSource = routerInputEdge ? nodesRef.current.find((n) => n.id === routerInputEdge.source) : null;
+
+        if (routerSource?.type === "prompt") {
+          const promptOccupied = edgesRef.current.some((e) => e.target === targetId && e.targetHandle === "prompt");
+          finalTargetHandle = promptOccupied ? "system-prompt" : "prompt";
+        } else if (routerSource?.type === "imageInput") {
+          const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
+          const occupiedHandles = new Set(
+            edgesRef.current.filter((e) => e.target === targetId && e.targetHandle?.startsWith("image-")).map((e) => e.targetHandle)
+          );
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= imageInputCount; i++) {
+            if (!occupiedHandles.has(`image-${i}`)) { freeHandle = `image-${i}`; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
 
       // Prompt → anyLLM: auto-route to prompt or system-prompt handle
       if (sourceNode.type === "prompt" && targetNode.type === "anyLLM") {
@@ -567,7 +628,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (targetNodeId && targetNodeId !== connectingFrom.current.nodeId) {
           const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
 
-          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat" || targetNode.type === "anyLLM")) {
+          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat" || targetNode.type === "anyLLM" || targetNode.type === "router")) {
             // Verificar se a conexão já foi feita pelo onConnect (evitar duplicata)
             const alreadyConnected = edgesRef.current.some(
               (e) => e.source === connectingFrom.current!.nodeId && e.target === targetNodeId
@@ -1194,6 +1255,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "prompt", label: "Prompt" },
       { type: "imageInput", label: "File Input" },
       { type: "anyLLM", label: "Any LLM" },
+      { type: "router", label: "Router" },
       { type: "lastFrame", label: "Last Frame" },
       { type: "videoConcat", label: "Video Concat" },
     ],
