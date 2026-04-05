@@ -6,7 +6,13 @@ export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
+  }
+
   const { hasCredits, cost } = await verifyCredits(user.id, "kling", body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
@@ -44,6 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
+    console.error("[generate-kling] error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

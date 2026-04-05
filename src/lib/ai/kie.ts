@@ -1,5 +1,16 @@
 const API_BASE = "https://api.kie.ai/api/v1/jobs";
 
+// Safe JSON parse — returns error object if response is not valid JSON
+async function safeJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("[kie] Invalid JSON response:", response.status, text.slice(0, 500));
+    throw new Error(`API retornou resposta invalida (status ${response.status}): ${text.slice(0, 200)}`);
+  }
+}
+
 interface CreateTaskInput {
   prompt: string;
   imageInput?: string[];
@@ -54,7 +65,7 @@ export async function createImageTask(
     }),
   });
 
-  return response.json();
+  return safeJson(response);
 }
 
 // === Seedance 2.0 Fast ===
@@ -87,7 +98,7 @@ export async function createByteDanceAsset(
     },
     body: JSON.stringify({ url, assetType }),
   });
-  return response.json();
+  return safeJson(response);
 }
 
 // Verificar status de um asset na ByteDance
@@ -103,7 +114,7 @@ export async function getAssetStatus(
       headers: { Authorization: `Bearer ${apiKey}` },
     }
   );
-  return response.json();
+  return safeJson(response);
 }
 
 export async function createSeedanceTask(
@@ -144,7 +155,7 @@ export async function createSeedanceTask(
     }),
   });
 
-  return response.json();
+  return safeJson(response);
 }
 
 export async function getTaskStatus(
@@ -161,7 +172,7 @@ export async function getTaskStatus(
     }
   );
 
-  return response.json();
+  return safeJson(response);
 }
 
 export function parseResultUrls(resultJson: string): string[] {
@@ -214,7 +225,7 @@ export async function createGptImageTask(
     body: JSON.stringify({ model, input: inputBody }),
   });
 
-  return response.json();
+  return safeJson(response);
 }
 
 // === Kling 3.0 Video ===
@@ -262,7 +273,7 @@ export async function createKlingTask(
     }),
   });
 
-  return response.json();
+  return safeJson(response);
 }
 
 // === Veo 3.1 Image to Video ===
@@ -317,7 +328,7 @@ export async function createVeoTask(
     body: JSON.stringify(body),
   });
 
-  return response.json();
+  return safeJson(response);
 }
 
 // Veo status endpoint (diferente do Nano Banana)
@@ -349,5 +360,5 @@ export async function getVeoTaskStatus(
       headers: { Authorization: `Bearer ${apiKey}` },
     }
   );
-  return response.json();
+  return safeJson(response);
 }

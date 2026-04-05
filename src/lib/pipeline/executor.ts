@@ -256,7 +256,9 @@ export async function startGeneration(
         cost: options?.cost,
       }),
     });
-    const data = await response.json();
+    const gptText = await response.text();
+    let data;
+    try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
     return data.taskId;
   }
@@ -300,7 +302,9 @@ export async function startGeneration(
         cost: options?.cost,
       }),
     });
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do servidor: ${text.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Kling");
     return data.taskId;
   }
@@ -319,7 +323,9 @@ export async function startGeneration(
         cost: options?.cost,
       }),
     });
-    const data = await response.json();
+    const veoText = await response.text();
+    let data;
+    try { data = JSON.parse(veoText); } catch { throw new Error(`Resposta invalida do servidor: ${veoText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao de video");
     return data.taskId;
   }
@@ -350,7 +356,9 @@ export async function startGeneration(
         cost: options?.cost,
       }),
     });
-    const data = await response.json();
+    const sdText = await response.text();
+    let data;
+    try { data = JSON.parse(sdText); } catch { throw new Error(`Resposta invalida do servidor: ${sdText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedance");
     return data.taskId;
   }
@@ -369,7 +377,9 @@ export async function startGeneration(
     }),
   });
 
-  const data = await response.json();
+  const nanoText = await response.text();
+  let data;
+  try { data = JSON.parse(nanoText); } catch { throw new Error(`Resposta invalida do servidor: ${nanoText.slice(0, 200)}`); }
   if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao");
   return data.taskId;
 }
@@ -421,7 +431,9 @@ export async function pollTaskStatus(
 
     try {
       const response = await fetch(`/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}`, { signal });
-      const data = await response.json();
+      const statusText = await response.text();
+      let data;
+      try { data = JSON.parse(statusText); } catch { console.error("[poll] Invalid JSON:", statusText.slice(0, 200)); continue; }
 
       if (!response.ok) {
         // Para video, continuar tentando em vez de parar
