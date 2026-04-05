@@ -4,6 +4,7 @@ import { useRef, useCallback, useState, useEffect, use } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import UserCredits from "@/components/Header/UserCredits";
+import AppView from "@/components/App/AppView";
 import type { FlowEditorHandle } from "@/components/Editor/FlowEditor";
 import type { Node } from "@xyflow/react";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const editorRef = useRef<FlowEditorHandle>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [workflowName, setWorkflowName] = useState("untitled");
+  const [activeTab, setActiveTab] = useState<"canvas" | "app">("canvas");
   const [workflowId, setWorkflowId] = useState(initialId);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoading = useRef(true);
@@ -117,12 +119,40 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         onNameChange={setWorkflowName}
         onBack={() => router.push("/dashboard")}
       />
-      {/* Main editor area */}
-      <div className="flex-1 relative">
+      {/* Main area */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Tab switcher + credits */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center bg-zinc-900/90 border border-zinc-800 rounded-lg p-0.5 backdrop-blur-sm">
+          <button
+            onClick={() => setActiveTab("canvas")}
+            className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeTab === "canvas"
+                ? "bg-zinc-700 text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Canvas
+          </button>
+          <button
+            onClick={() => setActiveTab("app")}
+            className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeTab === "app"
+                ? "bg-zinc-700 text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            App
+          </button>
+        </div>
         <div className="absolute top-3 right-3 z-10">
           <UserCredits />
         </div>
-        <FlowEditor ref={editorRef} onNodeSelect={handleNodeSelect} onFlowChange={triggerAutoSave} />
+
+        {/* Content */}
+        <div className={`flex-1 ${activeTab === "canvas" ? "" : "hidden"}`}>
+          <FlowEditor ref={editorRef} onNodeSelect={handleNodeSelect} onFlowChange={triggerAutoSave} />
+        </div>
+        {activeTab === "app" && <AppView />}
       </div>
       {selectedNode && (
         <NodePanel
