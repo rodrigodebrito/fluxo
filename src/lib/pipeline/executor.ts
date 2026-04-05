@@ -182,10 +182,17 @@ async function uploadImages(blobUrls: string[]): Promise<string[]> {
 
   const publicUrls: string[] = [];
   const blobsToUpload: string[] = [];
+  const currentOrigin = window.location.origin;
 
   for (const url of blobUrls) {
     if (url.startsWith("http://") || url.startsWith("https://")) {
       publicUrls.push(url);
+    } else if (url.startsWith("blob:")) {
+      // Blob URLs only work on the domain that created them
+      if (!url.startsWith(`blob:${currentOrigin}/`)) {
+        throw new Error("Imagens expiradas. Remova e adicione as imagens novamente.");
+      }
+      blobsToUpload.push(url);
     } else {
       blobsToUpload.push(url);
     }
@@ -207,7 +214,9 @@ async function uploadImages(blobUrls: string[]): Promise<string[]> {
     body: formData,
   });
 
-  const data = await uploadResponse.json();
+  const text = await uploadResponse.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do servidor: ${text.slice(0, 200)}`); }
   if (!uploadResponse.ok) {
     throw new Error(data.error || "Erro ao fazer upload das imagens");
   }
