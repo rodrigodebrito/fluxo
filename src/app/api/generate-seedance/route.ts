@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const costModel = sdModel.includes("seedance-1") ? "seedance15" : "seedance";
+  const costModel = "seedance";
   const { hasCredits, cost } = await verifyCredits(user.id, costModel, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 

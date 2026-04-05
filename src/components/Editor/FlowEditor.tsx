@@ -39,8 +39,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "16:9", enhancePrompt: true };
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
-    case "model-seedance15":
-      return { label: "Seedance V1.5 Pro", model: "seedance15", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-1.5-pro", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, fixedLens: false };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
     case "model-gpt-image-txt":
@@ -818,10 +816,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
         const perSec = isFast ? (is720 ? 33 : 15.5) : (is720 ? 41 : 19);
         costPerRun = Math.round(perSec * (pipeline.sdDuration || 8));
-      } else if (m === "seedance15") {
-        const perSec = pipeline.sdResolution === "1080p" ? 7.5 : pipeline.sdResolution === "720p" ? 3.5 : 1.75;
-        const base = Math.round(perSec * (pipeline.sdDuration || 8));
-        costPerRun = pipeline.generateAudio ? base * 2 : base;
       } else if (m === "kling") {
         const perSec = pipeline.klingMode === "pro"
           ? (pipeline.generateAudio ? 27 : 18)
@@ -1328,7 +1322,6 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Video models",
     children: [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
-      { type: "model-seedance15", label: "Seedance V1.5 Pro" },
       { type: "model-seedance", label: "Seedance 2.0" },
       { type: "model-kling", label: "Kling 3" },
       { type: "klingElement", label: "Kling Element" },

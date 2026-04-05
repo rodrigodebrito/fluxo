@@ -33,7 +33,6 @@ const VEO_MODELS = [
 ];
 const VEO_DURATIONS = ["4s", "6s", "8s"];
 const SD_RESOLUTIONS = ["480p", "720p"];
-const SD15_RESOLUTIONS = ["480p", "720p", "1080p"];
 const SD_MODELS = [
   { value: "bytedance/seedance-2", label: "Seedance 2.0" },
   { value: "bytedance/seedance-2-fast", label: "Seedance Fast" },
@@ -93,7 +92,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
   const webSearch = (node.data.webSearch as boolean) ?? false;
   const fixedLens = (node.data.fixedLens as boolean) ?? false;
   const isSeedance = model === "seedance";
-  const isSeedance15 = model === "seedance15";
   const isKling = model === "kling";
   const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img";
 
@@ -122,12 +120,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
     if (isFast) { perSec = is720 ? 33 : 15.5; }
     else { perSec = is720 ? 41 : 19; }
     costPerRun = Math.round(perSec * sdDuration);
-  }
-  if (model === "seedance15") {
-    // Per-second base rate (no audio)
-    const perSec = sdResolution === "1080p" ? 7.5 : sdResolution === "720p" ? 3.5 : 1.75;
-    const base = Math.round(perSec * sdDuration);
-    costPerRun = generateAudio ? base * 2 : base;
   }
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);
@@ -289,7 +281,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
               onChange={(e) => update({ aspectRatio: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(isGptImage ? GPT_ASPECT_RATIOS : isKling ? KLING_ASPECT_RATIOS : (isSeedance || isSeedance15) ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
+              {(isGptImage ? GPT_ASPECT_RATIOS : isKling ? KLING_ASPECT_RATIOS : isSeedance ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
                 <option key={ar.value} value={ar.value}>{ar.label}</option>
               ))}
             </select>
@@ -346,7 +338,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
               onChange={(e) => update({ sdResolution: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(isSeedance15 ? SD15_RESOLUTIONS : SD_RESOLUTIONS).map((r) => (
+              {SD_RESOLUTIONS.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
@@ -377,34 +369,22 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Duration</span>
-              <span className="text-zinc-500 text-xs cursor-help" title={isSeedance15 ? "Duracao: 4, 8 ou 12 segundos" : "Duracao do video em segundos (4-15)"}>i</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (4-15)">i</span>
             </div>
-            {isSeedance15 ? (
-              <select
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={4}
+                max={15}
+                step={1}
                 value={sdDuration}
                 onChange={(e) => update({ sdDuration: parseInt(e.target.value) })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-              >
-                <option value={4}>4s</option>
-                <option value={8}>8s</option>
-                <option value={12}>12s</option>
-              </select>
-            ) : (
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min={4}
-                  max={15}
-                  step={1}
-                  value={sdDuration}
-                  onChange={(e) => update({ sdDuration: parseInt(e.target.value) })}
-                  className="flex-1 accent-purple-500"
-                />
+                className="flex-1 accent-purple-500"
+              />
                 <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
                   {sdDuration}
                 </span>
               </div>
-            )}
           </div>
         )}
 
@@ -419,20 +399,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
             />
             <span className="text-sm text-zinc-300">Generate Audio</span>
             <span className="text-zinc-500 text-xs cursor-help" title="Gera audio junto com o video (aumenta custo)">i</span>
-          </label>
-        )}
-
-        {/* Camera Fixed (Seedance 1.5 Pro) */}
-        {params.includes("fixedLens") && (
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={fixedLens}
-              onChange={(e) => update({ fixedLens: e.target.checked })}
-              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
-            />
-            <span className="text-sm text-zinc-300">Camera Fixed</span>
-            <span className="text-zinc-500 text-xs cursor-help" title="Camera estatica e estavel. Desative para movimentos cinematicos">i</span>
           </label>
         )}
 

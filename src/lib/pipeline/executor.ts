@@ -476,32 +476,6 @@ export async function startGeneration(
     return data.taskId;
   }
 
-  // Seedance V1.5 Pro
-  if (options?.model === "seedance15") {
-    const response = await fetch("/api/generate-seedance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        sdModel: "bytedance/seedance-1.5-pro",
-        firstFrameUrl: publicUrls[0] || undefined,
-        lastFrameUrl: publicUrls[1] || undefined,
-        resolution: options?.sdResolution || "720p",
-        aspectRatio: options?.aspectRatio || "16:9",
-        duration: options?.sdDuration || 8,
-        generateAudio: options?.generateAudio ?? true,
-        fixedLens: options?.fixedLens ?? false,
-        seed: options?.seed ?? undefined,
-        cost: options?.cost,
-      }),
-    });
-    const sd15Text = await response.text();
-    let data;
-    try { data = JSON.parse(sd15Text); } catch { throw new Error(`Resposta invalida do servidor: ${sd15Text.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedance 1.5 Pro");
-    return data.taskId;
-  }
-
   // Seedance 2.0
   if (options?.model === "seedance") {
     // Upload reference images separadamente
