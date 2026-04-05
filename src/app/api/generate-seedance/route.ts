@@ -1,3 +1,15 @@
+import { NextResponse } from "next/server";
+
+// Seedance temporariamente indisponivel
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function POST(_request: Request) {
+  return NextResponse.json(
+    { error: "Seedance esta temporariamente indisponivel. Tente novamente mais tarde." },
+    { status: 503 }
+  );
+}
+
+/*
 import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits } from "@/lib/auth-guard";
@@ -106,3 +118,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+*/
