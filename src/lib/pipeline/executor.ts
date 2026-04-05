@@ -483,7 +483,7 @@ export async function startGeneration(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        sdModel: "bytedance/seedance-1-5-pro",
+        sdModel: "bytedance/seedance-1.5-pro",
         firstFrameUrl: publicUrls[0] || undefined,
         lastFrameUrl: publicUrls[1] || undefined,
         resolution: options?.sdResolution || "720p",

@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface Template {
+  id: string;
+  name: string;
+  content: string;
+  fields?: Record<string, string>;
+  created_at: string;
+}
 
 interface Props {
   onBack: () => void;
@@ -14,15 +22,38 @@ const INTERPRETATION_MODES = [
   { value: "exploratory", label: "Exploratorio", description: "Explorar ideias livremente, respeitando as regras" },
 ];
 
-const META_SYSTEM_PROMPT = `You are an expert prompt engineer. Based on the user's specifications below, generate a professional, detailed, and optimized system prompt.
+const META_SYSTEM_PROMPT = `You are a world-class prompt engineer who designs system prompts for AI models. Your job is to take the user's rough specifications and transform them into a highly detailed, professional-grade system prompt.
 
-The generated system prompt must:
-- Be written in English (AI models perform better with English prompts)
-- Be direct, specific, and actionable
-- Include all rules and restrictions provided
-- Be formatted as plain text, ready to use as a system prompt
-- Follow the interpretation mode specified by the user
-- Output ONLY the system prompt text, nothing else. No explanations, no titles, no markdown.`;
+## How to write excellent system prompts:
+
+1. **Open with a clear role definition**: Start with "You are an expert [role] specializing in [domain]." — be specific about the expertise area.
+
+2. **Add domain-specific technical vocabulary**: If the target is video generation, use cinematic terms (close-up shot, dolly in, shallow depth of field, soft natural lighting). If it's image generation, use photography terms. If it's text, use writing craft terms. Match the vocabulary to the domain.
+
+3. **Write actionable rules, not vague guidelines**: Instead of "make it good", write "describe the scene visually: camera angle, lighting, movement, environment". Instead of "be detailed", write "include specific details: product placement, hand movements, facial expressions".
+
+4. **Include process instructions**: Tell the AI HOW to approach the task step by step. Example: "First analyze the input image to identify key visual elements. Then construct a scene description incorporating those elements. Finally, add technical specifications for camera and lighting."
+
+5. **Specify output constraints clearly**: What format, what length, what to include, what to exclude. Be explicit about what the AI should NOT do.
+
+6. **Add professional patterns from the domain**: For UGC content, mention "authentic and organic feel". For marketing, mention "conversion-focused". For technical writing, mention "precision and clarity". Use the terminology that professionals in that field actually use.
+
+7. **Include concrete examples of the kind of language expected**: Instead of just saying "use cinematic language", also show examples: "close-up shot", "soft natural lighting", "slow dolly in".
+
+## Interpretation modes:
+- Strict: Use ONLY what the user provided. Do not add anything beyond their specifications.
+- Conservative: Organize and clarify the user's input without adding creative content.
+- Balanced: Fill gaps with industry-standard practices and professional patterns.
+- Creative: Infer tone, structure, and add professional-level detail as a senior expert would.
+- Exploratory: Freely explore ideas and add rich detail while respecting the stated rules.
+
+## Critical rules:
+- The output must be written in English (AI models perform better with English prompts)
+- Output ONLY the system prompt text — no explanations, no titles, no markdown formatting, no code blocks
+- The prompt must be immediately usable as-is when pasted into a system prompt field
+- Be specific and technical, never generic or vague
+- Every rule the user mentions must be included verbatim or strengthened, never weakened or omitted
+- The prompt should read like it was written by a senior professional in that specific field`;
 
 export default function SystemPromptGenerator({ onBack }: Props) {
   const [fields, setFields] = useState({
@@ -41,6 +72,56 @@ export default function SystemPromptGenerator({ onBack }: Props) {
   const [saveModal, setSaveModal] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Carregar templates ao abrir o painel
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const res = await fetch("/api/templates");
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const loadTemplate = (tpl: Template) => {
+    setResult(tpl.content);
+    if (tpl.fields) {
+      setFields({
+        job: tpl.fields.job || "",
+        targetEnv: tpl.fields.targetEnv || "",
+        inputs: tpl.fields.inputs || "",
+        coreOperation: tpl.fields.coreOperation || "",
+        desiredOutput: tpl.fields.desiredOutput || "",
+        rules: tpl.fields.rules || "",
+        interpretationMode: tpl.fields.interpretationMode || "balanced",
+      });
+    }
+    setShowTemplates(false);
+  };
+
+  const deleteTemplate = async (id: string) => {
+    try {
+      const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+      }
+    } catch {
+      // silently fail
+    }
+  };
 
   const updateField = (key: string, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -116,6 +197,7 @@ export default function SystemPromptGenerator({ onBack }: Props) {
       setTemplateName("");
       setSavedMsg("Template salvo!");
       setTimeout(() => setSavedMsg(""), 3000);
+      fetchTemplates();
     } catch (err) {
       alert("Erro: " + (err instanceof Error ? err.message : "Erro"));
     } finally {
@@ -135,10 +217,20 @@ export default function SystemPromptGenerator({ onBack }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-semibold text-white">Gerador de System Prompt</h1>
           <p className="text-xs text-zinc-500">Preencha os campos e gere um system prompt profissional com IA</p>
         </div>
+        <button
+          onClick={() => { setShowTemplates(!showTemplates); if (!showTemplates && templates.length === 0) fetchTemplates(); }}
+          className={`px-4 py-2 rounded-lg text-xs font-medium border transition-colors ${
+            showTemplates
+              ? "bg-purple-600/20 border-purple-500/30 text-purple-300"
+              : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+          }`}
+        >
+          Meus Templates ({templates.length})
+        </button>
       </div>
 
       {/* Content */}
@@ -291,6 +383,70 @@ export default function SystemPromptGenerator({ onBack }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Templates Panel */}
+      {showTemplates && (
+        <div className="fixed inset-0 z-40 flex">
+          <div className="flex-1" onClick={() => setShowTemplates(false)} />
+          <div className="w-[380px] bg-zinc-900 border-l border-zinc-700 h-full flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+              <h3 className="text-sm font-semibold text-white">Meus Templates</h3>
+              <button onClick={() => setShowTemplates(false)} className="text-zinc-500 hover:text-white transition-colors">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {loadingTemplates ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                </div>
+              ) : templates.length === 0 ? (
+                <p className="text-sm text-zinc-600 text-center py-12 italic">
+                  Nenhum template salvo ainda
+                </p>
+              ) : (
+                templates.map((tpl) => (
+                  <div
+                    key={tpl.id}
+                    className="bg-zinc-800 border border-zinc-700 rounded-lg p-4 hover:border-purple-500/40 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">
+                        {tpl.name}
+                      </h4>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteTemplate(tpl.id); }}
+                        className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Excluir template"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-xs text-zinc-500 line-clamp-2 mb-3">
+                      {tpl.content.substring(0, 120)}...
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-zinc-600">
+                        {new Date(tpl.created_at).toLocaleDateString("pt-BR")}
+                      </span>
+                      <button
+                        onClick={() => loadTemplate(tpl)}
+                        className="px-3 py-1 rounded text-xs font-medium bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/30 transition-colors"
+                      >
+                        Carregar
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save Modal */}
       {saveModal && (

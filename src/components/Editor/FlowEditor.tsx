@@ -40,7 +40,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-seedance15":
-      return { label: "Seedance V1.5 Pro", model: "seedance15", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-1-5-pro", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, fixedLens: false };
+      return { label: "Seedance V1.5 Pro", model: "seedance15", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-1.5-pro", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, fixedLens: false };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
     case "model-gpt-image-txt":
