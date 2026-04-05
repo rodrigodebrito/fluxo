@@ -55,6 +55,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Any LLM", llmModel: "gpt-4o-mini", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
     case "router":
       return { label: "Router", outputCount: 2 };
+    case "promptConcat":
+      return { label: "Prompt Concatenator", inputCount: 2, additionalText: "" };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -273,6 +275,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       else if (sourceNode.type === "model") edgeColor = "#22c55e";
       else if (sourceNode.type === "anyLLM") edgeColor = "#f59e0b";
       else if (sourceNode.type === "router") edgeColor = "#06b6d4";
+      else if (sourceNode.type === "promptConcat") edgeColor = "#a855f7";
 
       let finalTargetHandle = targetHandleId;
 
@@ -332,6 +335,39 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           if (!freeHandle) return;
           finalTargetHandle = freeHandle;
         }
+      }
+
+      // Prompt → promptConcat: route to next free prompt handle
+      if (sourceNode.type === "prompt" && targetNode.type === "promptConcat") {
+        const inputCount = (targetNode.data.inputCount as number) || 2;
+        const occupiedHandles = new Set(
+          edgesRef.current
+            .filter((e) => e.target === targetId && e.targetHandle?.startsWith("prompt-"))
+            .map((e) => e.targetHandle)
+        );
+        if (finalTargetHandle?.startsWith("prompt-") && !occupiedHandles.has(finalTargetHandle)) {
+          // user chose specific handle
+        } else {
+          let freeHandle: string | null = null;
+          for (let i = 1; i <= inputCount; i++) {
+            if (!occupiedHandles.has(`prompt-${i}`)) { freeHandle = `prompt-${i}`; break; }
+          }
+          if (!freeHandle) return;
+          finalTargetHandle = freeHandle;
+        }
+      }
+
+      // PromptConcat → model: output goes to prompt handle
+      if (sourceNode.type === "promptConcat" && targetNode.type === "model") {
+        if (finalTargetHandle !== "negative-prompt") {
+          finalTargetHandle = "prompt";
+        }
+      }
+
+      // PromptConcat → anyLLM: output goes to prompt or system-prompt handle
+      if (sourceNode.type === "promptConcat" && targetNode.type === "anyLLM") {
+        const promptOccupied = edgesRef.current.some((e) => e.target === targetId && e.targetHandle === "prompt");
+        finalTargetHandle = promptOccupied ? "system-prompt" : "prompt";
       }
 
       // Prompt → anyLLM: auto-route to prompt or system-prompt handle
@@ -640,7 +676,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (targetNodeId && targetNodeId !== connectingFrom.current.nodeId) {
           const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
 
-          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat" || targetNode.type === "anyLLM" || targetNode.type === "router")) {
+          if (targetNode && (targetNode.type === "model" || targetNode.type === "klingElement" || targetNode.type === "lastFrame" || targetNode.type === "videoConcat" || targetNode.type === "anyLLM" || targetNode.type === "router" || targetNode.type === "promptConcat")) {
             // Verificar se a conexão já foi feita pelo onConnect (evitar duplicata)
             const alreadyConnected = edgesRef.current.some(
               (e) => e.source === connectingFrom.current!.nodeId && e.target === targetNodeId
@@ -1268,6 +1304,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "imageInput", label: "File Input" },
       { type: "anyLLM", label: "Any LLM" },
       { type: "router", label: "Router" },
+      { type: "promptConcat", label: "Prompt Concatenator" },
       { type: "lastFrame", label: "Last Frame" },
       { type: "videoConcat", label: "Video Concat" },
     ],

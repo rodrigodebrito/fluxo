@@ -109,6 +109,30 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
         continue;
       }
 
+      // PromptConcat → Model: concatenate all connected prompts
+      if (sourceNode.type === "promptConcat" && edge.targetHandle === "prompt") {
+        const parts: string[] = [];
+        const inputCount = (sourceNode.data.inputCount as number) || 2;
+
+        // Collect prompts in order (prompt-1, prompt-2, ...)
+        for (let i = 1; i <= inputCount; i++) {
+          const promptEdge = edges.find((e) => e.target === sourceNode.id && e.targetHandle === `prompt-${i}`);
+          if (!promptEdge) continue;
+          const promptSource = resolveSource(promptEdge.source);
+          if (promptSource?.type === "prompt") {
+            const text = (promptSource.data.text as string) || "";
+            if (text.trim()) parts.push(text.trim());
+          }
+        }
+
+        // Add additional text from the node itself
+        const additionalText = (sourceNode.data.additionalText as string) || "";
+        if (additionalText.trim()) parts.push(additionalText.trim());
+
+        result.prompt = parts.join("\n\n");
+        continue;
+      }
+
       // AnyLLM → Model: detect LLM chain
       if (sourceNode.type === "anyLLM" && edge.targetHandle === "prompt") {
         // If LLM already has generated text, use it directly
@@ -126,7 +150,23 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
             const llmSource = nodes.find((n) => n.id === llmEdge.source);
             if (!llmSource) continue;
 
-            if (llmSource.type === "prompt" && llmEdge.targetHandle === "prompt") {
+            if (llmEdge.targetHandle === "prompt" && llmSource.type === "promptConcat") {
+              // Resolve promptConcat: concatenate all its inputs
+              const parts: string[] = [];
+              const pcInputCount = (llmSource.data.inputCount as number) || 2;
+              for (let pi = 1; pi <= pcInputCount; pi++) {
+                const pcEdge = edges.find((e) => e.target === llmSource.id && e.targetHandle === `prompt-${pi}`);
+                if (!pcEdge) continue;
+                const pcSrc = resolveSource(pcEdge.source);
+                if (pcSrc?.type === "prompt") {
+                  const t = (pcSrc.data.text as string) || "";
+                  if (t.trim()) parts.push(t.trim());
+                }
+              }
+              const pcAdditional = (llmSource.data.additionalText as string) || "";
+              if (pcAdditional.trim()) parts.push(pcAdditional.trim());
+              llmPrompt = parts.join("\n\n");
+            } else if (llmSource.type === "prompt" && llmEdge.targetHandle === "prompt") {
               llmPrompt = (llmSource.data.text as string) || "";
             } else if (llmSource.type === "prompt" && llmEdge.targetHandle === "system-prompt") {
               llmSystemPrompt = (llmSource.data.text as string) || "";

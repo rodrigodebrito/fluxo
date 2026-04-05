@@ -7,6 +7,7 @@ import LastFrameNode from "./LastFrameNode";
 import VideoConcatNode from "./VideoConcatNode";
 import AnyLLMNode from "./AnyLLMNode";
 import RouterNode from "./RouterNode";
+import PromptConcatNode from "./PromptConcatNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -18,4 +19,5 @@ export const nodeTypes = {
   videoConcat: VideoConcatNode,
   anyLLM: AnyLLMNode,
   router: RouterNode,
+  promptConcat: PromptConcatNode,
 };
