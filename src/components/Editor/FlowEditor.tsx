@@ -1370,12 +1370,30 @@ function ContextMenu({
     ? ALL_ITEMS.filter((item) => item.label.toLowerCase().includes(q))
     : [];
 
+  // Adjust position so menu doesn't overflow outside viewport
+  const menuMaxH = 400;
+  const wrapperRef = ref;
+
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    const el = wrapperRef.current;
+    const parent = el.offsetParent as HTMLElement | null;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const menuBottom = parentRect.top + y + menuMaxH;
+    const viewportH = window.innerHeight;
+    if (menuBottom > viewportH - 16) {
+      const adjusted = Math.max(16, y - (menuBottom - viewportH + 16));
+      el.style.top = `${adjusted}px`;
+    }
+  }, [y]);
+
   return (
     <div ref={ref} className="absolute z-50" style={{ left: x, top: y }}>
       {/* Main menu */}
-      <div className="bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl w-[220px] py-1.5 overflow-hidden">
+      <div className="bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl w-[220px] py-1.5 flex flex-col" style={{ maxHeight: `${menuMaxH}px` }}>
         {/* Search */}
-        <div className="px-2.5 pb-1.5 pt-1">
+        <div className="px-2.5 pb-1.5 pt-1 shrink-0">
           <div className="flex items-center gap-2 bg-zinc-800/80 border border-zinc-700 rounded-lg px-2.5 py-1.5">
             <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -1391,11 +1409,11 @@ function ContextMenu({
           </div>
         </div>
 
-        <div className="h-px bg-zinc-800 mx-2.5 my-1" />
+        <div className="h-px bg-zinc-800 mx-2.5 my-1 shrink-0" />
 
         {isSearching ? (
           // Search results
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className="overflow-y-auto nowheel">
             {searchResults.length > 0 ? searchResults.map((item) => (
               <button
                 key={item.type}
@@ -1411,7 +1429,7 @@ function ContextMenu({
           </div>
         ) : (
           // Menu with inline expanding categories
-          <div>
+          <div className="overflow-y-auto nowheel">
             {MENU_STRUCTURE.map((item, i) => (
               item.children ? (
                 <div key={item.label}>
