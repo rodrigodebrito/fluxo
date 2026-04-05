@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("uploads")
+        .from("upload")
         .upload(fileName, file, {
           contentType: file.type,
           upsert: false,
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { data: publicUrl } = supabase.storage
-        .from("uploads")
+        .from("upload")
         .getPublicUrl(fileName);
 
       urls.push(publicUrl.publicUrl);
