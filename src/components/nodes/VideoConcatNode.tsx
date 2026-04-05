@@ -4,10 +4,10 @@ import { Handle, Position, type NodeProps, useReactFlow, useStore, useUpdateNode
 import { useCallback, useState, useEffect } from "react";
 
 // Pre-load a video from blob and return ready-to-play element
-async function preloadVideo(blob: Blob): Promise<HTMLVideoElement> {
+async function preloadVideo(blob: Blob): Promise<{ video: HTMLVideoElement; blob: Blob }> {
   const url = URL.createObjectURL(blob);
   const video = document.createElement("video");
-  video.muted = true;
+  video.muted = true; // muted for preload only (autoplay policy)
   video.playsInline = true;
   video.preload = "auto";
   video.src = url;
@@ -21,14 +21,16 @@ async function preloadVideo(blob: Blob): Promise<HTMLVideoElement> {
   video.currentTime = 0;
   await new Promise<void>((r) => { video.onseeked = () => r(); });
 
-  return video;
+  return { video, blob };
 }
 
-// Play a pre-loaded video on canvas
+// Play a pre-loaded video on canvas, connecting its audio to the destination
 async function playVideoToCanvas(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
+  audioCtx: AudioContext,
+  audioDest: MediaStreamAudioDestinationNode,
 ): Promise<void> {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
@@ -36,13 +38,18 @@ async function playVideoToCanvas(
   // Draw first frame before playing to avoid any black flash
   ctx.drawImage(video, 0, 0);
 
+  // Connect audio from this video to the mixed audio destination
+  video.muted = false;
+  video.volume = 1;
+  const source = audioCtx.createMediaElementSource(video);
+  source.connect(audioDest);
+
   await video.play();
 
   await new Promise<void>((resolve) => {
     let animId: number;
     const draw = () => {
       if (video.ended) {
-        // Draw the final frame one last time to keep it on canvas
         ctx.drawImage(video, 0, 0);
         resolve();
         return;
@@ -59,6 +66,7 @@ async function playVideoToCanvas(
   });
 
   video.pause();
+  source.disconnect();
 }
 
 export default function VideoConcatNode({ id, data }: NodeProps) {
@@ -125,13 +133,13 @@ export default function VideoConcatNode({ id, data }: NodeProps) {
 
     try {
       // Download and pre-load all videos
-      const videos: HTMLVideoElement[] = [];
+      const loaded: { video: HTMLVideoElement; blob: Blob }[] = [];
       for (let i = 0; i < connectedVideos.length; i++) {
         setProgress(`Baixando video ${i + 1}/${connectedVideos.length}...`);
         const resp = await fetch(connectedVideos[i].url);
         const blob = await resp.blob();
         setProgress(`Carregando video ${i + 1}/${connectedVideos.length}...`);
-        videos.push(await preloadVideo(blob));
+        loaded.push(await preloadVideo(blob));
       }
 
       // Setup canvas with dimensions from first video
@@ -139,28 +147,41 @@ export default function VideoConcatNode({ id, data }: NodeProps) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas context indisponivel");
-      canvas.width = videos[0].videoWidth;
-      canvas.height = videos[0].videoHeight;
+      canvas.width = loaded[0].video.videoWidth;
+      canvas.height = loaded[0].video.videoHeight;
 
       // Draw first frame before starting recorder
-      ctx.drawImage(videos[0], 0, 0);
+      ctx.drawImage(loaded[0].video, 0, 0);
 
-      // Start recording
-      const stream = canvas.captureStream(30);
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-          ? "video/webm;codecs=vp9"
-          : "video/webm",
+      // Setup AudioContext to capture audio from videos
+      const audioCtx = new AudioContext();
+      const audioDest = audioCtx.createMediaStreamDestination();
+
+      // Combine canvas video stream + audio stream
+      const videoStream = canvas.captureStream(30);
+      const combinedStream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...audioDest.stream.getAudioTracks(),
+      ]);
+
+      // Start recording with combined stream (video + audio)
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+          ? "video/webm;codecs=vp9,opus"
+          : MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+            ? "video/webm;codecs=vp9"
+            : "video/webm",
         videoBitsPerSecond: 8_000_000,
+        audioBitsPerSecond: 128_000,
       });
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.start();
 
-      // Play each pre-loaded video sequentially (no loading gap between them)
-      for (let i = 0; i < videos.length; i++) {
-        setProgress(`Processando video ${i + 1}/${videos.length}...`);
-        await playVideoToCanvas(videos[i], canvas, ctx);
+      // Play each pre-loaded video sequentially with audio
+      for (let i = 0; i < loaded.length; i++) {
+        setProgress(`Processando video ${i + 1}/${loaded.length}...`);
+        await playVideoToCanvas(loaded[i].video, canvas, ctx, audioCtx, audioDest);
       }
 
       // Stop recording and get result
@@ -169,8 +190,9 @@ export default function VideoConcatNode({ id, data }: NodeProps) {
         recorder.stop();
       });
 
-      // Cleanup video elements
-      for (const v of videos) {
+      // Cleanup
+      audioCtx.close();
+      for (const { video: v } of loaded) {
         const src = v.src;
         v.src = "";
         if (src.startsWith("blob:")) URL.revokeObjectURL(src);
