@@ -849,22 +849,24 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         cost: costPerRun,
       };
 
-      // Text Iterator: gerar uma task por item, cada com prompt diferente
+      // Text Iterator: gerar uma task por item com delay entre cada (evita rate limit)
       // Runs normal: gerar N tasks com o mesmo prompt
-      let taskPromises: Promise<string>[];
+      const taskIds: string[] = [];
 
       if (pipeline.iteratorPrompts && pipeline.iteratorPrompts.length > 0) {
-        taskPromises = pipeline.iteratorPrompts.map((iterPrompt) =>
-          startGeneration(iterPrompt, pipeline.localImageUrls, genOptions)
-        );
+        for (let i = 0; i < pipeline.iteratorPrompts.length; i++) {
+          if (i > 0) await new Promise((r) => setTimeout(r, 1500)); // 1.5s delay entre tasks
+          const id = await startGeneration(pipeline.iteratorPrompts[i], pipeline.localImageUrls, genOptions);
+          taskIds.push(id);
+        }
       } else {
         const runCount = pipeline.runs;
-        taskPromises = Array.from({ length: runCount }, () =>
-          startGeneration(pipeline.prompt, pipeline.localImageUrls, genOptions)
-        );
+        for (let i = 0; i < runCount; i++) {
+          if (i > 0 && runCount > 1) await new Promise((r) => setTimeout(r, 1500));
+          const id = await startGeneration(pipeline.prompt, pipeline.localImageUrls, genOptions);
+          taskIds.push(id);
+        }
       }
-
-      const taskIds = await Promise.all(taskPromises);
 
       // Atualizar creditos na UI apos cobranca
       window.dispatchEvent(new Event("fluxo-credits-update"));
