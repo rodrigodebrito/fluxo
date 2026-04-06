@@ -1,11 +1,29 @@
 const QUEUE_BASE = "https://queue.fal.run";
 
-// Endpoints map
-export const FAL_ENDPOINTS: Record<string, string> = {
-  "kling-o3-i2v": "fal-ai/kling-video/o3/pro/image-to-video",
-  "kling-o3-edit": "fal-ai/kling-video/o3/pro/video-to-video/edit",
-  "kling-o1-ref": "fal-ai/kling-video/o1/video-to-video/reference",
+// Endpoints map — tier (std/pro) is resolved dynamically
+const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
+  "kling-o3-i2v": {
+    std: "fal-ai/kling-video/o3/standard/image-to-video",
+    pro: "fal-ai/kling-video/o3/pro/image-to-video",
+  },
+  "kling-o3-edit": {
+    std: "fal-ai/kling-video/o3/standard/video-to-video/edit",
+    pro: "fal-ai/kling-video/o3/pro/video-to-video/edit",
+  },
+  "kling-o1-ref": {
+    std: "fal-ai/kling-video/o1/standard/video-to-video/reference",
+    pro: "fal-ai/kling-video/o1/video-to-video/reference",
+  },
 };
+
+export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro"): string | null {
+  const template = FAL_ENDPOINT_TEMPLATES[model];
+  if (!template) return null;
+  return template[tier];
+}
+
+// Keep a flat lookup for validation
+export const FAL_MODELS = new Set(Object.keys(FAL_ENDPOINT_TEMPLATES));
 
 // Retry config (same pattern as kie.ts)
 const MAX_RETRIES = 3;

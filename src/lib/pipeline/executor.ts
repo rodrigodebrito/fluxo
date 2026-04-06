@@ -44,6 +44,7 @@ interface PipelineData {
   keepAudio?: boolean;
   klingO3Duration?: number;
   klingO1Duration?: number;
+  falTier?: "std" | "pro";
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -90,6 +91,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.keepAudio = (modelNode.data.keepAudio as boolean) ?? true;
   result.klingO3Duration = (modelNode.data.klingO3Duration as number) || 5;
   result.klingO1Duration = (modelNode.data.klingO1Duration as number) || 5;
+  result.falTier = (modelNode.data.falTier as "std" | "pro") || "pro";
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -438,6 +440,7 @@ export async function startGeneration(
     keepAudio?: boolean;
     klingO3Duration?: number;
     klingO1Duration?: number;
+    falTier?: "std" | "pro";
     cost?: number;
   }
 ): Promise<string> {
@@ -494,6 +497,7 @@ export async function startGeneration(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: options.model,
+        tier: options.falTier || "pro",
         prompt,
         negativePrompt: undefined,
         imageUrls: publicUrls.length > 0 ? publicUrls : undefined,

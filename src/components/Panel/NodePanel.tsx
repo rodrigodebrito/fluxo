@@ -109,6 +109,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const keepAudio = (node.data.keepAudio as boolean) ?? true;
   const klingO3Duration = (node.data.klingO3Duration as number) || 5;
   const klingO1Duration = (node.data.klingO1Duration as number) || 5;
+  const falTier = (node.data.falTier as string) || "pro";
 
   const selectedModel = AVAILABLE_MODELS.find((m) => m.id === model);
   const isVideo = selectedModel?.type === "video";
@@ -133,12 +134,16 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     costPerRun = perSec * klingDuration;
   }
   if (model === "kling-o3-i2v") {
-    const perSec = generateAudio ? 14 : 10;
+    const isPro = falTier === "pro";
+    const perSec = isPro
+      ? (generateAudio ? 21 : 17)
+      : (generateAudio ? 17 : 13);
     costPerRun = perSec * klingO3Duration;
   }
   if (model === "kling-o3-edit" || model === "kling-o1-ref") {
+    const isPro = falTier === "pro";
     const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
-    costPerRun = 17 * dur;
+    costPerRun = (isPro ? 25 : 19) * dur;
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -230,6 +235,24 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                 {klingDuration}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* fal.ai Tier (Standard/Pro) */}
+        {params.includes("falTier") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Quality</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Standard = mais rapido e barato, Pro = melhor qualidade">i</span>
+            </div>
+            <select
+              value={falTier}
+              onChange={(e) => update({ falTier: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="std">Standard</option>
+              <option value="pro">Pro</option>
+            </select>
           </div>
         )}
 

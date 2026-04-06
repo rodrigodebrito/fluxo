@@ -83,7 +83,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
-    params: ["klingO3Duration", "aspectRatio", "generateAudio", "cfgScale", "runs"],
+    params: ["falTier", "klingO3Duration", "aspectRatio", "generateAudio", "cfgScale", "runs"],
     dynamicElements: true,
   },
   {
@@ -91,13 +91,13 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Kling O3 Edit Video",
     type: "video",
     description: "Editar video com IA (Kling O3 via fal.ai)",
-    costPerRun: 150,
+    costPerRun: 125,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "video-1", label: "Video*", required: true },
       { id: "image-1", label: "Image 1", required: false },
     ],
-    params: ["keepAudio", "runs"],
+    params: ["falTier", "keepAudio", "runs"],
     dynamicElements: true,
   },
   {
@@ -105,13 +105,13 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Kling O1 Reference",
     type: "video",
     description: "Video de referencia (Kling O1 via fal.ai)",
-    costPerRun: 150,
+    costPerRun: 125,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "video-1", label: "Ref Video*", required: true },
       { id: "image-1", label: "Image 1", required: false },
     ],
-    params: ["klingO1Duration", "aspectRatio", "keepAudio", "runs"],
+    params: ["falTier", "klingO1Duration", "aspectRatio", "keepAudio", "runs"],
     dynamicElements: true,
   },
   {

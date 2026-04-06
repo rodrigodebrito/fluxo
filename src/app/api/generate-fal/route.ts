@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { submitFalTask, buildFalInput, FAL_ENDPOINTS } from "@/lib/ai/fal";
+import { submitFalTask, buildFalInput, getFalEndpoint, FAL_MODELS } from "@/lib/ai/fal";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
@@ -16,10 +16,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { model, cost } = body;
+  const { model, cost, tier } = body;
 
-  if (!model || !FAL_ENDPOINTS[model]) {
+  if (!model || !FAL_MODELS.has(model)) {
     return NextResponse.json({ error: `Modelo fal.ai invalido: ${model}` }, { status: 400 });
+  }
+
+  const endpoint = getFalEndpoint(model, tier || "pro");
+  if (!endpoint) {
+    return NextResponse.json({ error: `Endpoint fal.ai nao encontrado: ${model}/${tier}` }, { status: 400 });
   }
 
   const { hasCredits, cost: finalCost } = await verifyCredits(user.id, model, cost);
@@ -36,7 +41,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const endpoint = FAL_ENDPOINTS[model];
     const input = buildFalInput({
       model,
       prompt,

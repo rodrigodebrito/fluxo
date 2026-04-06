@@ -42,11 +42,11 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
     case "model-kling-o3-i2v":
-      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, elementCount: 0 };
+      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, falTier: "pro", elementCount: 0 };
     case "model-kling-o3-edit":
-      return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, elementCount: 0 };
+      return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
-      return { label: "Kling O1 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, elementCount: 0 };
+      return { label: "Kling O1 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-gpt-image-txt":
       return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
@@ -834,11 +834,15 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           : (pipeline.generateAudio ? 20 : 14);
         costPerRun = perSec * (pipeline.klingDuration || 5);
       } else if (m === "kling-o3-i2v") {
-        const perSec = pipeline.generateAudio ? 14 : 10;
+        const isPro = pipeline.falTier === "pro";
+        const perSec = isPro
+          ? (pipeline.generateAudio ? 21 : 17)
+          : (pipeline.generateAudio ? 17 : 13);
         costPerRun = perSec * (pipeline.klingO3Duration || 5);
       } else if (m === "kling-o3-edit" || m === "kling-o1-ref") {
+        const isPro = pipeline.falTier === "pro";
         const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
-        costPerRun = 17 * dur; // ~$0.168/s
+        costPerRun = (isPro ? 25 : 19) * dur;
       }
 
       const genOptions = {
@@ -865,6 +869,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         keepAudio: pipeline.keepAudio,
         klingO3Duration: pipeline.klingO3Duration,
         klingO1Duration: pipeline.klingO1Duration,
+        falTier: pipeline.falTier,
         cost: costPerRun,
       };
 
