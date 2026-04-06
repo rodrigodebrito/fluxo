@@ -11,6 +11,40 @@ async function safeJson<T>(response: Response): Promise<T> {
   }
 }
 
+// Retry para chamadas de criacao de task (500, 502, 503, 429, network errors)
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [2000, 4000, 8000]; // backoff: 2s, 4s, 8s
+
+async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Retry on server errors and rate limits
+      if (attempt < MAX_RETRIES && (response.status >= 500 || response.status === 429)) {
+        const delay = response.status === 429 ? RETRY_DELAYS[attempt] * 2 : RETRY_DELAYS[attempt];
+        console.warn(`[kie] Attempt ${attempt + 1} failed (status ${response.status}), retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (attempt < MAX_RETRIES) {
+        console.warn(`[kie] Attempt ${attempt + 1} network error: ${lastError.message}, retrying in ${RETRY_DELAYS[attempt]}ms...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+        continue;
+      }
+    }
+  }
+
+  throw lastError || new Error("Falha apos multiplas tentativas");
+}
+
 interface CreateTaskInput {
   prompt: string;
   imageInput?: string[];
@@ -46,7 +80,7 @@ export async function createImageTask(
   apiKey: string,
   input: CreateTaskInput
 ): Promise<CreateTaskResponse> {
-  const response = await fetch(`${API_BASE}/createTask`, {
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -148,7 +182,7 @@ export async function createSeedanceTask(
     inputBody.seed = input.seed;
   }
 
-  const response = await fetch(`${API_BASE}/createTask`, {
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -221,7 +255,7 @@ export async function createGptImageTask(
     inputBody.background = input.background;
   }
 
-  const response = await fetch(`${API_BASE}/createTask`, {
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -266,7 +300,7 @@ export async function createKlingTask(
     inputBody.kling_elements = input.elements;
   }
 
-  const response = await fetch(`${API_BASE}/createTask`, {
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -324,7 +358,7 @@ export async function createVeoTask(
     body.seeds = input.seed;
   }
 
-  const response = await fetch("https://api.kie.ai/api/v1/veo/generate", {
+  const response = await fetchWithRetry("https://api.kie.ai/api/v1/veo/generate", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
