@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -8,6 +9,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Nao autenticado" }, { status: 401 });
   }
+
+  const rl = checkRateLimit(user.id, "upload");
+  if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const formData = await request.formData();
   const files = formData.getAll("files") as File[];

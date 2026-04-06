@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
-import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits } from "@/lib/auth-guard";
+import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 // Registra imagem na Asset Library e aguarda ficar pronta
 async function registerAndWaitAsset(apiKey: string, url: string): Promise<string> {
@@ -35,6 +35,9 @@ async function registerAndWaitAsset(apiKey: string, url: string): Promise<string
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
+
+  const rl = checkRateLimit(user.id, "generation");
+  if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const body = await request.json();
 

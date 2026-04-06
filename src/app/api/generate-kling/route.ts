@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createKlingTask } from "@/lib/ai/kie";
-import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits } from "@/lib/auth-guard";
+import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
+
+  const rl = checkRateLimit(user.id, "generation");
+  if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   let body;
   try {

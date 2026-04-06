@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits } from "@/lib/auth-guard";
+import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
+
+  const rl = checkRateLimit(user.id, "llm");
+  if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const body = await request.json();
   const { prompt, systemPrompt, model, temperature, imageUrls } = body;
