@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref";
 
 export interface ModelInfo {
   id: AIModel;
@@ -71,6 +71,48 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     ],
     params: ["klingMode", "klingDuration", "aspectRatio", "generateAudio", "runs"],
     dynamicElements: true, // suporta element handles dinamicos
+  },
+  {
+    id: "kling-o3-i2v",
+    name: "Kling O3",
+    type: "video",
+    description: "Image to Video (Kling O3 via fal.ai)",
+    costPerRun: 100,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
+      { id: "image-2", label: "Last Frame", required: false },
+    ],
+    params: ["klingO3Duration", "aspectRatio", "generateAudio", "cfgScale", "runs"],
+    dynamicElements: true,
+  },
+  {
+    id: "kling-o3-edit",
+    name: "Kling O3 Edit Video",
+    type: "video",
+    description: "Editar video com IA (Kling O3 via fal.ai)",
+    costPerRun: 150,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "video-1", label: "Video*", required: true },
+      { id: "image-1", label: "Image 1", required: false },
+    ],
+    params: ["keepAudio", "runs"],
+    dynamicElements: true,
+  },
+  {
+    id: "kling-o1-ref",
+    name: "Kling O1 Reference",
+    type: "video",
+    description: "Video de referencia (Kling O1 via fal.ai)",
+    costPerRun: 150,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "video-1", label: "Ref Video*", required: true },
+      { id: "image-1", label: "Image 1", required: false },
+    ],
+    params: ["klingO1Duration", "aspectRatio", "keepAudio", "runs"],
+    dynamicElements: true,
   },
   {
     id: "gpt-image-txt",

@@ -38,6 +38,12 @@ interface PipelineData {
   gptBackground?: string;
   // Seedance 1.5 Pro
   fixedLens?: boolean;
+  // fal.ai models
+  videoUrl?: string;
+  cfgScale?: number;
+  keepAudio?: boolean;
+  klingO3Duration?: number;
+  klingO1Duration?: number;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -80,6 +86,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.gptQuality = (modelNode.data.gptQuality as string) || "medium";
   result.gptBackground = (modelNode.data.gptBackground as string) || "opaque";
   result.fixedLens = (modelNode.data.fixedLens as boolean) ?? false;
+  result.cfgScale = (modelNode.data.cfgScale as number) ?? 0.5;
+  result.keepAudio = (modelNode.data.keepAudio as boolean) ?? true;
+  result.klingO3Duration = (modelNode.data.klingO3Duration as number) || 5;
+  result.klingO1Duration = (modelNode.data.klingO1Duration as number) || 5;
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -243,6 +253,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
           const handleId = edge.targetHandle || "image-1";
           imagesByHandle[handleId] = [...(imagesByHandle[handleId] || []), frameUrl];
         }
+      } else if (sourceNode.type === "videoInput") {
+        // VideoInput → Model: video URL para modelos fal.ai
+        const vUrl = (sourceNode.data.videoUrl as string) || "";
+        if (vUrl) result.videoUrl = vUrl;
       } else if (sourceNode.type === "model") {
         // Model → Model: usar a imagem de capa (resultado visível) como referência
         const coverUrl = sourceNode.data.coverResultUrl as string | null;
@@ -419,6 +433,11 @@ export async function startGeneration(
     gptQuality?: string;
     gptBackground?: string;
     fixedLens?: boolean;
+    videoUrl?: string;
+    cfgScale?: number;
+    keepAudio?: boolean;
+    klingO3Duration?: number;
+    klingO1Duration?: number;
     cost?: number;
   }
 ): Promise<string> {
@@ -443,6 +462,59 @@ export async function startGeneration(
     try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
     return data.taskId;
+  }
+
+  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref)
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref"];
+  if (options?.model && FAL_MODELS.includes(options.model)) {
+    // Upload element images for fal.ai
+    let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
+    if (options.klingElements && options.klingElements.length > 0) {
+      falElements = [];
+      for (const el of options.klingElements) {
+        const elPublicUrls = await uploadImages(el.imageUrls);
+        if (elPublicUrls.length > 0) {
+          falElements.push({
+            frontal_image_url: elPublicUrls[0],
+            reference_image_urls: elPublicUrls.slice(1),
+          });
+        }
+      }
+    }
+
+    // Upload video URL if it's a blob
+    let videoUrl = options.videoUrl;
+    if (videoUrl && videoUrl.startsWith("blob:")) {
+      const uploaded = await uploadImages([videoUrl]);
+      videoUrl = uploaded[0] || videoUrl;
+    }
+
+    const response = await fetch("/api/generate-fal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: options.model,
+        prompt,
+        negativePrompt: undefined,
+        imageUrls: publicUrls.length > 0 ? publicUrls : undefined,
+        videoUrl,
+        endImageUrl: publicUrls[1] || undefined,
+        duration: options.model === "kling-o3-i2v" ? (options.klingO3Duration || 5) :
+                  options.model === "kling-o1-ref" ? (options.klingO1Duration || 5) : undefined,
+        aspectRatio: options.aspectRatio || "16:9",
+        generateAudio: options.generateAudio ?? false,
+        cfgScale: options.cfgScale ?? 0.5,
+        keepAudio: options.keepAudio ?? true,
+        elements: falElements && falElements.length > 0 ? falElements : undefined,
+        cost: options.cost,
+      }),
+    });
+    const falText = await response.text();
+    let data;
+    try { data = JSON.parse(falText); } catch { throw new Error(`Resposta invalida do servidor: ${falText.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao fal.ai");
+    // Return taskId with falEndpoint encoded (separator: |)
+    return `${data.taskId}|${data.falEndpoint}`;
   }
 
   // Kling 3.0
@@ -605,6 +677,8 @@ export async function pollTaskStatus(
   cost?: number,
   prompt?: string
 ): Promise<{ resultUrls: string[]; error: string | null }> {
+  // Detect fal.ai tasks (taskId contains "|" separator with endpoint)
+  const isFal = taskId.includes("|");
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -626,7 +700,14 @@ export async function pollTaskStatus(
     }
 
     try {
-      const response = await fetch(`/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}`, { signal });
+      let statusUrl: string;
+      if (isFal) {
+        const [falTaskId, falEndpoint] = taskId.split("|");
+        statusUrl = `/api/status-fal?taskId=${encodeURIComponent(falTaskId)}&falEndpoint=${encodeURIComponent(falEndpoint)}`;
+      } else {
+        statusUrl = `/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}`;
+      }
+      const response = await fetch(statusUrl, { signal });
       const statusText = await response.text();
       let data;
       try { data = JSON.parse(statusText); } catch { console.error("[poll] Invalid JSON:", statusText.slice(0, 200)); continue; }

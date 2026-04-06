@@ -104,6 +104,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const klingMode = (node.data.klingMode as string) || "std";
   const klingDuration = (node.data.klingDuration as number) || 5;
 
+  // fal.ai models
+  const cfgScale = (node.data.cfgScale as number) ?? 0.5;
+  const keepAudio = (node.data.keepAudio as boolean) ?? true;
+  const klingO3Duration = (node.data.klingO3Duration as number) || 5;
+  const klingO1Duration = (node.data.klingO1Duration as number) || 5;
+
   const selectedModel = AVAILABLE_MODELS.find((m) => m.id === model);
   const isVideo = selectedModel?.type === "video";
   // Custo dinamico
@@ -125,6 +131,14 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);
     costPerRun = perSec * klingDuration;
+  }
+  if (model === "kling-o3-i2v") {
+    const perSec = generateAudio ? 14 : 10;
+    costPerRun = perSec * klingO3Duration;
+  }
+  if (model === "kling-o3-edit" || model === "kling-o1-ref") {
+    const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
+    costPerRun = 17 * dur;
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -217,6 +231,92 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               </span>
             </div>
           </div>
+        )}
+
+        {/* Kling O3 Duration (3-15s) */}
+        {params.includes("klingO3Duration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duration</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (3-15)">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={3}
+                max={15}
+                step={1}
+                value={klingO3Duration}
+                onChange={(e) => update({ klingO3Duration: parseInt(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
+                {klingO3Duration}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Kling O1 Duration (3-10s) */}
+        {params.includes("klingO1Duration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duration</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (3-10)">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={3}
+                max={10}
+                step={1}
+                value={klingO1Duration}
+                onChange={(e) => update({ klingO1Duration: parseInt(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
+                {klingO1Duration}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* CFG Scale (Kling O3 i2v) */}
+        {params.includes("cfgScale") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">CFG Scale</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Aderencia ao prompt (0 = mais criativo, 1 = mais fiel ao prompt)">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.1}
+                value={cfgScale}
+                onChange={(e) => update({ cfgScale: parseFloat(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
+                {cfgScale.toFixed(1)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Keep Audio (fal.ai video-to-video) */}
+        {params.includes("keepAudio") && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={keepAudio}
+              onChange={(e) => update({ keepAudio: e.target.checked })}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+            />
+            <span className="text-sm text-zinc-300">Keep Original Audio</span>
+            <span className="text-zinc-500 text-xs cursor-help" title="Manter o audio original do video de entrada">i</span>
+          </label>
         )}
 
         {/* Enhance Prompt (Veo) */}

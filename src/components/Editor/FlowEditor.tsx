@@ -41,6 +41,12 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
+    case "model-kling-o3-i2v":
+      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, elementCount: 0 };
+    case "model-kling-o3-edit":
+      return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, elementCount: 0 };
+    case "model-kling-o1-ref":
+      return { label: "Kling O1 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, elementCount: 0 };
     case "model-gpt-image-txt":
       return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
@@ -59,6 +65,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Prompt Concatenator", inputCount: 2, additionalText: "" };
     case "textIterator":
       return { label: "Text Iterator", items: ["", ""] };
+    case "videoInput":
+      return { label: "Video Input", videoUrl: "", fileName: "" };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -825,6 +833,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           ? (pipeline.generateAudio ? 27 : 18)
           : (pipeline.generateAudio ? 20 : 14);
         costPerRun = perSec * (pipeline.klingDuration || 5);
+      } else if (m === "kling-o3-i2v") {
+        const perSec = pipeline.generateAudio ? 14 : 10;
+        costPerRun = perSec * (pipeline.klingO3Duration || 5);
+      } else if (m === "kling-o3-edit" || m === "kling-o1-ref") {
+        const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
+        costPerRun = 17 * dur; // ~$0.168/s
       }
 
       const genOptions = {
@@ -846,6 +860,11 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         gptQuality: pipeline.gptQuality,
         gptBackground: pipeline.gptBackground,
         fixedLens: pipeline.fixedLens,
+        videoUrl: pipeline.videoUrl,
+        cfgScale: pipeline.cfgScale,
+        keepAudio: pipeline.keepAudio,
+        klingO3Duration: pipeline.klingO3Duration,
+        klingO1Duration: pipeline.klingO1Duration,
         cost: costPerRun,
       };
 
@@ -1395,6 +1414,7 @@ const MENU_STRUCTURE: MenuItem[] = [
     children: [
       { type: "prompt", label: "Prompt" },
       { type: "imageInput", label: "File Input" },
+      { type: "videoInput", label: "Video Input" },
       { type: "anyLLM", label: "Any LLM" },
       { type: "router", label: "Router" },
       { type: "promptConcat", label: "Prompt Concatenator" },
@@ -1417,6 +1437,9 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
       { type: "model-seedance", label: "Seedance 2.0" },
       { type: "model-kling", label: "Kling 3" },
+      { type: "model-kling-o3-i2v", label: "Kling O3" },
+      { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
+      { type: "model-kling-o1-ref", label: "Kling O1 Reference" },
       { type: "klingElement", label: "Kling Element" },
     ],
   },
