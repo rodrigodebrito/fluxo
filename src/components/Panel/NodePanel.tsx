@@ -163,8 +163,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const is3 = motionVersion === "3.0";
     const is1080 = motionMode === "1080p";
     const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
-    const motionDur = characterOrientation === "video" ? 10 : 30;
-    costPerRun = perSec * motionDur;
+    costPerRun = perSec * 10; // estimativa base 10s, custo real depende do video
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -466,8 +465,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ characterOrientation: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              <option value="image">Image (max 10s)</option>
-              <option value="video">Video (max 30s)</option>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
             </select>
           </div>
         )}
