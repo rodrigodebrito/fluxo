@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       elements: body.elements,
     });
 
+    console.log("[generate-fal] model:", model, "endpoint:", endpoint, "input:", JSON.stringify(input));
+
     const result = await submitFalTask(falKey, endpoint, input);
 
     await chargeCredits(user.id, model, finalCost);
