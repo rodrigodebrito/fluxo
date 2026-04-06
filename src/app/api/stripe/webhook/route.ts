@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, getCreditsForPriceId } from "@/lib/stripe";
+import { getStripe, getCreditsForPriceId } from "@/lib/stripe";
 import { addCredits } from "@/lib/credits";
 import { createServiceClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
       if (session.mode === "payment") {
         // Pacote avulso - buscar line items para saber qual pack
-        const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+        const lineItems = await getStripe().checkout.sessions.listLineItems(session.id);
         const priceId = lineItems.data[0]?.price?.id;
         if (!priceId) break;
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       if (session.mode === "subscription") {
         // Assinatura - salvar subscription ID e plan
         const subscriptionId = session.subscription as string;
-        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        const sub = await getStripe().subscriptions.retrieve(subscriptionId);
         const priceId = sub.items.data[0]?.price?.id;
         if (!priceId) break;
 
