@@ -1,14 +1,41 @@
 "use client";
 
-import { Handle, Position, type NodeProps, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
-import { useEffect } from "react";
+import { Handle, Position, type NodeProps, useReactFlow, useUpdateNodeInternals, useEdges, useNodes } from "@xyflow/react";
+import { useEffect, useMemo } from "react";
 
 export default function PromptConcatNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
+  const edges = useEdges();
+  const nodes = useNodes();
 
   const inputCount = (data.inputCount as number) || 2;
   const additionalText = (data.additionalText as string) || "";
+
+  // Build preview of connected inputs
+  const connectedPreview = useMemo(() => {
+    const parts: string[] = [];
+    const myEdges = edges.filter((e) => e.target === id);
+
+    for (let i = 1; i <= inputCount; i++) {
+      const edge = myEdges.find((e) => e.targetHandle === `prompt-${i}`);
+      if (!edge) continue;
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) continue;
+
+      if (sourceNode.type === "prompt") {
+        const text = (sourceNode.data.prompt as string) || "";
+        if (text.trim()) parts.push(text.trim());
+      } else if (sourceNode.type === "textIterator") {
+        const items = (sourceNode.data.items as string[]) || [];
+        const valid = items.filter((t) => (t as string).trim() !== "");
+        if (valid.length > 0) parts.push(valid[0] as string); // show first item as preview
+      }
+    }
+
+    if (additionalText.trim()) parts.push(additionalText.trim());
+    return parts.join(" ");
+  }, [edges, nodes, id, inputCount, additionalText]);
 
   useEffect(() => {
     updateNodeInternals(id);
@@ -92,7 +119,14 @@ export default function PromptConcatNode({ id, data }: NodeProps) {
 
       {/* Body */}
       <div className="p-2">
-        <p className="text-[10px] text-zinc-500 mb-2">Connect multiple prompts to one output prompt.</p>
+        {/* Preview of combined prompt */}
+        {connectedPreview ? (
+          <div className="bg-zinc-800 border border-zinc-600 rounded-md p-2 mb-2 text-[11px] text-zinc-200">
+            {connectedPreview}
+          </div>
+        ) : (
+          <p className="text-[10px] text-zinc-500 mb-2">Connect multiple prompts to one output prompt.</p>
+        )}
         <textarea
           value={additionalText}
           onChange={(e) => updateNodeData(id, { additionalText: e.target.value })}
