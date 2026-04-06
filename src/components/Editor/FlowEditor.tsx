@@ -790,7 +790,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       }
     }
 
-    if (!pipeline.prompt) {
+    const isMultiShot = pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0;
+    if (!pipeline.prompt && !isMultiShot) {
       alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
       return;
     }
