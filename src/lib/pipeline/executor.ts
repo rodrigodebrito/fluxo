@@ -272,11 +272,16 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
         const vUrl = (sourceNode.data.videoUrl as string) || "";
         if (vUrl) result.videoUrl = vUrl;
       } else if (sourceNode.type === "model") {
-        // Model → Model: usar a imagem de capa (resultado visível) como referência
+        // Model → Model: usar resultado como referência
         const coverUrl = sourceNode.data.coverResultUrl as string | null;
         if (coverUrl) {
           const handleId = edge.targetHandle || "image-1";
-          imagesByHandle[handleId] = [...(imagesByHandle[handleId] || []), coverUrl];
+          // Se conectado ao handle video-1, usar como videoUrl
+          if (handleId === "video-1") {
+            result.videoUrl = coverUrl;
+          } else {
+            imagesByHandle[handleId] = [...(imagesByHandle[handleId] || []), coverUrl];
+          }
         }
       }
     }
