@@ -225,24 +225,31 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
   }, [edges, onFlowChange]);
 
   // Propagar videoDuration de VideoInput/Model conectados ao handle video-1
+  // Usa nodesRef pra ler duracoes sem causar loop
   useEffect(() => {
-    setNodes((nds) => {
-      let changed = false;
-      const updated = nds.map((n) => {
-        if (n.type !== "model") return n;
-        const videoEdge = edges.find((e) => e.target === n.id && e.targetHandle === "video-1");
-        if (!videoEdge) {
-          if (n.data.connectedVideoDuration) { changed = true; return { ...n, data: { ...n.data, connectedVideoDuration: 0 } }; }
-          return n;
-        }
-        const src = nds.find((s) => s.id === videoEdge.source);
-        const dur = (src?.data.videoDuration as number) || 0;
-        if (dur !== (n.data.connectedVideoDuration || 0)) { changed = true; return { ...n, data: { ...n.data, connectedVideoDuration: dur } }; }
-        return n;
-      });
-      return changed ? updated : nds;
-    });
-  }, [edges, setNodes]);
+    const currentNodes = nodesRef.current;
+    const updates: { id: string; dur: number }[] = [];
+
+    for (const n of currentNodes) {
+      if (n.type !== "model") continue;
+      const videoEdge = edges.find((e) => e.target === n.id && e.targetHandle === "video-1");
+      const currentDur = (n.data.connectedVideoDuration as number) || 0;
+      if (!videoEdge) {
+        if (currentDur > 0) updates.push({ id: n.id, dur: 0 });
+        continue;
+      }
+      const src = currentNodes.find((s) => s.id === videoEdge.source);
+      const srcDur = (src?.data.videoDuration as number) || 0;
+      if (srcDur !== currentDur) updates.push({ id: n.id, dur: srcDur });
+    }
+
+    if (updates.length > 0) {
+      setNodes((nds) => nds.map((n) => {
+        const upd = updates.find((u) => u.id === n.id);
+        return upd ? { ...n, data: { ...n.data, connectedVideoDuration: upd.dur } } : n;
+      }));
+    }
+  }, [edges, nodes, setNodes]);
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {

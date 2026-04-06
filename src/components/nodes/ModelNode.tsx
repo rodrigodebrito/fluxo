@@ -238,6 +238,10 @@ export default function ModelNode({ id, data }: NodeProps) {
                 controls
                 muted
                 loop
+                onLoadedMetadata={(e) => {
+                  const dur = Math.round((e.target as HTMLVideoElement).duration);
+                  if (dur > 0) updateNodeData(id, { videoDuration: dur });
+                }}
               />
             ) : (
               <img
