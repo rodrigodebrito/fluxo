@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 /* ── Scroll suave para anchors ── */
@@ -99,6 +100,7 @@ function MobileMenu() {
       {open && (
         <div className="absolute top-full left-0 right-0 bg-zinc-950/98 border-b border-zinc-800 md:hidden backdrop-blur-xl">
           <div className="flex flex-col px-6 py-4 gap-3">
+            <a href="#galeria" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Galeria</a>
             <a href="#como-funciona" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Como funciona</a>
             <a href="#modelos" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Modelos</a>
             <a href="#precos" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Precos</a>
@@ -110,6 +112,215 @@ function MobileMenu() {
         </div>
       )}
     </>
+  );
+}
+
+/* ── Galeria item com hover ── */
+function GalleryItem({ src, label, model, delay }: { src: string; label: string; model: string; delay: number }) {
+  const isPlaceholder = !src || src.startsWith("/placeholder");
+
+  return (
+    <Reveal delay={delay}>
+      <div className="group relative overflow-hidden rounded-2xl aspect-square cursor-pointer">
+        {isPlaceholder ? (
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-zinc-900 to-pink-900/40 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl mb-2 opacity-40">🖼️</div>
+              <p className="text-xs text-zinc-600">Adicionar imagem</p>
+            </div>
+          </div>
+        ) : (
+          <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <p className="text-sm font-medium text-white">{label}</p>
+          <p className="text-xs text-zinc-400">{model}</p>
+        </div>
+      </div>
+    </Reveal>
+  );
+}
+
+/* ── Galeria item retangular (video) ── */
+function GalleryVideoItem({ src, label, model, delay }: { src: string; label: string; model: string; delay: number }) {
+  const isPlaceholder = !src || src.startsWith("/placeholder");
+
+  return (
+    <Reveal delay={delay}>
+      <div className="group relative overflow-hidden rounded-2xl aspect-video cursor-pointer">
+        {isPlaceholder ? (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-zinc-900 to-cyan-900/30 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl mb-2 opacity-40">🎬</div>
+              <p className="text-xs text-zinc-600">Adicionar video</p>
+            </div>
+          </div>
+        ) : (
+          <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute top-3 right-3 w-8 h-8 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center">
+          <svg className="w-3.5 h-3.5 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <p className="text-sm font-medium text-white">{label}</p>
+          <p className="text-xs text-zinc-400">{model}</p>
+        </div>
+      </div>
+    </Reveal>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   GALERIA — SUBSTITUA AS URLs ABAIXO PELAS
+   IMAGENS/VIDEOS GERADOS NO FLUXO AI
+   ══════════════════════════════════════════════ */
+const GALLERY_IMAGES = [
+  { src: "", label: "Produto gourmet em estudio", model: "Nano Banana Pro" },
+  { src: "", label: "Retrato cinematografico 4K", model: "Nano Banana Pro" },
+  { src: "", label: "Sneaker flutuando no espaco", model: "GPT Image 1.5" },
+  { src: "", label: "Paisagem surreal de montanhas", model: "Nano Banana Pro" },
+  { src: "", label: "Logo 3D com iluminacao neon", model: "GPT Image 1.5" },
+  { src: "", label: "Moda editorial futurista", model: "Nano Banana Pro" },
+];
+
+const GALLERY_VIDEOS = [
+  { src: "", label: "Carro esportivo em movimento", model: "Veo 3.1" },
+  { src: "", label: "Danca coreografada com IA", model: "Kling 3.0" },
+  { src: "", label: "Produto girando 360 graus", model: "Veo 3.1" },
+];
+
+/* ── Formulario de lista de espera ── */
+function WaitlistForm() {
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "full">("idle");
+  const [message, setMessage] = useState("");
+  const [position, setPosition] = useState(0);
+  const [remaining, setRemaining] = useState(50);
+
+  useEffect(() => {
+    fetch("/api/waitlist")
+      .then((r) => r.json())
+      .then((d) => {
+        setRemaining(d.remaining);
+        if (d.remaining <= 0) setStatus("full");
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !contact.trim()) return;
+
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), contact: contact.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          setStatus("error");
+          setMessage(data.error);
+        } else {
+          setStatus("error");
+          setMessage(data.error || "Erro ao enviar.");
+        }
+        return;
+      }
+
+      setStatus("success");
+      setPosition(data.position);
+      setRemaining(data.remaining);
+    } catch {
+      setStatus("error");
+      setMessage("Erro de conexao. Tente novamente.");
+    }
+  };
+
+  if (status === "success") {
+    return (
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500/10 rounded-full mb-4">
+          <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="text-2xl font-bold mb-2">Voce esta na lista!</h3>
+        <p className="text-zinc-400 mb-2">
+          Posicao <span className="text-purple-400 font-bold">#{position}</span> de 50
+        </p>
+        <p className="text-sm text-zinc-500">
+          Entraremos em contato em breve. {remaining > 0 ? `Restam ${remaining} vagas.` : "Ultima vaga preenchida!"}
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "full") {
+    return (
+      <div className="text-center">
+        <p className="text-lg font-semibold text-zinc-300 mb-2">Todas as 50 vagas foram preenchidas!</p>
+        <p className="text-sm text-zinc-500">Fique de olho — novas vagas podem abrir em breve.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto">
+      <div className="flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Seu nome"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
+        />
+        <input
+          type="text"
+          placeholder="Email ou WhatsApp"
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          required
+          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={status === "loading"}
+        className="w-full px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-lg transition-all hover:shadow-2xl hover:shadow-purple-600/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+      >
+        {status === "loading" ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+            Enviando...
+          </span>
+        ) : (
+          "Quero Minha Vaga no Beta"
+        )}
+      </button>
+
+      {status === "error" && (
+        <p className="text-red-400 text-sm text-center mt-3">{message}</p>
+      )}
+
+      <p className="text-center text-xs text-zinc-600 mt-4">
+        {remaining > 0 ? (
+          <>
+            <span className="text-purple-400 font-semibold">{remaining}</span> vagas restantes de 50
+          </>
+        ) : (
+          "Verificando vagas..."
+        )}
+      </p>
+    </form>
   );
 }
 
@@ -134,6 +345,7 @@ export default function LandingPage() {
             </Link>
 
             <div className="hidden md:flex items-center gap-8 text-[13px] text-zinc-400">
+              <a href="#galeria" className="hover:text-white transition-colors">Galeria</a>
               <a href="#como-funciona" className="hover:text-white transition-colors">Como funciona</a>
               <a href="#modelos" className="hover:text-white transition-colors">Modelos</a>
               <a href="#precos" className="hover:text-white transition-colors">Precos</a>
@@ -153,7 +365,7 @@ export default function LandingPage() {
         </nav>
 
         {/* ── HERO ── */}
-        <section className="relative pt-16 md:pt-28 pb-20 md:pb-36 px-6">
+        <section className="relative pt-16 md:pt-28 pb-12 md:pb-20 px-6">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-purple-600/15 rounded-full blur-[150px]" />
             <div className="absolute top-40 left-1/4 w-[400px] h-[400px] bg-pink-600/10 rounded-full blur-[120px]" />
@@ -164,27 +376,26 @@ export default function LandingPage() {
             <Reveal>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-600/10 border border-purple-500/20 rounded-full text-xs text-purple-300 mb-8">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                Beta exclusivo — apenas 50 vagas
+                Beta exclusivo — vagas limitadas
               </div>
             </Reveal>
 
             <Reveal delay={100}>
               <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tight">
-                Voce ainda perde{" "}
-                <span className="line-through text-zinc-600 decoration-red-500/60 decoration-[3px]">horas</span>{" "}
-                criando conteudo?
+                Crie conteudo com IA{" "}
+                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
+                  arrastando blocos.
+                </span>
               </h1>
             </Reveal>
 
             <Reveal delay={200}>
               <p className="text-xl md:text-2xl text-zinc-300 max-w-2xl mx-auto mb-3 leading-relaxed font-light">
-                Gere imagens 4K e videos HD com IA{" "}
-                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent font-semibold">
-                  arrastando blocos visuais.
-                </span>
+                Imagens 4K e videos HD com os melhores modelos do mundo.{" "}
+                <span className="text-zinc-500">Sem codigo. Sem assinatura cara.</span>
               </p>
               <p className="text-base md:text-lg text-zinc-500 max-w-xl mx-auto mb-10">
-                Sem codigo. Sem assinatura cara. O que levava 2h agora leva 2 min.
+                O que levava 2 horas agora leva 2 minutos.
               </p>
             </Reveal>
 
@@ -197,10 +408,10 @@ export default function LandingPage() {
                   Comecar Agora — E Gratis
                 </Link>
                 <a
-                  href="#como-funciona"
+                  href="#galeria"
                   className="w-full sm:w-auto px-10 py-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium rounded-xl text-lg transition-all border border-zinc-700/80 hover:border-zinc-600 flex items-center justify-center gap-2 group"
                 >
-                  Ver como funciona
+                  Ver galeria
                   <svg className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
@@ -224,8 +435,137 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── PREVIEW DO EDITOR ── */}
+        <section className="pb-16 md:pb-28 px-6">
+          <Reveal delay={400}>
+            <div className="max-w-5xl mx-auto">
+              <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/80 overflow-hidden shadow-2xl shadow-purple-600/5">
+                {/* Barra do topo fake */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-900">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
+                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
+                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    <div className="px-4 py-1 bg-zinc-800 rounded-md text-xs text-zinc-500">fluxo-ai.com/editor</div>
+                  </div>
+                </div>
+                {/* Canvas mockup */}
+                <div className="p-6 md:p-10 min-h-[300px] md:min-h-[400px] relative bg-[radial-gradient(circle_at_center,_rgba(124,58,237,0.03)_0%,_transparent_70%)]">
+                  {/* Grid dots background */}
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, #555 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+
+                  {/* Node: Prompt */}
+                  <div className="absolute top-8 left-6 md:top-12 md:left-12 w-52 md:w-64 bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg z-10">
+                    <div className="px-4 py-2.5 border-b border-zinc-700 flex items-center gap-2">
+                      <div className="w-5 h-5 bg-purple-600/20 rounded flex items-center justify-center"><span className="text-[10px]">✏️</span></div>
+                      <span className="text-xs font-semibold text-zinc-300">Prompt</span>
+                    </div>
+                    <div className="p-3">
+                      <div className="text-[11px] text-zinc-500 leading-relaxed">&quot;Foto de produto gourmet em estudio minimalista, iluminacao suave...&quot;</div>
+                    </div>
+                    <div className="absolute top-1/2 -right-2 w-4 h-4 bg-purple-500 rounded-full border-2 border-zinc-900 -translate-y-1/2" />
+                  </div>
+
+                  {/* Connection line */}
+                  <svg className="absolute top-[4.5rem] md:top-[5.5rem] left-[17rem] md:left-[21rem] w-20 md:w-32 h-20 z-0 hidden sm:block" viewBox="0 0 120 80">
+                    <path d="M0,10 C40,10 80,70 120,70" fill="none" stroke="url(#grad)" strokeWidth="2" strokeDasharray="6 4" />
+                    <defs>
+                      <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity="0.6" />
+                        <stop offset="100%" stopColor="#ec4899" stopOpacity="0.6" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+
+                  {/* Node: Modelo IA */}
+                  <div className="absolute top-32 right-6 md:top-24 md:right-12 w-52 md:w-64 bg-zinc-800 border border-purple-500/30 rounded-xl shadow-lg shadow-purple-500/5 z-10">
+                    <div className="px-4 py-2.5 border-b border-zinc-700 flex items-center gap-2">
+                      <div className="w-5 h-5 bg-pink-600/20 rounded flex items-center justify-center"><span className="text-[10px]">🖼️</span></div>
+                      <span className="text-xs font-semibold text-zinc-300">Nano Banana Pro</span>
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">4K</span>
+                    </div>
+                    <div className="p-3 flex flex-col gap-2">
+                      <div className="flex justify-between text-[10px]"><span className="text-zinc-500">Aspecto</span><span className="text-zinc-400">1:1</span></div>
+                      <div className="flex justify-between text-[10px]"><span className="text-zinc-500">Resolucao</span><span className="text-zinc-400">1024x1024</span></div>
+                      <div className="flex justify-between text-[10px]"><span className="text-zinc-500">Custo</span><span className="text-purple-400">18 cred</span></div>
+                    </div>
+                    <div className="absolute top-1/2 -left-2 w-4 h-4 bg-pink-500 rounded-full border-2 border-zinc-900 -translate-y-1/2" />
+                  </div>
+
+                  {/* Node: Resultado (bottom) */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:bottom-10 w-44 md:w-52 bg-zinc-800 border border-green-500/20 rounded-xl shadow-lg z-10">
+                    <div className="px-4 py-2.5 border-b border-zinc-700 flex items-center gap-2">
+                      <div className="w-5 h-5 bg-green-600/20 rounded flex items-center justify-center"><span className="text-[10px]">✅</span></div>
+                      <span className="text-xs font-semibold text-green-400">Resultado</span>
+                    </div>
+                    <div className="p-3">
+                      <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-purple-900/40 via-zinc-800 to-pink-900/40 flex items-center justify-center">
+                        <span className="text-2xl opacity-60">🖼️</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Run button floating */}
+                  <div className="absolute bottom-6 right-6 md:bottom-10 md:right-12 z-10">
+                    <div className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg text-xs font-bold shadow-lg shadow-purple-600/20 flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+                      Run Pipeline
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* ── GALERIA DE EXEMPLOS ── */}
+        <section id="galeria" className="py-16 md:py-24 px-6 border-y border-zinc-800/50 bg-zinc-900/20">
+          <div className="max-w-6xl mx-auto">
+            <Reveal>
+              <div className="text-center mb-12">
+                <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Resultados reais</p>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  Tudo isso foi feito no{" "}
+                  <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Fluxo AI</span>
+                </h2>
+                <p className="text-zinc-500 max-w-lg mx-auto">
+                  Imagens em 4K e videos HD gerados por nossos usuarios. Clique pra ver detalhes.
+                </p>
+              </div>
+            </Reveal>
+
+            {/* Grid de imagens */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+              {GALLERY_IMAGES.map((img, i) => (
+                <GalleryItem key={i} src={img.src} label={img.label} model={img.model} delay={i * 80} />
+              ))}
+            </div>
+
+            {/* Grid de videos */}
+            <div className="grid md:grid-cols-3 gap-3 md:gap-4">
+              {GALLERY_VIDEOS.map((vid, i) => (
+                <GalleryVideoItem key={i} src={vid.src} label={vid.label} model={vid.model} delay={i * 100 + 200} />
+              ))}
+            </div>
+
+            <Reveal delay={500}>
+              <div className="text-center mt-10">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 px-8 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 rounded-xl text-sm font-medium transition-all"
+                >
+                  Criar meus proprios resultados
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
         {/* ── DOR / PROBLEMA ── */}
-        <section className="py-16 md:py-24 px-6 border-y border-zinc-800/50 bg-zinc-900/20">
+        <section className="py-16 md:py-24 px-6">
           <div className="max-w-4xl mx-auto">
             <Reveal>
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-4">
@@ -254,7 +594,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── SOLUCAO ── */}
-        <section className="py-16 md:py-24 px-6">
+        <section className="py-16 md:py-24 px-6 bg-zinc-900/30">
           <Reveal>
             <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-2xl mb-6 ring-1 ring-purple-500/10">
@@ -275,7 +615,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── COMO FUNCIONA ── */}
-        <section id="como-funciona" className="py-16 md:py-24 px-6 bg-zinc-900/30">
+        <section id="como-funciona" className="py-16 md:py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <Reveal>
               <div className="text-center mb-16">
@@ -514,7 +854,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── CTA FINAL ── */}
+        {/* ── CTA FINAL — LISTA DE ESPERA ── */}
         <section className="py-20 md:py-32 px-6 relative">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-600/10 rounded-full blur-[150px]" />
@@ -528,28 +868,23 @@ export default function LandingPage() {
                 outros ja estao criando.
               </h2>
               <p className="text-lg text-zinc-400 mb-10 leading-relaxed">
-                50 vagas no beta. Quando acabar, acabou.
-                <br />
-                <strong className="text-zinc-200">Crie sua conta em 30 segundos.</strong>
+                Apenas 50 vagas no beta. Deixe seu contato e seja um dos primeiros.
               </p>
-              <Link
-                href="/register"
-                className="inline-flex px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-lg transition-all hover:shadow-2xl hover:shadow-purple-600/30 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Quero Minha Vaga no Beta
-              </Link>
-              <div className="mt-6 flex items-center justify-center gap-5 text-xs text-zinc-600">
+
+              <WaitlistForm />
+
+              <div className="mt-8 flex items-center justify-center gap-5 text-xs text-zinc-600">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Sem cartao
+                  Acesso antecipado
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Sem assinatura
+                  Bonus exclusivo
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Creditos nao expiram
+                  Sem compromisso
                 </span>
               </div>
             </div>
@@ -568,11 +903,12 @@ export default function LandingPage() {
               <span className="text-sm font-bold text-zinc-400">Fluxo AI</span>
             </Link>
             <div className="flex items-center gap-6 text-xs text-zinc-600">
+              <a href="#galeria" className="hover:text-zinc-400 transition-colors">Galeria</a>
               <a href="#como-funciona" className="hover:text-zinc-400 transition-colors">Como funciona</a>
               <a href="#modelos" className="hover:text-zinc-400 transition-colors">Modelos</a>
               <a href="#precos" className="hover:text-zinc-400 transition-colors">Precos</a>
+              <Link href="/pricing" className="hover:text-zinc-400 transition-colors">Planos</Link>
               <Link href="/login" className="hover:text-zinc-400 transition-colors">Entrar</Link>
-              <Link href="/register" className="hover:text-zinc-400 transition-colors">Cadastrar</Link>
             </div>
             <p className="text-[11px] text-zinc-700">&copy; 2026 Fluxo AI. Todos os direitos reservados.</p>
           </div>

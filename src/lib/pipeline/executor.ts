@@ -530,6 +530,19 @@ export async function startGeneration(
   return data.taskId;
 }
 
+// Salva geracao no historico
+async function saveGeneration(model: string, prompt: string, resultUrls: string[], cost: number, type: "image" | "video") {
+  try {
+    await fetch("/api/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, prompt, resultUrls, cost, type }),
+    });
+  } catch (err) {
+    console.error("[saveGeneration] Falha ao salvar historico:", err);
+  }
+}
+
 // Solicita reembolso de creditos quando geracao falha
 async function refundCredits(model: string, taskId: string, cost?: number) {
   try {
@@ -553,7 +566,8 @@ export async function pollTaskStatus(
   type: "image" | "video" = "image",
   signal?: AbortSignal,
   model?: string,
-  cost?: number
+  cost?: number,
+  prompt?: string
 ): Promise<{ resultUrls: string[]; error: string | null }> {
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
 
@@ -592,6 +606,10 @@ export async function pollTaskStatus(
       if (data.state === "success") {
         // Atualizar creditos na UI apos sucesso
         window.dispatchEvent(new Event("fluxo-credits-update"));
+        // Salvar no historico
+        if (model && data.resultUrls?.length > 0) {
+          saveGeneration(model, prompt || "", data.resultUrls, cost || 0, type);
+        }
         return { resultUrls: data.resultUrls, error: null };
       }
 

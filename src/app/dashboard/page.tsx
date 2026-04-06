@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import UserCredits from "@/components/Header/UserCredits";
 
 interface Workflow {
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -61,58 +63,106 @@ export default function Dashboard() {
     return `Editado em ${d.toLocaleDateString("pt-BR")}`;
   };
 
+  const filtered = search
+    ? workflows.filter((w) => w.name.toLowerCase().includes(search.toLowerCase()))
+    : workflows;
+
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
-      <header className="border-b border-zinc-800">
+      <header className="border-b border-zinc-800 sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h1 className="text-xl font-bold text-white">Fluxo AI</h1>
+          <div className="flex items-center gap-6">
+            <Link href="/dashboard" className="flex items-center gap-3 group">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h1 className="text-xl font-bold text-white">Fluxo AI</h1>
+            </Link>
+
+            {/* Nav links */}
+            <nav className="hidden md:flex items-center gap-1">
+              <Link href="/dashboard" className="px-3 py-1.5 text-sm text-white bg-zinc-800 rounded-lg">
+                Workflows
+              </Link>
+              <Link href="/history" className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+                Historico
+              </Link>
+            </nav>
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-3">
             <UserCredits />
             <button
               onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              + Create New File
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Novo Workflow
             </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Workspace Title */}
-        <h2 className="text-2xl font-semibold text-white mb-6">Meus Workflows</h2>
+        {/* Title + search */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-white">Meus Workflows</h2>
 
-        {/* Search */}
-        <div className="flex items-center justify-between mb-6">
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Buscar workflows..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-10 pr-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-purple-500 w-64"
             />
           </div>
         </div>
 
+        {/* Mobile nav */}
+        <div className="flex md:hidden items-center gap-2 mb-6">
+          <Link href="/dashboard" className="flex-1 py-2 text-sm text-center text-white bg-zinc-800 rounded-lg font-medium">
+            Workflows
+          </Link>
+          <Link href="/history" className="flex-1 py-2 text-sm text-center text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-lg hover:text-white transition-colors">
+            Historico
+          </Link>
+        </div>
+
+        {/* Mobile create button */}
+        <button
+          onClick={handleCreate}
+          className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors mb-6"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Novo Workflow
+        </button>
+
         {/* Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-zinc-500">Carregando...</div>
+            <div className="flex items-center gap-3 text-zinc-500">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Carregando...
+            </div>
           </div>
-        ) : workflows.length === 0 ? (
+        ) : filtered.length === 0 && !search ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-20 h-20 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 border border-zinc-800">
+              <svg className="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
             </div>
@@ -121,8 +171,12 @@ export default function Dashboard() {
               onClick={handleCreate}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              + Criar primeiro workflow
+              Criar primeiro workflow
             </button>
+          </div>
+        ) : filtered.length === 0 && search ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <p className="text-zinc-500 text-sm">Nenhum workflow encontrado para &quot;{search}&quot;</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -140,11 +194,11 @@ export default function Dashboard() {
             </button>
 
             {/* Workflow Cards */}
-            {workflows.map((wf) => (
+            {filtered.map((wf) => (
               <div
                 key={wf.id}
                 onClick={() => router.push(`/editor/${wf.id}`)}
-                className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden cursor-pointer hover:border-zinc-600 transition-colors"
+                className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden cursor-pointer hover:border-zinc-600 transition-all hover:-translate-y-0.5"
               >
                 {/* Thumbnail */}
                 <div className="h-[160px] bg-zinc-800 flex items-center justify-center">

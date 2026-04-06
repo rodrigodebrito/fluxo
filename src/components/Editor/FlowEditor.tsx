@@ -861,7 +861,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       const resultPromises = taskIds.map((taskId) =>
         pollTaskStatus(taskId, (progress) => {
           console.log(`Task ${taskId} progresso:`, progress);
-        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun)
+        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun, pipeline.prompt)
       );
 
       const results = await Promise.all(resultPromises);
