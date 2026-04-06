@@ -40,6 +40,8 @@ interface PipelineData {
   fixedLens?: boolean;
   // LLM Chain
   llmChain?: LLMChain;
+  // Text Iterator — array of complete prompts (one per iterator item)
+  iteratorPrompts?: string[];
 }
 
 // Percorre os nós conectados e coleta os dados do pipeline
@@ -116,12 +118,24 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
       if (sourceNode.type === "promptConcat" && edge.targetHandle === "prompt") {
         const parts: string[] = [];
         const inputCount = (sourceNode.data.inputCount as number) || 2;
+        let iteratorItems: string[] | null = null;
+        let iteratorSlotIndex = -1;
 
         // Collect prompts in order (prompt-1, prompt-2, ...)
         for (let i = 1; i <= inputCount; i++) {
           const promptEdge = edges.find((e) => e.target === sourceNode.id && e.targetHandle === `prompt-${i}`);
           if (!promptEdge) continue;
           const promptSource = resolveSource(promptEdge.source);
+
+          // TextIterator connected to PromptConcat
+          if (promptSource?.type === "textIterator") {
+            const rawItems = (promptSource.data.items as string[]) || [];
+            iteratorItems = rawItems.filter((t) => t.trim() !== "");
+            iteratorSlotIndex = parts.length;
+            parts.push("__ITERATOR__"); // placeholder
+            continue;
+          }
+
           if (promptSource?.type === "prompt") {
             const text = (promptSource.data.text as string) || "";
             if (text.trim()) parts.push(text.trim());
@@ -132,7 +146,29 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
         const additionalText = (sourceNode.data.additionalText as string) || "";
         if (additionalText.trim()) parts.push(additionalText.trim());
 
-        result.prompt = parts.join("\n\n");
+        if (iteratorItems && iteratorItems.length > 0 && iteratorSlotIndex >= 0) {
+          // Build one complete prompt per iterator item
+          result.iteratorPrompts = iteratorItems.map((item) => {
+            const promptParts = [...parts];
+            promptParts[iteratorSlotIndex] = item;
+            return promptParts.join("\n\n");
+          });
+          // Use first item as the default prompt (for display/preview)
+          result.prompt = result.iteratorPrompts[0];
+        } else {
+          result.prompt = parts.join("\n\n");
+        }
+        continue;
+      }
+
+      // TextIterator → Model direct (without PromptConcat)
+      if (sourceNode.type === "textIterator" && edge.targetHandle === "prompt") {
+        const rawItems = (sourceNode.data.items as string[]) || [];
+        const validItems = rawItems.filter((t) => t.trim() !== "");
+        if (validItems.length > 0) {
+          result.iteratorPrompts = validItems;
+          result.prompt = validItems[0];
+        }
         continue;
       }
 

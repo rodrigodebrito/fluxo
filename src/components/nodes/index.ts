@@ -8,6 +8,7 @@ import VideoConcatNode from "./VideoConcatNode";
 import AnyLLMNode from "./AnyLLMNode";
 import RouterNode from "./RouterNode";
 import PromptConcatNode from "./PromptConcatNode";
+import TextIteratorNode from "./TextIteratorNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -20,4 +21,5 @@ export const nodeTypes = {
   anyLLM: AnyLLMNode,
   router: RouterNode,
   promptConcat: PromptConcatNode,
+  textIterator: TextIteratorNode,
 };

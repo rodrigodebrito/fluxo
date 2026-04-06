@@ -103,8 +103,16 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     }
   }, [selectedNode]);
 
+  const [iteratorCount, setIteratorCount] = useState(0);
+
   const handleNodeSelect = useCallback((node: Node | null) => {
-    setSelectedNode(node?.type === "model" ? node : null);
+    const modelNode = node?.type === "model" ? node : null;
+    setSelectedNode(modelNode);
+    if (modelNode && editorRef.current) {
+      setIteratorCount(editorRef.current.getIteratorCount(modelNode.id));
+    } else {
+      setIteratorCount(0);
+    }
   }, []);
 
   const handleUpdateNodeData = useCallback((nodeId: string, data: Record<string, unknown>) => {
@@ -160,6 +168,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           onRun={handleRunSelected}
           onClose={() => setSelectedNode(null)}
           onUpdateData={handleUpdateNodeData}
+          iteratorCount={iteratorCount}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ interface NodePanelProps {
   onRun: () => void;
   onClose: () => void;
   onUpdateData: (nodeId: string, data: Record<string, unknown>) => void;
+  iteratorCount?: number;
 }
 
 const IMAGE_RESOLUTIONS = ["1K", "2K", "4K"];
@@ -70,7 +71,7 @@ const KLING_ASPECT_RATIOS = [
   { value: "1:1", label: "1:1" },
 ];
 
-export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePanelProps) {
+export default function NodePanel({ node, onRun, onClose, onUpdateData, iteratorCount = 0 }: NodePanelProps) {
   const model = (node.data.model as string) || "nano-banana-pro";
   const resolution = (node.data.resolution as string) || "1K";
   const aspectRatio = (node.data.aspectRatio as string) || "auto";
@@ -125,7 +126,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);
     costPerRun = perSec * klingDuration;
   }
-  const totalCost = costPerRun * runs;
+  const multiplier = iteratorCount > 0 ? iteratorCount : 1;
+  const totalCost = costPerRun * runs * multiplier;
   const params = selectedModel?.params || [];
 
   const update = (data: Record<string, unknown>) => {
@@ -450,6 +452,19 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
       <div className="p-4 border-t border-zinc-800 space-y-3">
         <div className="text-xs text-zinc-400">Run selected nodes</div>
 
+        {/* Text Iterator info */}
+        {iteratorCount > 0 && (
+          <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-xs text-green-400 font-medium">Text Iterator</span>
+            </div>
+            <span className="text-xs text-green-300 font-medium">{iteratorCount} values</span>
+          </div>
+        )}
+
         {/* Runs counter */}
         {params.includes("runs") && (
           <div className="flex items-center justify-between">
@@ -470,7 +485,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData }: NodePa
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-zinc-500">Total cost</span>
-          <span className="text-xs text-zinc-300">✳ {totalCost} credits</span>
+          <span className="text-xs text-zinc-300">
+            ✳ {totalCost} credits
+            {iteratorCount > 0 && (
+              <span className="text-zinc-500 ml-1">({costPerRun} × {iteratorCount}{runs > 1 ? ` × ${runs}` : ""})</span>
+            )}
+          </span>
         </div>
 
         <button

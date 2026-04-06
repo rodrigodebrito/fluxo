@@ -57,6 +57,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Router", outputCount: 2 };
     case "promptConcat":
       return { label: "Prompt Concatenator", inputCount: 2, additionalText: "" };
+    case "textIterator":
+      return { label: "Text Iterator", items: ["", ""] };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     default:
@@ -80,6 +82,7 @@ export interface FlowEditorHandle {
   loadWorkflow: (data?: { nodes: Node[]; edges: Edge[] }) => void;
   runPipeline: () => void;
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
+  getIteratorCount: (modelNodeId: string) => number;
 }
 
 const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEditor({ onNodeSelect, onFlowChange }, ref) {
@@ -846,10 +849,20 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         cost: costPerRun,
       };
 
-      const runCount = pipeline.runs;
-      const taskPromises = Array.from({ length: runCount }, () =>
-        startGeneration(pipeline.prompt, pipeline.localImageUrls, genOptions)
-      );
+      // Text Iterator: gerar uma task por item, cada com prompt diferente
+      // Runs normal: gerar N tasks com o mesmo prompt
+      let taskPromises: Promise<string>[];
+
+      if (pipeline.iteratorPrompts && pipeline.iteratorPrompts.length > 0) {
+        taskPromises = pipeline.iteratorPrompts.map((iterPrompt) =>
+          startGeneration(iterPrompt, pipeline.localImageUrls, genOptions)
+        );
+      } else {
+        const runCount = pipeline.runs;
+        taskPromises = Array.from({ length: runCount }, () =>
+          startGeneration(pipeline.prompt, pipeline.localImageUrls, genOptions)
+        );
+      }
 
       const taskIds = await Promise.all(taskPromises);
 
@@ -858,11 +871,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       // Veo usa endpoint diferente de polling, os outros usam recordInfo
       const pollType = pipeline.model === "veo3" ? "video" : "image";
-      const resultPromises = taskIds.map((taskId) =>
-        pollTaskStatus(taskId, (progress) => {
+      const resultPromises = taskIds.map((taskId, idx) => {
+        const promptForTask = pipeline.iteratorPrompts?.[idx] || pipeline.prompt;
+        return pollTaskStatus(taskId, (progress) => {
           console.log(`Task ${taskId} progresso:`, progress);
-        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun, pipeline.prompt)
-      );
+        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun, promptForTask);
+      });
 
       const results = await Promise.all(resultPromises);
 
@@ -1093,12 +1107,51 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     [setNodes]
   );
 
+  // Detectar TextIterator conectado a um model node (via PromptConcat ou direto)
+  const getIteratorCount = useCallback((modelNodeId: string): number => {
+    const currentNodes = nodesRef.current;
+    const currentEdges = edgesRef.current;
+
+    // Check direct: TextIterator → Model (prompt handle)
+    for (const edge of currentEdges) {
+      if (edge.target === modelNodeId && edge.targetHandle === "prompt") {
+        const src = currentNodes.find((n) => n.id === edge.source);
+        if (src?.type === "textIterator") {
+          const items = (src.data.items as string[]) || [];
+          return items.filter((t) => (t as string).trim() !== "").length;
+        }
+      }
+    }
+
+    // Check via PromptConcat: TextIterator → PromptConcat → Model
+    for (const edge of currentEdges) {
+      if (edge.target === modelNodeId && edge.targetHandle === "prompt") {
+        const concatNode = currentNodes.find((n) => n.id === edge.source);
+        if (concatNode?.type === "promptConcat") {
+          // Check inputs to the PromptConcat
+          for (const innerEdge of currentEdges) {
+            if (innerEdge.target === concatNode.id) {
+              const src = currentNodes.find((n) => n.id === innerEdge.source);
+              if (src?.type === "textIterator") {
+                const items = (src.data.items as string[]) || [];
+                return items.filter((t) => (t as string).trim() !== "").length;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return 0;
+  }, []);
+
   // Expor funções via ref
   useImperativeHandle(ref, () => ({
     saveWorkflow,
     loadWorkflow,
     runPipeline: () => executePipeline(),
     updateNodeData: handleUpdateNodeData,
+    getIteratorCount,
   }));
 
   return (
@@ -1343,6 +1396,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "anyLLM", label: "Any LLM" },
       { type: "router", label: "Router" },
       { type: "promptConcat", label: "Prompt Concatenator" },
+      { type: "textIterator", label: "Text Iterator" },
       { type: "lastFrame", label: "Last Frame" },
       { type: "videoConcat", label: "Video Concat" },
     ],
