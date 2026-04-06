@@ -873,7 +873,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const is3 = pipeline.motionVersion === "3.0";
         const is1080 = pipeline.motionMode === "1080p";
         const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
-        costPerRun = perSec * 10; // estimativa base 10s, custo real depende do video
+        const motionDur = pipeline.videoDuration || 10;
+        costPerRun = perSec * motionDur;
       }
 
       const genOptions = {

@@ -52,6 +52,7 @@ interface PipelineData {
   motionVersion?: string;
   motionMode?: string;
   characterOrientation?: string;
+  videoDuration?: number;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -270,7 +271,11 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
       } else if (sourceNode.type === "videoInput") {
         // VideoInput → Model: video URL para modelos fal.ai
         const vUrl = (sourceNode.data.videoUrl as string) || "";
-        if (vUrl) result.videoUrl = vUrl;
+        if (vUrl) {
+          result.videoUrl = vUrl;
+          const vDur = sourceNode.data.videoDuration as number;
+          if (vDur > 0) result.videoDuration = vDur;
+        }
       } else if (sourceNode.type === "model") {
         // Model → Model: usar resultado como referência
         const coverUrl = sourceNode.data.coverResultUrl as string | null;

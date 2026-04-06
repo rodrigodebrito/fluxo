@@ -162,8 +162,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (isMotion) {
     const is3 = motionVersion === "3.0";
     const is1080 = motionMode === "1080p";
-    const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
-    costPerRun = perSec * 10; // estimativa base 10s, custo real depende do video
+    const motionPerSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
+    costPerRun = motionPerSec * 10; // estimativa ~10s, custo real = perSec × duração do video
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -468,6 +468,13 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               <option value="image">Image</option>
               <option value="video">Video</option>
             </select>
+          </div>
+        )}
+
+        {/* Motion cost info */}
+        {isMotion && (
+          <div className="text-xs text-zinc-500 bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2">
+            <span className="text-zinc-400">{motionVersion === "3.0" ? (motionMode === "1080p" ? 23 : 17) : (motionMode === "1080p" ? 8 : 5)}</span> credits/s — custo final = duracao do video
           </div>
         )}
 

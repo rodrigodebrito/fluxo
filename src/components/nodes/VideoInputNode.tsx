@@ -78,11 +78,21 @@ export default function VideoInputNode({ id, data }: NodeProps) {
               loop
               onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
               onMouseLeave={(e) => { (e.target as HTMLVideoElement).pause(); (e.target as HTMLVideoElement).currentTime = 0; }}
+              onLoadedMetadata={(e) => {
+                const dur = Math.round((e.target as HTMLVideoElement).duration);
+                if (dur > 0) updateNodeData(id, { videoDuration: dur });
+              }}
             />
             {/* Overlay info */}
             <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent rounded-b-md opacity-0 group-hover:opacity-100 transition-opacity">
               <span className="text-white/60 text-[10px] truncate block">{fileName}</span>
             </div>
+            {/* Duration badge */}
+            {(data.videoDuration as number) > 0 && (
+              <div className="absolute top-1 left-1 bg-black/60 rounded px-1.5 py-0.5">
+                <span className="text-[9px] text-white/70">{data.videoDuration as number}s</span>
+              </div>
+            )}
             {/* Remove button */}
             <button
               onClick={() => updateNodeData(id, { videoUrl: "", fileName: "" })}
