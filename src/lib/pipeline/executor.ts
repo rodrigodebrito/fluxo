@@ -48,6 +48,10 @@ interface PipelineData {
   // Multi-Shot
   multiShotEnabled?: boolean;
   multiShots?: { prompt: string; duration: number }[];
+  // Motion Control
+  motionVersion?: string;
+  motionMode?: string;
+  characterOrientation?: string;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -97,6 +101,9 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.falTier = (modelNode.data.falTier as "std" | "pro") || "pro";
   result.multiShotEnabled = (modelNode.data.multiShotEnabled as boolean) ?? false;
   result.multiShots = (modelNode.data.multiShots as { prompt: string; duration: number }[]) || [];
+  result.motionVersion = (modelNode.data.motionVersion as string) || "2.6";
+  result.motionMode = (modelNode.data.motionMode as string) || "720p";
+  result.characterOrientation = (modelNode.data.characterOrientation as string) || "video";
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -448,6 +455,9 @@ export async function startGeneration(
     falTier?: "std" | "pro";
     multiShotEnabled?: boolean;
     multiShots?: { prompt: string; duration: number }[];
+    motionVersion?: string;
+    motionMode?: string;
+    characterOrientation?: string;
     cost?: number;
   }
 ): Promise<string> {
@@ -529,6 +539,36 @@ export async function startGeneration(
     // Return taskId with falEndpoint + status/response URLs encoded (separator: |)
     const parts = [data.taskId, data.falEndpoint, data.statusUrl || "", data.responseUrl || ""];
     return parts.join("|");
+  }
+
+  // Kling Motion Control
+  if (options?.model === "kling-motion") {
+    // Upload video URL if it's a blob
+    let videoUrl = options.videoUrl;
+    if (videoUrl && videoUrl.startsWith("blob:")) {
+      const uploaded = await uploadImages([videoUrl]);
+      videoUrl = uploaded[0] || videoUrl;
+    }
+
+    const response = await fetch("/api/generate-kling", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "kling-motion",
+        prompt: prompt || undefined,
+        inputUrls: publicUrls.length > 0 ? publicUrls : undefined,
+        videoUrls: videoUrl ? [videoUrl] : undefined,
+        motionVersion: options.motionVersion || "2.6",
+        motionMode: options.motionMode || "720p",
+        characterOrientation: options.characterOrientation || "video",
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do servidor: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Kling Motion");
+    return data.taskId;
   }
 
   // Kling 3.0

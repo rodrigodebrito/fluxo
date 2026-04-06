@@ -330,6 +330,46 @@ export async function createKlingTask(
   return safeJson(response);
 }
 
+// === Kling Motion Control ===
+
+interface CreateKlingMotionInput {
+  prompt?: string;
+  inputUrls: string[];   // character image(s)
+  videoUrls: string[];   // motion reference video
+  version?: "2.6" | "3.0";
+  mode?: "720p" | "1080p";
+  characterOrientation?: "image" | "video";
+}
+
+export async function createKlingMotionTask(
+  apiKey: string,
+  input: CreateKlingMotionInput
+): Promise<CreateTaskResponse> {
+  const model = input.version === "3.0" ? "kling-3.0/motion-control" : "kling-2.6/motion-control";
+
+  const inputBody: Record<string, unknown> = {
+    input_urls: input.inputUrls,
+    video_urls: input.videoUrls,
+    mode: input.mode || "720p",
+    character_orientation: input.characterOrientation || "video",
+  };
+
+  if (input.prompt) {
+    inputBody.prompt = input.prompt;
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model, input: inputBody }),
+  });
+
+  return safeJson(response);
+}
+
 // === Veo 3.1 Image to Video ===
 
 interface CreateVeoTaskInput {

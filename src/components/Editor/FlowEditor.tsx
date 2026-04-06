@@ -47,6 +47,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
       return { label: "Kling O1 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, falTier: "pro", elementCount: 0 };
+    case "model-kling-motion":
+      return { label: "Kling Motion", model: "kling-motion", isRunning: false, results: [], imageInputCount: 1, motionVersion: "2.6", motionMode: "720p", characterOrientation: "video" };
     case "model-gpt-image-txt":
       return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
@@ -850,6 +852,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const isPro = pipeline.falTier === "pro";
         const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
         costPerRun = (isPro ? 36 : 24) * dur;
+      } else if (m === "kling-motion") {
+        // 2.6: 720p=$0.03/s, 1080p=$0.045/s → 5/s, 8/s credits (50% margin)
+        // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 17/s, 23/s credits (50% margin)
+        const is3 = pipeline.motionVersion === "3.0";
+        const is1080 = pipeline.motionMode === "1080p";
+        const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
+        costPerRun = perSec * 5; // default 5s, real cost calculated at generation
       }
 
       const genOptions = {
@@ -879,6 +888,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         falTier: pipeline.falTier,
         multiShotEnabled: pipeline.multiShotEnabled,
         multiShots: pipeline.multiShots,
+        motionVersion: pipeline.motionVersion,
+        motionMode: pipeline.motionMode,
+        characterOrientation: pipeline.characterOrientation,
         cost: costPerRun,
       };
 
@@ -1455,6 +1467,12 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
       { type: "model-kling-o1-ref", label: "Kling O1 Reference" },
       { type: "klingElement", label: "Kling Element" },
+    ],
+  },
+  {
+    label: "Video Motion",
+    children: [
+      { type: "model-kling-motion", label: "Kling Motion Control" },
     ],
   },
 ];

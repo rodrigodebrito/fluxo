@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createKlingTask } from "@/lib/ai/kie";
+import { createKlingTask, createKlingMotionTask } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { hasCredits, cost } = await verifyCredits(user.id, "kling", body.cost);
+  const creditModel = body.model === "kling-motion" ? "kling-motion" : "kling";
+  const { hasCredits, cost } = await verifyCredits(user.id, creditModel, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -24,6 +25,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
+  // Kling Motion Control
+  if (body.model === "kling-motion") {
+    const { prompt, inputUrls, videoUrls, motionVersion, motionMode, characterOrientation } = body;
+
+    if (!inputUrls || inputUrls.length === 0) {
+      return NextResponse.json({ error: "Imagem do personagem e obrigatoria" }, { status: 400 });
+    }
+    if (!videoUrls || videoUrls.length === 0) {
+      return NextResponse.json({ error: "Video de referencia e obrigatorio" }, { status: 400 });
+    }
+
+    try {
+      const result = await createKlingMotionTask(apiKey, {
+        prompt: prompt || undefined,
+        inputUrls,
+        videoUrls,
+        version: (motionVersion as "2.6" | "3.0") || "2.6",
+        mode: (motionMode as "720p" | "1080p") || "720p",
+        characterOrientation: (characterOrientation as "image" | "video") || "video",
+      });
+
+      if (result.code !== 200 || !result.data) {
+        return NextResponse.json(
+          { error: result.msg || "Erro ao criar task Kling Motion" },
+          { status: result.code || 500 }
+        );
+      }
+
+      await chargeCredits(user.id, "kling-motion", cost);
+      return NextResponse.json({ taskId: result.data.taskId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      console.error("[generate-kling-motion] error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  // Kling 3.0 standard
   const { prompt, imageUrls, mode, duration, aspectRatio, sound, elements, multiShotEnabled, multiShots } = body;
 
   const isMultiShot = multiShotEnabled && multiShots?.length > 0;

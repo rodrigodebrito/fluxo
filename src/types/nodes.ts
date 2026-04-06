@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion";
 
 export interface ModelInfo {
   id: AIModel;
@@ -136,6 +136,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["gptQuality", "aspectRatio", "runs"],
+  },
+  {
+    id: "kling-motion",
+    name: "Kling Motion Control",
+    type: "video",
+    description: "Motion Control (Kling 2.6/3.0 via Kie AI)",
+    costPerRun: 50,
+    handles: [
+      { id: "prompt", label: "Prompt", required: false },
+      { id: "image-1", label: "Character*", required: true },
+      { id: "video-1", label: "Motion Video*", required: true },
+    ],
+    params: ["motionVersion", "motionMode", "characterOrientation", "runs"],
   },
 ];
 

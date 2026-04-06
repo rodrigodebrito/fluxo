@@ -87,6 +87,7 @@ export function getModelCost(model: string): number {
     case "kling-o3-i2v": return 120;
     case "kling-o3-edit": return 180;
     case "kling-o1-ref": return 180;
+    case "kling-motion": return 50;
     case "gpt-image-txt": return 4;
     case "gpt-image-img": return 4;
     case "llm": return 1;

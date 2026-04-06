@@ -95,6 +95,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const isSeedance = model === "seedance";
   const isKling = model === "kling" || model === "kling-o3-i2v" || model === "kling-o3-edit" || model === "kling-o1-ref";
   const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img";
+  const isMotion = model === "kling-motion";
 
   // GPT Image-specific
   const gptQuality = (node.data.gptQuality as string) || "medium";
@@ -110,6 +111,11 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const klingO3Duration = (node.data.klingO3Duration as number) || 5;
   const klingO1Duration = (node.data.klingO1Duration as number) || 5;
   const falTier = (node.data.falTier as string) || "pro";
+
+  // Motion Control
+  const motionVersion = (node.data.motionVersion as string) || "2.6";
+  const motionMode = (node.data.motionMode as string) || "720p";
+  const characterOrientation = (node.data.characterOrientation as string) || "video";
 
   // Multi-Shot
   const multiShotEnabled = (node.data.multiShotEnabled as boolean) ?? false;
@@ -152,6 +158,13 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const isPro = falTier === "pro";
     const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
     costPerRun = (isPro ? 36 : 24) * dur;
+  }
+  if (isMotion) {
+    const is3 = motionVersion === "3.0";
+    const is1080 = motionMode === "1080p";
+    const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
+    const motionDur = characterOrientation === "video" ? 10 : 30;
+    costPerRun = perSec * motionDur;
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -405,6 +418,60 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
+        {/* Motion Control Version */}
+        {params.includes("motionVersion") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Kling Version</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Kling 2.6 = mais barato, Kling 3.0 = melhor qualidade">i</span>
+            </div>
+            <select
+              value={motionVersion}
+              onChange={(e) => update({ motionVersion: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="2.6">Kling 2.6</option>
+              <option value="3.0">Kling 3.0</option>
+            </select>
+          </div>
+        )}
+
+        {/* Motion Mode (resolution) */}
+        {params.includes("motionMode") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Resolution</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="720p = mais rapido e barato, 1080p = melhor qualidade">i</span>
+            </div>
+            <select
+              value={motionMode}
+              onChange={(e) => update({ motionMode: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+          </div>
+        )}
+
+        {/* Character Orientation */}
+        {params.includes("characterOrientation") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Character Orientation</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Image = personagem na imagem (max 10s), Video = personagem no video (max 30s)">i</span>
+            </div>
+            <select
+              value={characterOrientation}
+              onChange={(e) => update({ characterOrientation: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="image">Image (max 10s)</option>
+              <option value="video">Video (max 30s)</option>
+            </select>
+          </div>
+        )}
+
         {/* CFG Scale (Kling O3 i2v) */}
         {params.includes("cfgScale") && (
           <div>
@@ -507,7 +574,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ aspectRatio: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(isGptImage ? GPT_ASPECT_RATIOS : isKling ? KLING_ASPECT_RATIOS : isSeedance ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
+              {(isGptImage ? GPT_ASPECT_RATIOS : (isKling || isMotion) ? KLING_ASPECT_RATIOS : isSeedance ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
                 <option key={ar.value} value={ar.value}>{ar.label}</option>
               ))}
             </select>
