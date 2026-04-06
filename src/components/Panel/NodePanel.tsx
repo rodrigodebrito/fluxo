@@ -331,6 +331,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                       multiShots: enabled && multiShots.length === 0
                         ? [{ prompt: "", duration: 5 }]
                         : multiShots,
+                      ...(enabled ? { generateAudio: true } : {}),
                     });
                   }}
                   className="sr-only peer"
@@ -615,15 +616,19 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
 
         {/* Generate Audio */}
         {params.includes("generateAudio") && (
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className={`flex items-center gap-2 ${multiShotEnabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
             <input
               type="checkbox"
-              checked={generateAudio}
-              onChange={(e) => update({ generateAudio: e.target.checked })}
+              checked={multiShotEnabled ? true : generateAudio}
+              onChange={(e) => { if (!multiShotEnabled) update({ generateAudio: e.target.checked }); }}
+              disabled={multiShotEnabled}
               className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
             />
             <span className="text-sm text-zinc-300">Generate Audio</span>
-            <span className="text-zinc-500 text-xs cursor-help" title="Gera audio junto com o video (aumenta custo)">i</span>
+            {multiShotEnabled
+              ? <span className="text-zinc-500 text-xs">(obrigatorio no multi-shot)</span>
+              : <span className="text-zinc-500 text-xs cursor-help" title="Gera audio junto com o video (aumenta custo)">i</span>
+            }
           </label>
         )}
 

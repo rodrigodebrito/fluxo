@@ -290,7 +290,7 @@ export async function createKlingTask(
   const inputBody: Record<string, unknown> = {
     mode: input.mode || "std",
     aspect_ratio: input.aspectRatio || "16:9",
-    sound: input.sound ?? false,
+    sound: isMultiShot ? true : (input.sound ?? false),
     multi_shots: isMultiShot ? true : false,
   };
 
