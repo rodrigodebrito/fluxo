@@ -40,9 +40,9 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-kling":
-      return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0 };
+      return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":
-      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, falTier: "pro", elementCount: 0 };
+      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, falTier: "pro", elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-edit":
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
@@ -832,13 +832,19 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const perSec = pipeline.klingMode === "pro"
           ? (pipeline.generateAudio ? 27 : 18)
           : (pipeline.generateAudio ? 20 : 14);
-        costPerRun = perSec * (pipeline.klingDuration || 5);
+        const klingDur = pipeline.multiShotEnabled && pipeline.multiShots?.length
+          ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
+          : (pipeline.klingDuration || 5);
+        costPerRun = perSec * klingDur;
       } else if (m === "kling-o3-i2v") {
         const isPro = pipeline.falTier === "pro";
         const perSec = isPro
           ? (pipeline.generateAudio ? 29 : 24)
           : (pipeline.generateAudio ? 20 : 16);
-        costPerRun = perSec * (pipeline.klingO3Duration || 5);
+        const o3Dur = pipeline.multiShotEnabled && pipeline.multiShots?.length
+          ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
+          : (pipeline.klingO3Duration || 5);
+        costPerRun = perSec * o3Dur;
       } else if (m === "kling-o3-edit" || m === "kling-o1-ref") {
         const isPro = pipeline.falTier === "pro";
         const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
@@ -870,6 +876,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         klingO3Duration: pipeline.klingO3Duration,
         klingO1Duration: pipeline.klingO1Duration,
         falTier: pipeline.falTier,
+        multiShotEnabled: pipeline.multiShotEnabled,
+        multiShots: pipeline.multiShots,
         cost: costPerRun,
       };
 

@@ -69,7 +69,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
-    params: ["klingMode", "klingDuration", "aspectRatio", "generateAudio", "runs"],
+    params: ["klingMode", "multiShots", "klingDuration", "aspectRatio", "generateAudio", "runs"],
     dynamicElements: true, // suporta element handles dinamicos
   },
   {
@@ -83,7 +83,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
-    params: ["falTier", "klingO3Duration", "aspectRatio", "generateAudio", "cfgScale", "runs"],
+    params: ["falTier", "multiShots", "klingO3Duration", "aspectRatio", "generateAudio", "cfgScale", "runs"],
     dynamicElements: true,
   },
   {

@@ -111,6 +111,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const klingO1Duration = (node.data.klingO1Duration as number) || 5;
   const falTier = (node.data.falTier as string) || "pro";
 
+  // Multi-Shot
+  const multiShotEnabled = (node.data.multiShotEnabled as boolean) ?? false;
+  const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
+  const totalShotDuration = multiShots.reduce((s, shot) => s + shot.duration, 0);
+  const maxShotDuration = model === "kling" ? 12 : 15;
+
   const selectedModel = AVAILABLE_MODELS.find((m) => m.id === model);
   const isVideo = selectedModel?.type === "video";
   // Custo dinamico
@@ -131,14 +137,16 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   }
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);
-    costPerRun = perSec * klingDuration;
+    const dur = multiShotEnabled && multiShots.length > 0 ? totalShotDuration : klingDuration;
+    costPerRun = perSec * dur;
   }
   if (model === "kling-o3-i2v") {
     const isPro = falTier === "pro";
     const perSec = isPro
       ? (generateAudio ? 29 : 24)
       : (generateAudio ? 20 : 16);
-    costPerRun = perSec * klingO3Duration;
+    const dur = multiShotEnabled && multiShots.length > 0 ? totalShotDuration : klingO3Duration;
+    costPerRun = perSec * dur;
   }
   if (model === "kling-o3-edit" || model === "kling-o1-ref") {
     const isPro = falTier === "pro";
@@ -214,8 +222,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Kling Duration */}
-        {params.includes("klingDuration") && (
+        {/* Kling Duration — hidden when multishot ON */}
+        {params.includes("klingDuration") && !multiShotEnabled && (
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Duration</span>
@@ -256,8 +264,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Kling O3 Duration (3-15s) */}
-        {params.includes("klingO3Duration") && (
+        {/* Kling O3 Duration (3-15s) — hidden when multishot ON */}
+        {params.includes("klingO3Duration") && !multiShotEnabled && (
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Duration</span>
@@ -301,6 +309,98 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                 {klingO1Duration}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Multi-Shot */}
+        {params.includes("multiShots") && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-zinc-300">Multi-Shot</span>
+                <span className="text-zinc-500 text-xs cursor-help" title="Dividir o video em multiplas cenas, cada uma com prompt e duracao proprios">i</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={multiShotEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    update({
+                      multiShotEnabled: enabled,
+                      multiShots: enabled && multiShots.length === 0
+                        ? [{ prompt: "", duration: 5 }]
+                        : multiShots,
+                    });
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600" />
+              </label>
+            </div>
+
+            {multiShotEnabled && (
+              <div className="space-y-2">
+                {multiShots.map((shot, idx) => (
+                  <div key={idx} className="bg-zinc-800 border border-zinc-700 rounded-lg p-2 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-purple-400 font-medium">Shot {idx + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            max={maxShotDuration}
+                            value={shot.duration}
+                            onChange={(e) => {
+                              const newShots = [...multiShots];
+                              newShots[idx] = { ...newShots[idx], duration: Math.max(1, Math.min(maxShotDuration, parseInt(e.target.value) || 1)) };
+                              update({ multiShots: newShots });
+                            }}
+                            className="w-12 bg-zinc-900 border border-zinc-600 rounded px-1.5 py-0.5 text-xs text-zinc-300 text-center focus:outline-none focus:border-purple-500"
+                          />
+                          <span className="text-xs text-zinc-500">s</span>
+                        </div>
+                        {multiShots.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const newShots = multiShots.filter((_, i) => i !== idx);
+                              update({ multiShots: newShots });
+                            }}
+                            className="text-zinc-500 hover:text-red-400 text-xs"
+                          >
+                            x
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <textarea
+                      value={shot.prompt}
+                      onChange={(e) => {
+                        const newShots = [...multiShots];
+                        newShots[idx] = { ...newShots[idx], prompt: e.target.value };
+                        update({ multiShots: newShots });
+                      }}
+                      placeholder={`Descreva a cena ${idx + 1}...`}
+                      rows={2}
+                      className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-300 placeholder:text-zinc-500 focus:outline-none focus:border-purple-500 resize-none"
+                    />
+                  </div>
+                ))}
+
+                <button
+                  onClick={() => update({ multiShots: [...multiShots, { prompt: "", duration: 3 }] })}
+                  className="w-full text-xs text-purple-400 hover:text-purple-300 border border-dashed border-zinc-700 hover:border-purple-500/50 rounded-lg py-1.5 transition-colors"
+                >
+                  + Add Shot
+                </button>
+
+                <div className={`flex items-center justify-between text-xs px-1 ${totalShotDuration > 15 ? "text-red-400" : "text-zinc-400"}`}>
+                  <span>Total: {totalShotDuration}s / 15s</span>
+                  {totalShotDuration > 15 && <span className="text-red-400 font-medium">Excede limite!</span>}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -45,6 +45,9 @@ interface PipelineData {
   klingO3Duration?: number;
   klingO1Duration?: number;
   falTier?: "std" | "pro";
+  // Multi-Shot
+  multiShotEnabled?: boolean;
+  multiShots?: { prompt: string; duration: number }[];
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -92,6 +95,8 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.klingO3Duration = (modelNode.data.klingO3Duration as number) || 5;
   result.klingO1Duration = (modelNode.data.klingO1Duration as number) || 5;
   result.falTier = (modelNode.data.falTier as "std" | "pro") || "pro";
+  result.multiShotEnabled = (modelNode.data.multiShotEnabled as boolean) ?? false;
+  result.multiShots = (modelNode.data.multiShots as { prompt: string; duration: number }[]) || [];
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -441,6 +446,8 @@ export async function startGeneration(
     klingO3Duration?: number;
     klingO1Duration?: number;
     falTier?: "std" | "pro";
+    multiShotEnabled?: boolean;
+    multiShots?: { prompt: string; duration: number }[];
     cost?: number;
   }
 ): Promise<string> {
@@ -510,6 +517,8 @@ export async function startGeneration(
         cfgScale: options.cfgScale ?? 0.5,
         keepAudio: options.keepAudio ?? true,
         elements: falElements && falElements.length > 0 ? falElements : undefined,
+        multiShotEnabled: options.multiShotEnabled,
+        multiShots: options.multiShots && options.multiShots.length > 0 ? options.multiShots : undefined,
         cost: options.cost,
       }),
     });
@@ -558,6 +567,8 @@ export async function startGeneration(
         aspectRatio: options?.aspectRatio || "16:9",
         sound: options?.generateAudio ?? false,
         elements: elements && elements.length > 0 ? elements : undefined,
+        multiShotEnabled: options?.multiShotEnabled,
+        multiShots: options?.multiShots && options.multiShots.length > 0 ? options.multiShots : undefined,
         cost: options?.cost,
       }),
     });

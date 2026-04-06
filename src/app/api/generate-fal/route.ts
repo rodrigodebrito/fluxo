@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
   }
 
   const { prompt } = body;
-  if (!prompt) {
+  const isMultiShot = body.multiShotEnabled && body.multiShots?.length > 0;
+  if (!prompt && !isMultiShot) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
       cfgScale: body.cfgScale,
       keepAudio: body.keepAudio,
       elements: body.elements,
+      multiShotEnabled: body.multiShotEnabled,
+      multiShots: body.multiShots,
     });
 
     console.log("[generate-fal] model:", model, "endpoint:", endpoint, "input:", JSON.stringify(input));

@@ -225,6 +225,8 @@ interface FalGenerateInput {
   cfgScale?: number;
   keepAudio?: boolean;
   elements?: { frontal_image_url: string; reference_image_urls?: string[] }[];
+  multiShotEnabled?: boolean;
+  multiShots?: { prompt: string; duration: number }[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -235,15 +237,25 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     // Kling O3 Image-to-Video
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body: Record<string, any> = {};
-    if (input.prompt) body.prompt = input.prompt;
     if (input.negativePrompt) body.negative_prompt = input.negativePrompt;
     if (input.imageUrls && input.imageUrls[0]) body.image_url = input.imageUrls[0];
     if (input.endImageUrl) body.end_image_url = input.endImageUrl;
-    body.duration = String(input.duration || 5);
     body.aspect_ratio = input.aspectRatio || "16:9";
     body.generate_audio = input.generateAudio ?? false;
     if (input.cfgScale != null) body.cfg_scale = input.cfgScale;
     if (input.elements && input.elements.length > 0) body.elements = input.elements;
+
+    // Multi-Shot: use multi_prompt instead of prompt + duration
+    if (input.multiShotEnabled && input.multiShots && input.multiShots.length > 0) {
+      body.multi_prompt = input.multiShots.map((s) => ({
+        prompt: s.prompt,
+        duration: s.duration,
+      }));
+      body.shot_type = "customize";
+    } else {
+      if (input.prompt) body.prompt = input.prompt;
+      body.duration = String(input.duration || 5);
+    }
     return body;
   }
 

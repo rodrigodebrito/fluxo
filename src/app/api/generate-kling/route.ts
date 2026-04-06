@@ -24,9 +24,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
-  const { prompt, imageUrls, mode, duration, aspectRatio, sound, elements } = body;
+  const { prompt, imageUrls, mode, duration, aspectRatio, sound, elements, multiShotEnabled, multiShots } = body;
 
-  if (!prompt) {
+  const isMultiShot = multiShotEnabled && multiShots?.length > 0;
+  if (!prompt && !isMultiShot) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
@@ -39,6 +40,8 @@ export async function POST(request: NextRequest) {
       aspectRatio: aspectRatio || "16:9",
       sound: sound ?? false,
       elements,
+      multiShotEnabled,
+      multiShots,
     });
 
     if (result.code !== 200 || !result.data) {

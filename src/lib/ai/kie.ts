@@ -277,20 +277,35 @@ interface CreateKlingInput {
   aspectRatio?: string;
   sound?: boolean;
   elements?: { name: string; description: string; element_input_urls: string[] }[];
+  multiShotEnabled?: boolean;
+  multiShots?: { prompt: string; duration: number }[];
 }
 
 export async function createKlingTask(
   apiKey: string,
   input: CreateKlingInput
 ): Promise<CreateTaskResponse> {
+  const isMultiShot = input.multiShotEnabled && input.multiShots && input.multiShots.length > 0;
+
   const inputBody: Record<string, unknown> = {
-    prompt: input.prompt,
     mode: input.mode || "std",
-    duration: String(input.duration || 5),
     aspect_ratio: input.aspectRatio || "16:9",
     sound: input.sound ?? false,
-    multi_shots: false,
+    multi_shots: isMultiShot ? true : false,
   };
+
+  if (isMultiShot) {
+    // Multi-Shot: use multi_prompt array, no top-level prompt
+    inputBody.multi_prompt = input.multiShots!.map((s) => ({
+      prompt: s.prompt,
+      duration: s.duration,
+    }));
+    // Duration = total of all shots
+    inputBody.duration = String(input.multiShots!.reduce((sum, s) => sum + s.duration, 0));
+  } else {
+    inputBody.prompt = input.prompt;
+    inputBody.duration = String(input.duration || 5);
+  }
 
   if (input.imageUrls && input.imageUrls.length > 0) {
     inputBody.image_urls = input.imageUrls;
