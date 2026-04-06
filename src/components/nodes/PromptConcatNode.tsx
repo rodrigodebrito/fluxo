@@ -24,7 +24,7 @@ export default function PromptConcatNode({ id, data }: NodeProps) {
       if (!sourceNode) continue;
 
       if (sourceNode.type === "prompt") {
-        const text = (sourceNode.data.prompt as string) || "";
+        const text = (sourceNode.data.text as string) || "";
         if (text.trim()) parts.push(text.trim());
       } else if (sourceNode.type === "textIterator") {
         const items = (sourceNode.data.items as string[]) || [];
