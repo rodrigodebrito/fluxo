@@ -836,13 +836,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "kling-o3-i2v") {
         const isPro = pipeline.falTier === "pro";
         const perSec = isPro
-          ? (pipeline.generateAudio ? 21 : 17)
-          : (pipeline.generateAudio ? 17 : 13);
+          ? (pipeline.generateAudio ? 29 : 24)
+          : (pipeline.generateAudio ? 20 : 16);
         costPerRun = perSec * (pipeline.klingO3Duration || 5);
       } else if (m === "kling-o3-edit" || m === "kling-o1-ref") {
         const isPro = pipeline.falTier === "pro";
         const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
-        costPerRun = (isPro ? 25 : 19) * dur;
+        costPerRun = (isPro ? 36 : 24) * dur;
       }
 
       const genOptions = {

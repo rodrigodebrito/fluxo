@@ -136,14 +136,14 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "kling-o3-i2v") {
     const isPro = falTier === "pro";
     const perSec = isPro
-      ? (generateAudio ? 21 : 17)
-      : (generateAudio ? 17 : 13);
+      ? (generateAudio ? 29 : 24)
+      : (generateAudio ? 20 : 16);
     costPerRun = perSec * klingO3Duration;
   }
   if (model === "kling-o3-edit" || model === "kling-o1-ref") {
     const isPro = falTier === "pro";
     const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
-    costPerRun = (isPro ? 25 : 19) * dur;
+    costPerRun = (isPro ? 36 : 24) * dur;
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;

@@ -77,7 +77,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Kling O3",
     type: "video",
     description: "Image to Video (Kling O3 via fal.ai)",
-    costPerRun: 100,
+    costPerRun: 120,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "image-1", label: "First Frame", required: false },
@@ -91,7 +91,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Kling O3 Edit Video",
     type: "video",
     description: "Editar video com IA (Kling O3 via fal.ai)",
-    costPerRun: 125,
+    costPerRun: 180,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "video-1", label: "Video*", required: true },
@@ -105,7 +105,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Kling O1 Reference",
     type: "video",
     description: "Video de referencia (Kling O1 via fal.ai)",
-    costPerRun: 125,
+    costPerRun: 180,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "video-1", label: "Ref Video*", required: true },
