@@ -872,7 +872,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 17/s, 23/s credits (50% margin)
         const is3 = pipeline.motionVersion === "3.0";
         const is1080 = pipeline.motionMode === "1080p";
-        const perSec = is3 ? (is1080 ? 23 : 17) : (is1080 ? 8 : 5);
+        const perSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 9 : 6);
         const motionDur = pipeline.videoDuration || 10;
         costPerRun = perSec * motionDur;
       }
