@@ -134,6 +134,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
   // Context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
   const [contextSearch, setContextSearch] = useState("");
+  const [showNoCredits, setShowNoCredits] = useState(false);
   // Track right-mouse-button drag for panning cursor
   useEffect(() => {
     const wrapper = reactFlowWrapper.current;
@@ -909,7 +910,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         console.log("[pipeline] Cancelado pelo usuário");
       } else {
         console.error("Erro no pipeline:", err);
-        alert("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+        const errMsg = err instanceof Error ? err.message : "Erro desconhecido";
+        if (errMsg.includes("Creditos insuficientes") || errMsg.includes("402")) {
+          setShowNoCredits(true);
+        } else {
+          alert("Erro: " + errMsg);
+        }
       }
       setNodes((nds) =>
         nds.map((n) =>
@@ -1166,6 +1172,37 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           onSelect={addNodeFromContext}
           onClose={() => setContextMenu(null)}
         />
+      )}
+
+      {/* Modal: Creditos insuficientes */}
+      {showNoCredits && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
+            <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Creditos insuficientes</h3>
+            <p className="text-sm text-zinc-400 mb-6">
+              Voce nao tem creditos suficientes para essa geracao. Compre seu primeiro pacote e ganhe <span className="text-purple-400 font-semibold">+50 creditos de bonus</span>!
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNoCredits(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 transition-colors"
+              >
+                Fechar
+              </button>
+              <a
+                href="/pricing"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white text-center transition-colors"
+              >
+                Comprar Creditos
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

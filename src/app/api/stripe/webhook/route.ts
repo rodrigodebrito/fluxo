@@ -34,6 +34,21 @@ export async function POST(request: NextRequest) {
       const userId = session.metadata?.supabase_user_id;
       if (!userId) break;
 
+      // Verificar se e primeira compra (para bonus de +50)
+      const { data: logs } = await supabase
+        .from("credit_logs")
+        .select("id")
+        .eq("user_id", userId)
+        .like("reason", "pack_purchase_%")
+        .limit(1);
+      const { data: subLogs } = await supabase
+        .from("credit_logs")
+        .select("id")
+        .eq("user_id", userId)
+        .like("reason", "subscription_%")
+        .limit(1);
+      const isFirstPurchase = (!logs || logs.length === 0) && (!subLogs || subLogs.length === 0);
+
       if (session.mode === "payment") {
         // Pacote avulso - buscar line items para saber qual pack
         const lineItems = await getStripe().checkout.sessions.listLineItems(session.id);
@@ -44,6 +59,12 @@ export async function POST(request: NextRequest) {
         if (info) {
           await addCredits(userId, info.credits, `pack_purchase_${info.credits}`);
           console.log(`[stripe-webhook] Added ${info.credits} credits (pack) for user ${userId}`);
+
+          // Bonus primeira compra
+          if (isFirstPurchase) {
+            await addCredits(userId, 50, "first_purchase_bonus");
+            console.log(`[stripe-webhook] Added 50 bonus credits (first purchase) for user ${userId}`);
+          }
         }
       }
 
@@ -66,6 +87,12 @@ export async function POST(request: NextRequest) {
 
           await addCredits(userId, info.credits, `subscription_${info.planId}`);
           console.log(`[stripe-webhook] Activated plan ${info.planId} (+${info.credits} credits) for user ${userId}`);
+
+          // Bonus primeira compra
+          if (isFirstPurchase) {
+            await addCredits(userId, 50, "first_purchase_bonus");
+            console.log(`[stripe-webhook] Added 50 bonus credits (first purchase) for user ${userId}`);
+          }
         }
       }
       break;
