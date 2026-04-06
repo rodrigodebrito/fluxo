@@ -159,11 +159,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
     costPerRun = (isPro ? 36 : 24) * dur;
   }
+  const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
     const is3 = motionVersion === "3.0";
     const is1080 = motionMode === "1080p";
     const motionPerSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 9 : 6);
-    costPerRun = motionPerSec * 10; // estimativa ~10s, custo real = perSec × duração do video
+    costPerRun = motionPerSec * (connectedVideoDuration || 10);
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
   const totalCost = costPerRun * runs * multiplier;
@@ -474,7 +475,11 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
         {/* Motion cost info */}
         {isMotion && (
           <div className="text-xs text-zinc-500 bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2">
-            <span className="text-zinc-400">{motionVersion === "3.0" ? (motionMode === "1080p" ? 27 : 20) : (motionMode === "1080p" ? 9 : 6)}</span> credits/s — custo final = duracao do video
+            <span className="text-zinc-400">{motionVersion === "3.0" ? (motionMode === "1080p" ? 27 : 20) : (motionMode === "1080p" ? 9 : 6)}</span> credits/s
+            {connectedVideoDuration > 0
+              ? <> × <span className="text-zinc-300">{connectedVideoDuration}s</span> = <span className="text-purple-400">{costPerRun}</span> credits</>
+              : <> — conecte um video pra ver o custo exato</>
+            }
           </div>
         )}
 

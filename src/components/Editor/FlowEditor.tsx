@@ -224,6 +224,26 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     onFlowChange?.();
   }, [edges, onFlowChange]);
 
+  // Propagar videoDuration de VideoInput/Model conectados ao handle video-1
+  useEffect(() => {
+    setNodes((nds) => {
+      let changed = false;
+      const updated = nds.map((n) => {
+        if (n.type !== "model") return n;
+        const videoEdge = edges.find((e) => e.target === n.id && e.targetHandle === "video-1");
+        if (!videoEdge) {
+          if (n.data.connectedVideoDuration) { changed = true; return { ...n, data: { ...n.data, connectedVideoDuration: 0 } }; }
+          return n;
+        }
+        const src = nds.find((s) => s.id === videoEdge.source);
+        const dur = (src?.data.videoDuration as number) || 0;
+        if (dur !== (n.data.connectedVideoDuration || 0)) { changed = true; return { ...n, data: { ...n.data, connectedVideoDuration: dur } }; }
+        return n;
+      });
+      return changed ? updated : nds;
+    });
+  }, [edges, setNodes]);
+
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       // Forçar seleção visual do nó clicado
