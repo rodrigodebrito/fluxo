@@ -24,7 +24,7 @@ export async function GET() {
   // List all users
   const { data: users, error } = await serviceClient
     .from("profiles")
-    .select("id, name, email, credits, role, created_at")
+    .select("id, name, email, credits, role, plan, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
