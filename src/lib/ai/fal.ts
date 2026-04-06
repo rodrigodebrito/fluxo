@@ -1,4 +1,5 @@
 const QUEUE_BASE = "https://queue.fal.run";
+const QUEUE_BASE_ALT = "https://api.fal.ai/queue";
 
 // Endpoints map — tier (std/pro) is resolved dynamically
 const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
@@ -113,17 +114,45 @@ interface FalStatusResponse {
 export async function pollFalStatus(
   falKey: string,
   endpoint: string,
-  requestId: string
+  requestId: string,
+  statusUrl?: string
 ): Promise<FalStatusResponse> {
-  const response = await fetch(
-    `${QUEUE_BASE}/${endpoint}/requests/${encodeURIComponent(requestId)}/status`,
-    {
-      method: "GET",
-      headers: { Authorization: `Key ${falKey}` },
-    }
-  );
+  // Use status_url from submit response if available, otherwise try multiple URL formats
+  const urls = statusUrl
+    ? [statusUrl]
+    : [
+        `${QUEUE_BASE}/${endpoint}/requests/${encodeURIComponent(requestId)}/status`,
+        `${QUEUE_BASE_ALT}/${endpoint}/requests/${encodeURIComponent(requestId)}/status`,
+      ];
 
-  return safeJson(response);
+  let lastError: Error | null = null;
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Key ${falKey}` },
+      });
+
+      if (response.status === 405 || response.status === 404) {
+        console.warn(`[fal] Status URL returned ${response.status}: ${url}`);
+        lastError = new Error(`fal.ai status ${response.status} for ${url}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`fal.ai status failed (${response.status}): ${text.slice(0, 300)}`);
+      }
+
+      return safeJson(response);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (urls.length > 1) continue;
+      throw lastError;
+    }
+  }
+
+  throw lastError || new Error("fal.ai: falha ao obter status");
 }
 
 // === Get result ===
@@ -140,22 +169,45 @@ interface FalVideoResult {
 export async function getFalResult(
   falKey: string,
   endpoint: string,
-  requestId: string
+  requestId: string,
+  responseUrl?: string
 ): Promise<FalVideoResult> {
-  const response = await fetch(
-    `${QUEUE_BASE}/${endpoint}/requests/${encodeURIComponent(requestId)}`,
-    {
-      method: "GET",
-      headers: { Authorization: `Key ${falKey}` },
-    }
-  );
+  // Use response_url from submit response if available, otherwise try multiple URL formats
+  const urls = responseUrl
+    ? [responseUrl]
+    : [
+        `${QUEUE_BASE}/${endpoint}/requests/${encodeURIComponent(requestId)}`,
+        `${QUEUE_BASE_ALT}/${endpoint}/requests/${encodeURIComponent(requestId)}`,
+      ];
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`fal.ai result failed (${response.status}): ${text.slice(0, 300)}`);
+  let lastError: Error | null = null;
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Key ${falKey}` },
+      });
+
+      if (response.status === 405 || response.status === 404) {
+        console.warn(`[fal] Result URL returned ${response.status}: ${url}`);
+        lastError = new Error(`fal.ai result ${response.status} for ${url}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`fal.ai result failed (${response.status}): ${text.slice(0, 300)}`);
+      }
+
+      return safeJson(response);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (urls.length > 1) continue;
+      throw lastError;
+    }
   }
 
-  return safeJson(response);
+  throw lastError || new Error("fal.ai: falha ao obter resultado");
 }
 
 // === Build input body per model ===

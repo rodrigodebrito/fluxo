@@ -517,8 +517,9 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(falText); } catch { throw new Error(`Resposta invalida do servidor: ${falText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao fal.ai");
-    // Return taskId with falEndpoint encoded (separator: |)
-    return `${data.taskId}|${data.falEndpoint}`;
+    // Return taskId with falEndpoint + status/response URLs encoded (separator: |)
+    const parts = [data.taskId, data.falEndpoint, data.statusUrl || "", data.responseUrl || ""];
+    return parts.join("|");
   }
 
   // Kling 3.0
@@ -706,8 +707,11 @@ export async function pollTaskStatus(
     try {
       let statusUrl: string;
       if (isFal) {
-        const [falTaskId, falEndpoint] = taskId.split("|");
-        statusUrl = `/api/status-fal?taskId=${encodeURIComponent(falTaskId)}&falEndpoint=${encodeURIComponent(falEndpoint)}`;
+        const parts = taskId.split("|");
+        const [falTaskId, falEndpoint] = parts;
+        const falStatusUrl = parts[2] || "";
+        const falResponseUrl = parts[3] || "";
+        statusUrl = `/api/status-fal?taskId=${encodeURIComponent(falTaskId)}&falEndpoint=${encodeURIComponent(falEndpoint)}${falStatusUrl ? `&statusUrl=${encodeURIComponent(falStatusUrl)}` : ""}${falResponseUrl ? `&responseUrl=${encodeURIComponent(falResponseUrl)}` : ""}`;
       } else {
         statusUrl = `/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}`;
       }

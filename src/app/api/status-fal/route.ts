@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const taskId = searchParams.get("taskId");
   const falEndpoint = searchParams.get("falEndpoint");
+  const statusUrl = searchParams.get("statusUrl") || undefined;
+  const responseUrl = searchParams.get("responseUrl") || undefined;
 
   if (!taskId || !falEndpoint) {
     return NextResponse.json({ error: "taskId e falEndpoint sao obrigatorios" }, { status: 400 });
@@ -20,11 +22,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const status = await pollFalStatus(falKey, falEndpoint, taskId);
+    const status = await pollFalStatus(falKey, falEndpoint, taskId, statusUrl);
 
     if (status.status === "COMPLETED") {
       // Fetch actual result
-      const result = await getFalResult(falKey, falEndpoint, taskId);
+      const result = await getFalResult(falKey, falEndpoint, taskId, responseUrl);
       return NextResponse.json({
         state: "success",
         resultUrls: result.video?.url ? [result.video.url] : [],

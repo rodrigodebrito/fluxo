@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       taskId: result.request_id,
       falEndpoint: endpoint,
+      statusUrl: result.status_url || undefined,
+      responseUrl: result.response_url || undefined,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
