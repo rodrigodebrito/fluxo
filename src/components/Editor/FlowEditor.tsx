@@ -19,6 +19,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "../nodes";
+import { AVAILABLE_MODELS } from "@/types/nodes";
 import {
   extractPipelineData,
   startGeneration,
@@ -432,8 +433,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       // Model → model: resultado vai como imagem de referência (encontrar handle livre)
       if (sourceNode.type === "model" && targetNode.type === "model") {
-        // Respeitar ref-* e element-* handles
-        if (finalTargetHandle?.startsWith("ref-") || finalTargetHandle?.startsWith("element-")) {
+        // Respeitar ref-*, element-*, e video-* handles
+        if (finalTargetHandle?.startsWith("ref-") || finalTargetHandle?.startsWith("element-") || finalTargetHandle?.startsWith("video-")) {
           // usar o escolhido
         } else {
           const imageInputCount = (targetNode.data.imageInputCount as number) || 1;
@@ -452,6 +453,15 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
               if (!occupiedHandles.has(handleId)) {
                 freeHandle = handleId;
                 break;
+              }
+            }
+            // Se não tem image handle livre, tentar video-1 (motion, edit, ref)
+            if (!freeHandle) {
+              const targetModel = AVAILABLE_MODELS.find((m) => m.id === targetNode.data.model);
+              const hasVideoHandle = targetModel?.handles.some((h) => h.id === "video-1");
+              const videoOccupied = edgesRef.current.some((e) => e.target === targetId && e.targetHandle === "video-1");
+              if (hasVideoHandle && !videoOccupied) {
+                freeHandle = "video-1";
               }
             }
             if (!freeHandle) return;
