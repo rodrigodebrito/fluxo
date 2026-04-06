@@ -444,7 +444,16 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
               .map((e) => e.targetHandle)
           );
 
-          if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
+          // Se o source é um modelo de video e o target tem video-1, priorizar video-1
+          const sourceModelInfo = AVAILABLE_MODELS.find((m) => m.id === sourceNode.data.model);
+          const targetModelInfo = AVAILABLE_MODELS.find((m) => m.id === targetNode.data.model);
+          const sourceIsVideo = sourceModelInfo?.type === "video";
+          const targetHasVideo = targetModelInfo?.handles.some((h) => h.id === "video-1");
+          const videoOccupied = edgesRef.current.some((e) => e.target === targetId && e.targetHandle === "video-1");
+
+          if (sourceIsVideo && targetHasVideo && !videoOccupied && !finalTargetHandle?.startsWith("image-")) {
+            finalTargetHandle = "video-1";
+          } else if (finalTargetHandle?.startsWith("image-") && !occupiedHandles.has(finalTargetHandle)) {
             // usar o escolhido
           } else {
             let freeHandle: string | null = null;
@@ -455,14 +464,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
                 break;
               }
             }
-            // Se não tem image handle livre, tentar video-1 (motion, edit, ref)
-            if (!freeHandle) {
-              const targetModel = AVAILABLE_MODELS.find((m) => m.id === targetNode.data.model);
-              const hasVideoHandle = targetModel?.handles.some((h) => h.id === "video-1");
-              const videoOccupied = edgesRef.current.some((e) => e.target === targetId && e.targetHandle === "video-1");
-              if (hasVideoHandle && !videoOccupied) {
-                freeHandle = "video-1";
-              }
+            // Se não tem image handle livre, tentar video-1
+            if (!freeHandle && targetHasVideo && !videoOccupied) {
+              freeHandle = "video-1";
             }
             if (!freeHandle) return;
             finalTargetHandle = freeHandle;
@@ -803,7 +807,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     }
 
     const isMultiShot = pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0;
-    if (!pipeline.prompt && !isMultiShot) {
+    const isPromptOptional = pipeline.model === "kling-motion";
+    if (!pipeline.prompt && !isMultiShot && !isPromptOptional) {
       alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
       return;
     }
