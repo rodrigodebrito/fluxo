@@ -65,6 +65,12 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="text-right">
+            <a href="/forgot-password" className="text-xs text-zinc-500 hover:text-purple-400 transition-colors">
+              Esqueceu a senha?
+            </a>
+          </div>
+
           {error && (
             <div className="text-red-400 text-sm text-center">{error}</div>
           )}
