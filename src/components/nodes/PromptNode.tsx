@@ -2,6 +2,7 @@
 
 import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import { useCallback, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 export default function PromptNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements } = useReactFlow();
@@ -94,36 +95,35 @@ export default function PromptNode({ id, data }: NodeProps) {
         />
       </div>
 
-      {/* Expanded Modal */}
-      {expanded && (
+      {/* Expanded Modal - rendered via portal to escape ReactFlow transform */}
+      {expanded && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm nodrag"
+          style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setExpanded(false); }}
         >
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-[600px] max-w-[90vw] max-h-[80vh] flex flex-col">
+          <div style={{ width: 700, maxWidth: "90vw", backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: 16, boxShadow: "0 25px 50px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-700">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                <span className="text-sm font-semibold text-zinc-200">Prompt</span>
-                <span className="text-[10px] text-zinc-500">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderBottom: "1px solid #3f3f46" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#a855f7" }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#e4e4e7" }}>Prompt</span>
+                <span style={{ fontSize: 11, color: "#71717a" }}>
                   {((data.text as string) || "").length} chars
                 </span>
               </div>
               <button
                 onClick={() => setExpanded(false)}
-                className="text-zinc-400 hover:text-white text-lg leading-none transition-colors"
-                title="Fechar (Esc)"
+                style={{ color: "#a1a1aa", fontSize: 20, lineHeight: 1, cursor: "pointer", background: "none", border: "none" }}
               >
                 ×
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 flex-1 min-h-0">
+            <div style={{ padding: 16 }}>
               <textarea
                 ref={expandedRef}
-                className="w-full h-[400px] max-h-[60vh] bg-zinc-800 border border-zinc-600 rounded-xl p-4 text-sm text-zinc-200 placeholder-zinc-500 resize-none focus:outline-none focus:border-purple-500 transition-colors leading-relaxed"
+                style={{ width: "100%", height: 350, backgroundColor: "#27272a", border: "1px solid #52525b", borderRadius: 12, padding: 16, fontSize: 14, color: "#e4e4e7", resize: "none", outline: "none", lineHeight: 1.7, fontFamily: "inherit" }}
                 placeholder="Digite seu prompt aqui..."
                 value={(data.text as string) || ""}
                 onChange={handleChange}
@@ -131,16 +131,17 @@ export default function PromptNode({ id, data }: NodeProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-5 py-3 border-t border-zinc-700 flex justify-end">
+            <div style={{ padding: "12px 20px", borderTop: "1px solid #3f3f46", display: "flex", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setExpanded(false)}
-                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+                style={{ padding: "6px 16px", backgroundColor: "#9333ea", color: "white", fontSize: 13, fontWeight: 500, borderRadius: 8, border: "none", cursor: "pointer" }}
               >
                 Fechar
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
