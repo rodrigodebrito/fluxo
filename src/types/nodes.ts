@@ -165,11 +165,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     id: "flux-2-edit",
     name: "Flux 2 Edit",
     type: "image",
-    description: "Editar imagem com texto (Flux 2 Pro Edit via fal.ai)",
+    description: "Editar imagem com texto (Flux 2 Pro Edit via fal.ai, ate 9 imagens)",
     costPerRun: 6,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
-      { id: "image-1", label: "Image*", required: true },
     ],
     params: ["fluxImageSize", "seed", "runs"],
   },

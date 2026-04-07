@@ -20,9 +20,9 @@ export default function ModelNode({ id, data }: NodeProps) {
 
   // Para Veo3/Seedance/Kling, handles vêm do modelo. Para nano-banana, são dinâmicos
   const modelHandles = selectedModel?.handles.filter((h) => h.id !== "prompt") || [];
-  const useFixedHandles = modelHandles.length > 0 && model !== "nano-banana-pro";
-  // Modelos que só têm Prompt (sem handles de imagem definidos) e não são nano-banana: 0 image handles
-  const hasDynamicImages = model === "nano-banana-pro";
+  const useFixedHandles = modelHandles.length > 0 && model !== "nano-banana-pro" && model !== "flux-2-edit";
+  // Modelos que só têm Prompt (sem handles de imagem definidos) e não são nano-banana/flux-edit: 0 image handles
+  const hasDynamicImages = model === "nano-banana-pro" || model === "flux-2-edit";
   const imageHandleCount = useFixedHandles ? modelHandles.length : hasDynamicImages ? imageInputCount : 0;
   const hasDynamicElements = selectedModel?.dynamicElements ?? false;
   const elementCount = (data.elementCount as number) || 0;
