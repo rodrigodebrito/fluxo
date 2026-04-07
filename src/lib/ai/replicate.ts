@@ -117,16 +117,19 @@ export interface ReplicateGenerateInput {
   aspectRatio?: string;
   numOutputs?: number;
   guidanceScale?: number;
-  nsfwEnabled?: boolean; // Auto-inject NSFW uncensor LoRA (default true)
+  nsfwEnabled?: boolean;
+  nsfwScale?: number;
+  realismEnabled?: boolean;
+  realismScale?: number;
 }
 
 export async function generateWithTrainedModel(
   input: ReplicateGenerateInput
 ): Promise<string[]> {
-  // Auto-inject quality + NSFW LoRAs before user's LoRAs
+  // Auto-inject quality + NSFW LoRAs based on user settings
   const allLoras: LoraInput[] = [
-    ...(input.nsfwEnabled !== false ? [{ url: NSFW_LORA, scale: NSFW_LORA_SCALE }] : []),
-    { url: SUPER_REALISM_LORA, scale: SUPER_REALISM_LORA_SCALE },
+    ...(input.nsfwEnabled !== false ? [{ url: NSFW_LORA, scale: input.nsfwScale ?? NSFW_LORA_SCALE }] : []),
+    ...(input.realismEnabled !== false ? [{ url: SUPER_REALISM_LORA, scale: input.realismScale ?? SUPER_REALISM_LORA_SCALE }] : []),
     ...input.loras,
   ];
 

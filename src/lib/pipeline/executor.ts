@@ -75,6 +75,10 @@ interface PipelineData {
   trainedModelId?: string;
   extraLoraIds?: string[];
   nsfwEnabled?: boolean;
+  nsfwScale?: number;
+  realismEnabled?: boolean;
+  realismScale?: number;
+  mainLoraScale?: number;
   customAspectRatio?: string;
   customNumOutputs?: number;
   // LLM Chain
@@ -135,6 +139,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   const extraLoras = (modelNode.data.extraLoras as { id: string; trigger: string }[]) || [];
   result.extraLoraIds = extraLoras.map((l) => l.id).filter((id) => id !== "");
   result.nsfwEnabled = (modelNode.data.nsfwEnabled as boolean) ?? true;
+  result.nsfwScale = (modelNode.data.nsfwScale as number) ?? 0.6;
+  result.realismEnabled = (modelNode.data.realismEnabled as boolean) ?? true;
+  result.realismScale = (modelNode.data.realismScale as number) ?? 0.7;
+  result.mainLoraScale = (modelNode.data.mainLoraScale as number) ?? 1;
   result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
   result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
 
@@ -505,6 +513,10 @@ export async function startGeneration(
     trainedModelId?: string;
     extraLoraIds?: string[];
     nsfwEnabled?: boolean;
+    nsfwScale?: number;
+    realismEnabled?: boolean;
+    realismScale?: number;
+    mainLoraScale?: number;
     customAspectRatio?: string;
     customNumOutputs?: number;
     cost?: number;
@@ -542,6 +554,10 @@ export async function startGeneration(
         trainedModelId: options.trainedModelId,
         extraLoraIds: options.extraLoraIds || [],
         nsfwEnabled: options.nsfwEnabled ?? true,
+        nsfwScale: options.nsfwScale ?? 0.6,
+        realismEnabled: options.realismEnabled ?? true,
+        realismScale: options.realismScale ?? 0.7,
+        mainLoraScale: options.mainLoraScale ?? 1,
         prompt,
         aspectRatio: options.customAspectRatio || "1:1",
         numOutputs: options.customNumOutputs || 1,

@@ -688,6 +688,97 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               triggerWord={(node.data.trainedModelTrigger as string) || ""}
               onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
             />
+            {/* Main model weight - advanced */}
+            <details className="mb-1 -mt-1">
+              <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400 select-none">Advanced</summary>
+              <div className="mt-1.5 px-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-zinc-400">Forca</span>
+                  <span className="text-[10px] text-purple-400 font-mono">{((node.data.mainLoraScale as number) ?? 1).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range" min="0" max="1" step="0.1"
+                  value={(node.data.mainLoraScale as number) ?? 1}
+                  onChange={(e) => update({ mainLoraScale: parseFloat(e.target.value) })}
+                  className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+                />
+                <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+                  <span>Fraco</span><span>Forte</span>
+                </div>
+              </div>
+            </details>
+
+            {/* NSFW Toggle + slider */}
+            <div className="border border-zinc-800 rounded-lg p-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-zinc-300">Modo NSFW</span>
+                  <p className="text-[10px] text-zinc-500">Desbloqueia conteudo adulto</p>
+                </div>
+                <button
+                  onClick={() => update({ nsfwEnabled: !(node.data.nsfwEnabled ?? true) })}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${(node.data.nsfwEnabled ?? true) ? "bg-purple-600" : "bg-zinc-700"}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${(node.data.nsfwEnabled ?? true) ? "left-5" : "left-0.5"}`} />
+                </button>
+              </div>
+              {(node.data.nsfwEnabled ?? true) && (
+                <details>
+                  <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400 select-none">Advanced</summary>
+                  <div className="mt-1.5 px-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-zinc-400">Forca</span>
+                      <span className="text-[10px] text-purple-400 font-mono">{((node.data.nsfwScale as number) ?? 0.6).toFixed(1)}</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="1" step="0.1"
+                      value={(node.data.nsfwScale as number) ?? 0.6}
+                      onChange={(e) => update({ nsfwScale: parseFloat(e.target.value) })}
+                      className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+                    />
+                    <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+                      <span>Sutil</span><span>Intenso</span>
+                    </div>
+                  </div>
+                </details>
+              )}
+            </div>
+
+            {/* Super Realism Toggle + slider */}
+            <div className="border border-zinc-800 rounded-lg p-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-zinc-300">Super Realismo</span>
+                  <p className="text-[10px] text-zinc-500">Pele e detalhes realistas</p>
+                </div>
+                <button
+                  onClick={() => update({ realismEnabled: !(node.data.realismEnabled ?? true) })}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${(node.data.realismEnabled ?? true) ? "bg-purple-600" : "bg-zinc-700"}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${(node.data.realismEnabled ?? true) ? "left-5" : "left-0.5"}`} />
+                </button>
+              </div>
+              {(node.data.realismEnabled ?? true) && (
+                <details>
+                  <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400 select-none">Advanced</summary>
+                  <div className="mt-1.5 px-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-zinc-400">Forca</span>
+                      <span className="text-[10px] text-purple-400 font-mono">{((node.data.realismScale as number) ?? 0.7).toFixed(1)}</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="1" step="0.1"
+                      value={(node.data.realismScale as number) ?? 0.7}
+                      onChange={(e) => update({ realismScale: parseFloat(e.target.value) })}
+                      className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+                    />
+                    <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+                      <span>Sutil</span><span>Intenso</span>
+                    </div>
+                  </div>
+                </details>
+              )}
+            </div>
 
             {/* Extra LoRAs - dynamic list */}
             {((node.data.extraLoras as { id: string; trigger: string }[]) || []).map((lora, idx) => (
@@ -717,7 +808,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                 </button>
               </div>
             ))}
-            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).length < 18 && (
+            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).length < 16 && (
               <button
                 onClick={() => {
                   const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
@@ -729,20 +820,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                 + Adicionar LoRA Extra
               </button>
             )}
-
-            {/* NSFW Toggle */}
-            <div className="flex items-center justify-between py-2 px-1">
-              <div>
-                <span className="text-sm text-zinc-300">Modo NSFW</span>
-                <p className="text-[10px] text-zinc-500">Desbloqueia conteudo adulto</p>
-              </div>
-              <button
-                onClick={() => update({ nsfwEnabled: !(node.data.nsfwEnabled ?? true) })}
-                className={`relative w-10 h-5 rounded-full transition-colors ${(node.data.nsfwEnabled ?? true) ? "bg-purple-600" : "bg-zinc-700"}`}
-              >
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${(node.data.nsfwEnabled ?? true) ? "left-5" : "left-0.5"}`} />
-              </button>
-            </div>
           </>
         )}
 

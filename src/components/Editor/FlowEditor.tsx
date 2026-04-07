@@ -63,7 +63,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-upscale":
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
     case "model-custom":
-      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, customAspectRatio: "1:1", customNumOutputs: 1 };
+      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -959,6 +959,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         trainedModelId: pipeline.trainedModelId,
         extraLoraIds: pipeline.extraLoraIds,
         nsfwEnabled: pipeline.nsfwEnabled,
+        nsfwScale: pipeline.nsfwScale,
+        realismEnabled: pipeline.realismEnabled,
+        realismScale: pipeline.realismScale,
+        mainLoraScale: pipeline.mainLoraScale,
         customAspectRatio: pipeline.customAspectRatio,
         customNumOutputs: pipeline.customNumOutputs,
         cost: costPerRun,

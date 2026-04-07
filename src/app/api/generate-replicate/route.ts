@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled } = body;
+  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled, nsfwScale, realismEnabled, realismScale, mainLoraScale } = body;
 
   if (!trainedModelId) {
     return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    loras.push({ url: mainUrl, scale: 1 });
+    loras.push({ url: mainUrl, scale: mainLoraScale ?? 1 });
 
     // Extra LoRA(s) — supports multiple
     const loraIds: string[] = Array.isArray(extraLoraIds) ? extraLoraIds : [];
@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
       nsfwEnabled: nsfwEnabled ?? true,
+      nsfwScale: nsfwScale ?? 0.6,
+      realismEnabled: realismEnabled ?? true,
+      realismScale: realismScale ?? 0.7,
     });
 
     console.log("[generate-replicate] imageUrls:", imageUrls);
