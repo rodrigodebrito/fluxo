@@ -98,7 +98,7 @@ export async function getTrainingStatus(trainingId: string) {
 // --- Inference ---
 
 // Multi-LoRA model: supports up to 20 LoRAs, NSFW unrestricted
-const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora";
+const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora:ad0314563856e714367fdc7244b19b160d25926d305fec270c9e00f64665d352";
 
 export interface LoraInput {
   url: string;   // URL to LoRA weights (Replicate, HuggingFace, or CivitAI)
