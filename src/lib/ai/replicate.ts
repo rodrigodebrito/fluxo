@@ -100,12 +100,12 @@ export async function getTrainingStatus(trainingId: string) {
 // Multi-LoRA model: supports up to 20 LoRAs, NSFW unrestricted
 const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora:ad0314563856e714367fdc7244b19b160d25926d305fec270c9e00f64665d352";
 
-// Auto-injected LoRAs for quality and NSFW support
+// Auto-injected LoRAs for quality and NSFW support (direct .safetensors URLs)
 const NSFW_LORA = "enhanceaiteam/Flux-Uncensored-V2";
 const NSFW_LORA_SCALE = 0.6;
-const DETAIL_LORA = "Shakker-Labs/FLUX.1-dev-LoRA-add-details";
+const DETAIL_LORA = "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-add-details/resolve/main/FLUX.1-dev-LoRA-add-details.safetensors";
 const DETAIL_LORA_SCALE = 0.8;
-const REALISM_LORA = "XLabs-AI/flux-RealismLora";
+const REALISM_LORA = "https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors";
 const REALISM_LORA_SCALE = 0.7;
 
 export interface LoraInput {
