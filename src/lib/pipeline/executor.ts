@@ -62,6 +62,7 @@ interface PipelineData {
   upscaleScale?: number;
   // Custom Model (Replicate LoRA)
   trainedModelId?: string;
+  extraLoraId?: string;
   customAspectRatio?: string;
   customNumOutputs?: number;
   // LLM Chain
@@ -119,6 +120,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.fluxImageSize = (modelNode.data.fluxImageSize as string) || "landscape_4_3";
   result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
   result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
+  result.extraLoraId = (modelNode.data.extraLoraId as string) || "";
   result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
   result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
 
@@ -487,6 +489,7 @@ export async function startGeneration(
     fluxImageSize?: string;
     upscaleScale?: number;
     trainedModelId?: string;
+    extraLoraId?: string;
     customAspectRatio?: string;
     customNumOutputs?: number;
     cost?: number;
@@ -522,6 +525,7 @@ export async function startGeneration(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         trainedModelId: options.trainedModelId,
+        extraLoraId: options.extraLoraId || undefined,
         prompt,
         aspectRatio: options.customAspectRatio || "1:1",
         numOutputs: options.customNumOutputs || 1,

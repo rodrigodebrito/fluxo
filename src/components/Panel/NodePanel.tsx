@@ -72,10 +72,13 @@ const KLING_ASPECT_RATIOS = [
   { value: "1:1", label: "1:1" },
 ];
 
-function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
+function TrainedModelSelector({ label, subtitle, selectedId, triggerWord, onSelect, allowEmpty }: {
+  label?: string;
+  subtitle?: string;
   selectedId: string;
   triggerWord: string;
   onSelect: (id: string, trigger: string) => void;
+  allowEmpty?: boolean;
 }) {
   const [models, setModels] = useState<{ id: string; name: string; trigger_word: string; thumbnail_url: string | null; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,18 +96,18 @@ function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
     return (
       <div>
         <div className="flex items-center gap-1 mb-2">
-          <span className="text-sm text-zinc-300">Modelo</span>
+          <span className="text-sm text-zinc-300">{label || "Modelo"}</span>
         </div>
         <div className="text-xs text-zinc-500">Carregando modelos...</div>
       </div>
     );
   }
 
-  if (models.length === 0) {
+  if (models.length === 0 && !allowEmpty) {
     return (
       <div>
         <div className="flex items-center gap-1 mb-2">
-          <span className="text-sm text-zinc-300">Modelo</span>
+          <span className="text-sm text-zinc-300">{label || "Modelo"}</span>
         </div>
         <div className="text-xs text-zinc-500 mb-2">Nenhum modelo treinado</div>
         <a href="/models" className="text-xs text-purple-400 hover:text-purple-300">
@@ -114,10 +117,13 @@ function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
     );
   }
 
+  if (models.length === 0 && allowEmpty) return null;
+
   return (
     <div>
-      <div className="flex items-center gap-1 mb-2">
-        <span className="text-sm text-zinc-300">Modelo Treinado</span>
+      <div className="flex flex-col mb-2">
+        <span className="text-sm text-zinc-300">{label || "Modelo Treinado"}</span>
+        {subtitle && <span className="text-[10px] text-zinc-500">{subtitle}</span>}
       </div>
       <select
         value={selectedId}
@@ -127,7 +133,7 @@ function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
         }}
         className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
       >
-        <option value="">Selecione um modelo...</option>
+        <option value="">{allowEmpty ? "Nenhum" : "Selecione um modelo..."}</option>
         {models.map((m) => (
           <option key={m.id} value={m.id}>
             {m.name} ({m.trigger_word})
@@ -136,7 +142,7 @@ function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
       </select>
       {triggerWord && (
         <p className="text-[10px] text-zinc-500 mt-1.5">
-          Use <span className="text-purple-400 font-mono">{triggerWord}</span> no prompt para ativar o modelo
+          {allowEmpty ? "Trigger" : "Use"} <span className="text-purple-400 font-mono">{triggerWord}</span> {allowEmpty ? "" : "no prompt para ativar"}
         </p>
       )}
     </div>
@@ -675,11 +681,22 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
 
         {/* Trained Model Selection */}
         {params.includes("trainedModel") && (
-          <TrainedModelSelector
-            selectedId={(node.data.trainedModelId as string) || ""}
-            triggerWord={(node.data.trainedModelTrigger as string) || ""}
-            onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
-          />
+          <>
+            <TrainedModelSelector
+              label="Modelo Principal"
+              selectedId={(node.data.trainedModelId as string) || ""}
+              triggerWord={(node.data.trainedModelTrigger as string) || ""}
+              onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
+            />
+            <TrainedModelSelector
+              label="LoRA Extra (opcional)"
+              subtitle="Ex: produto, roupa, estilo"
+              selectedId={(node.data.extraLoraId as string) || ""}
+              triggerWord={(node.data.extraLoraTrigger as string) || ""}
+              onSelect={(id, trigger) => update({ extraLoraId: id, extraLoraTrigger: trigger })}
+              allowEmpty
+            />
+          </>
         )}
 
         {/* Custom Aspect Ratio */}

@@ -103,20 +103,30 @@ export interface ReplicateGenerateInput {
   numOutputs?: number;
   guidanceScale?: number;
   loraScale?: number;
+  extraLoraModel?: string; // "owner/name:version" for second LoRA
+  extraLoraScale?: number;
 }
 
 export async function generateWithTrainedModel(
   input: ReplicateGenerateInput
 ): Promise<string[]> {
+  const inferenceInput: Record<string, unknown> = {
+    prompt: input.prompt,
+    num_outputs: input.numOutputs ?? 1,
+    aspect_ratio: input.aspectRatio ?? "1:1",
+    guidance_scale: input.guidanceScale ?? 3.5,
+    lora_scale: input.loraScale ?? 1,
+    output_format: "png",
+  };
+
+  // Combine two LoRAs (e.g. person + product)
+  if (input.extraLoraModel) {
+    inferenceInput.extra_lora = input.extraLoraModel;
+    inferenceInput.extra_lora_scale = input.extraLoraScale ?? 1;
+  }
+
   const output = await replicate.run(input.modelVersion as `${string}/${string}`, {
-    input: {
-      prompt: input.prompt,
-      num_outputs: input.numOutputs ?? 1,
-      aspect_ratio: input.aspectRatio ?? "1:1",
-      guidance_scale: input.guidanceScale ?? 3.5,
-      lora_scale: input.loraScale ?? 1,
-      output_format: "png",
-    },
+    input: inferenceInput,
   });
 
   // Output is an array of FileOutput objects or URLs

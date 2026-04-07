@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { trainedModelId, prompt, aspectRatio, numOutputs, cost } = body;
+  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraId } = body;
 
   if (!trainedModelId) {
     return NextResponse.json(
@@ -69,11 +69,28 @@ export async function POST(request: NextRequest) {
   try {
     const modelVersion = `${model.replicate_model_id}:${model.replicate_version}`;
 
+    // Look up extra LoRA if provided
+    let extraLoraModel: string | undefined;
+    if (extraLoraId) {
+      const { data: extraModel } = await supabase
+        .from("trained_models")
+        .select("replicate_model_id, replicate_version")
+        .eq("id", extraLoraId)
+        .eq("user_id", user.id)
+        .eq("status", "ready")
+        .single();
+
+      if (extraModel?.replicate_model_id && extraModel?.replicate_version) {
+        extraLoraModel = `${extraModel.replicate_model_id}:${extraModel.replicate_version}`;
+      }
+    }
+
     const imageUrls = await generateWithTrainedModel({
       modelVersion,
       prompt,
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
+      extraLoraModel,
     });
 
     if (!imageUrls.length) {
