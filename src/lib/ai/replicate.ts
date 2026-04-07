@@ -103,10 +103,8 @@ const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora:ad0314563856e714367fdc7244
 // Auto-injected LoRAs for quality and NSFW support (HuggingFace slugs, no dots allowed)
 const NSFW_LORA = "enhanceaiteam/Flux-Uncensored-V2";
 const NSFW_LORA_SCALE = 0.6;
-const REALISM_LORA = "XLabs-AI/flux-RealismLora";
-const REALISM_LORA_SCALE = 0.7;
 const SUPER_REALISM_LORA = "strangerzonehf/Flux-Super-Realism-LoRA";
-const SUPER_REALISM_LORA_SCALE = 0.6;
+const SUPER_REALISM_LORA_SCALE = 0.7;
 
 export interface LoraInput {
   url: string;   // URL to LoRA weights (Replicate, HuggingFace, or CivitAI)
@@ -128,7 +126,6 @@ export async function generateWithTrainedModel(
   // Auto-inject quality + NSFW LoRAs before user's LoRAs
   const allLoras: LoraInput[] = [
     ...(input.nsfwEnabled !== false ? [{ url: NSFW_LORA, scale: NSFW_LORA_SCALE }] : []),
-    { url: REALISM_LORA, scale: REALISM_LORA_SCALE },
     { url: SUPER_REALISM_LORA, scale: SUPER_REALISM_LORA_SCALE },
     ...input.loras,
   ];
