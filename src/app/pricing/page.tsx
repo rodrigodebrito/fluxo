@@ -222,18 +222,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Free tier note */}
-        <div className="text-center border-t border-zinc-800 pt-10">
-          <p className="text-zinc-500 text-sm mb-4">
-            Novo por aqui? Cadastre-se e ganhe <span className="text-white font-semibold">50 creditos gratis</span> para testar.
-          </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-sm font-semibold transition-colors"
-          >
-            Criar conta gratis
-          </Link>
-        </div>
       </div>
     </div>
   );
