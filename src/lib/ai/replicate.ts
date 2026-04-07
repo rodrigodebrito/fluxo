@@ -100,9 +100,13 @@ export async function getTrainingStatus(trainingId: string) {
 // Multi-LoRA model: supports up to 20 LoRAs, NSFW unrestricted
 const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora:ad0314563856e714367fdc7244b19b160d25926d305fec270c9e00f64665d352";
 
-// NSFW uncensor LoRA — always injected to remove FLUX.1-dev built-in content restrictions
+// Auto-injected LoRAs for quality and NSFW support
 const NSFW_LORA = "enhanceaiteam/Flux-Uncensored-V2";
 const NSFW_LORA_SCALE = 0.6;
+const DETAIL_LORA = "Shakker-Labs/FLUX.1-dev-LoRA-add-details";
+const DETAIL_LORA_SCALE = 0.8;
+const REALISM_LORA = "XLabs-AI/flux-RealismLora";
+const REALISM_LORA_SCALE = 0.7;
 
 export interface LoraInput {
   url: string;   // URL to LoRA weights (Replicate, HuggingFace, or CivitAI)
@@ -121,9 +125,11 @@ export interface ReplicateGenerateInput {
 export async function generateWithTrainedModel(
   input: ReplicateGenerateInput
 ): Promise<string[]> {
-  // Conditionally inject NSFW uncensor LoRA
+  // Auto-inject quality + NSFW LoRAs before user's LoRAs
   const allLoras: LoraInput[] = [
     ...(input.nsfwEnabled !== false ? [{ url: NSFW_LORA, scale: NSFW_LORA_SCALE }] : []),
+    { url: DETAIL_LORA, scale: DETAIL_LORA_SCALE },
+    { url: REALISM_LORA, scale: REALISM_LORA_SCALE },
     ...input.loras,
   ];
 
