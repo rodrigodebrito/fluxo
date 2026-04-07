@@ -64,6 +64,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
     case "model-custom":
       return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
+    case "model-wan-i2v":
+      return { label: "Wan 2.1 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", wanResolution: "720p", wanDuration: 81 };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -956,6 +958,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         characterOrientation: pipeline.characterOrientation,
         fluxImageSize: pipeline.fluxImageSize,
         upscaleScale: pipeline.upscaleScale,
+        wanResolution: pipeline.wanResolution,
+        wanDuration: pipeline.wanDuration,
         trainedModelId: pipeline.trainedModelId,
         extraLoraIds: pipeline.extraLoraIds,
         nsfwEnabled: pipeline.nsfwEnabled,
@@ -990,8 +994,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       // Atualizar creditos na UI apos cobranca
       window.dispatchEvent(new Event("fluxo-credits-update"));
 
-      // Custom model (Replicate) — resultados ja estao no cache, nao precisa polling
-      if (pipeline.model === "custom-model") {
+      // Replicate sync models — resultados ja estao no cache, nao precisa polling
+      if (pipeline.model === "custom-model" || pipeline.model === "wan-i2v") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
@@ -1012,7 +1016,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
             })
           );
         } else {
-          alert("Nenhuma imagem gerada");
+          alert("Nenhum resultado gerado");
           setNodes((nds) =>
             nds.map((n) => n.id === pipeline.modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n)
           );
@@ -1575,6 +1579,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-kling-o3-i2v", label: "Kling O3" },
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
       { type: "model-kling-o1-ref", label: "Kling O1 Reference" },
+      { type: "model-wan-i2v", label: "Wan 2.1 I2V" },
       { type: "klingElement", label: "Kling Element" },
     ],
   },

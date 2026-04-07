@@ -71,6 +71,9 @@ interface PipelineData {
   fluxImageSize?: string;
   // Upscale
   upscaleScale?: number;
+  // Wan 2.1 I2V
+  wanResolution?: string;
+  wanDuration?: number;
   // Custom Model (Replicate LoRA)
   trainedModelId?: string;
   extraLoraIds?: string[];
@@ -135,6 +138,8 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.characterOrientation = (modelNode.data.characterOrientation as string) || "video";
   result.fluxImageSize = (modelNode.data.fluxImageSize as string) || "landscape_4_3";
   result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
+  result.wanResolution = (modelNode.data.wanResolution as string) || "720p";
+  result.wanDuration = (modelNode.data.wanDuration as number) || 81;
   result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
   const extraLoras = (modelNode.data.extraLoras as { id: string; trigger: string }[]) || [];
   result.extraLoraIds = extraLoras.map((l) => l.id).filter((id) => id !== "");
@@ -510,6 +515,8 @@ export async function startGeneration(
     characterOrientation?: string;
     fluxImageSize?: string;
     upscaleScale?: number;
+    wanResolution?: string;
+    wanDuration?: number;
     trainedModelId?: string;
     extraLoraIds?: string[];
     nsfwEnabled?: boolean;
@@ -543,6 +550,29 @@ export async function startGeneration(
     try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
     return data.taskId;
+  }
+
+  // Wan 2.1 I2V (Replicate) — retorno sincrono
+  if (options?.model === "wan-i2v") {
+    const response = await fetch("/api/generate-wan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        imageUrl: publicUrls[0] || "",
+        resolution: options.wanResolution || "720p",
+        numFrames: options.wanDuration || 81,
+        aspectRatio: options.aspectRatio || "16:9",
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao gerar video com Wan 2.1");
+    const taskId = `replicate_${Date.now()}`;
+    getReplicateCache().set(taskId, data.urls || []);
+    return taskId;
   }
 
   // Custom Model (Replicate LoRA) — retorno sincrono, nao precisa de polling

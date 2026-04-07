@@ -199,6 +199,11 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const motionMode = (node.data.motionMode as string) || "720p";
   const characterOrientation = (node.data.characterOrientation as string) || "video";
 
+  // Wan 2.1 I2V
+  const wanResolution = (node.data.wanResolution as string) || "720p";
+  const wanDuration = (node.data.wanDuration as number) || 81;
+  const isWan = model === "wan-i2v";
+
   // Multi-Shot
   const multiShotEnabled = (node.data.multiShotEnabled as boolean) ?? false;
   const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
@@ -244,6 +249,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (isFlux) {
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
     costPerRun = hdSizes.includes(fluxImageSize) ? 9 : 6;
+  }
+  if (isWan) {
+    // 480p ~$0.04 → 5 cred, 720p ~$0.15 → 15 cred
+    costPerRun = wanResolution === "480p" ? 5 : 15;
   }
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
@@ -1002,6 +1011,48 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                   {sdDuration}
                 </span>
               </div>
+          </div>
+        )}
+
+        {/* Wan Resolution */}
+        {params.includes("wanResolution") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Resolution</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="480p e mais rapido e barato, 720p tem melhor qualidade">i</span>
+            </div>
+            <select
+              value={wanResolution}
+              onChange={(e) => update({ wanResolution: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="480p">480p (rapido ~$0.04)</option>
+              <option value="720p">720p (qualidade ~$0.15)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Wan Duration (frames) */}
+        {params.includes("wanDuration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Frames</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Numero de frames do video (mais frames = video mais longo). 81 frames ≈ 5s a 16fps">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={33}
+                max={129}
+                step={8}
+                value={wanDuration}
+                onChange={(e) => update({ wanDuration: parseInt(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[50px] text-center">
+                {wanDuration} ({(wanDuration / 16).toFixed(1)}s)
+              </span>
+            </div>
           </div>
         )}
 

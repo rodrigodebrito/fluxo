@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v";
 
 export interface ModelInfo {
   id: AIModel;
@@ -204,6 +204,18 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "prompt", label: "Prompt*", required: true },
     ],
     params: ["trainedModel", "customAspectRatio", "customNumOutputs", "runs"],
+  },
+  {
+    id: "wan-i2v",
+    name: "Wan 2.1 I2V",
+    type: "video",
+    description: "Image to Video (Wan 2.1 via Replicate)",
+    costPerRun: 15,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["wanResolution", "wanDuration", "aspectRatio", "runs"],
   },
 ];
 
