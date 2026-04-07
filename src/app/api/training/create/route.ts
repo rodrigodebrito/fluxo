@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
   const { hasCredits } = await verifyCredits(user.id, "custom-model", TRAINING_COST);
   if (!hasCredits) return insufficientCreditsResponse(TRAINING_COST);
 
+  let stepInfo = "parsing formdata";
   try {
     const formData = await request.formData();
     const name = (formData.get("name") as string)?.trim();
@@ -55,17 +56,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitize model name for Replicate (lowercase, no spaces)
-    const modelSlug = name
+    // Check env vars
+    if (!process.env.REPLICATE_API_TOKEN) {
+      return NextResponse.json(
+        { error: "REPLICATE_API_TOKEN nao configurado no servidor" },
+        { status: 500 }
+      );
+    }
+
+    // Sanitize model name for Replicate (lowercase, no spaces, must start with letter)
+    let modelSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 50);
 
+    // Replicate requires model name to start with a letter
+    if (!/^[a-z]/.test(modelSlug)) {
+      modelSlug = "m-" + modelSlug;
+    }
+
     const uniqueSlug = `${modelSlug}-${Date.now().toString(36)}`;
 
     // 1. Upload first image as thumbnail to Supabase
+    stepInfo = "uploading thumbnail";
     const supabase = await createClient();
     let thumbnailUrl = "";
     try {
@@ -78,32 +93,37 @@ export async function POST(request: NextRequest) {
       });
       const { data: pubUrl } = supabase.storage.from("upload").getPublicUrl(thumbPath);
       thumbnailUrl = pubUrl.publicUrl;
-    } catch {
-      // Thumbnail is optional
+    } catch (thumbErr) {
+      console.warn("[training/create] thumbnail upload failed:", thumbErr);
     }
 
     // 2. Create ZIP from uploaded files
-    // We need to create a zip in memory - use JSZip-like approach
-    // Since we can't easily zip in edge, we upload files individually and let Replicate handle it
-    // Actually Replicate expects a ZIP, so let's build one manually
-    const { default: JSZip } = await import("jszip");
+    stepInfo = "creating zip";
+    const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
     for (const file of files) {
       const buffer = await file.arrayBuffer();
       zip.file(file.name, buffer);
     }
-    const zipBuffer = Buffer.from(await zip.generateAsync({ type: "arraybuffer" }));
+    const zipArrayBuffer = await zip.generateAsync({ type: "arraybuffer" });
+    const zipBuffer = Buffer.from(zipArrayBuffer);
+    console.log(`[training/create] zip created: ${zipBuffer.length} bytes, ${files.length} files`);
 
     // 3. Upload ZIP to Replicate
+    stepInfo = "uploading zip to replicate";
     const imageZipUrl = await uploadTrainingZip(zipBuffer);
+    console.log(`[training/create] zip uploaded: ${imageZipUrl}`);
 
     // 4. Create Replicate model destination
+    stepInfo = "creating replicate model";
     const replicateModelId = await createReplicateModel(
       uniqueSlug,
       `Modelo treinado: ${name} (trigger: ${triggerWord})`
     );
+    console.log(`[training/create] model created: ${replicateModelId}`);
 
     // 5. Create DB record
+    stepInfo = "saving to database";
     const serviceClient = await createServiceClient();
     const { data: dbRecord, error: dbError } = await serviceClient
       .from("trained_models")
@@ -119,14 +139,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError || !dbRecord) {
+      console.error("[training/create] db error:", dbError);
       return NextResponse.json(
-        { error: "Erro ao salvar modelo" },
+        { error: `Erro ao salvar modelo: ${dbError?.message || "unknown"}` },
         { status: 500 }
       );
     }
 
     // 6. Start training
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
+    stepInfo = "starting training";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
     const webhookUrl = appUrl
       ? `${appUrl.startsWith("http") ? appUrl : `https://${appUrl}`}/api/webhooks/replicate?model_id=${dbRecord.id}`
       : undefined;
@@ -137,6 +159,7 @@ export async function POST(request: NextRequest) {
       triggerWord,
       webhookUrl
     );
+    console.log(`[training/create] training started: ${trainingId}`);
 
     // 7. Update DB with training ID
     await serviceClient
@@ -153,9 +176,10 @@ export async function POST(request: NextRequest) {
       status: "training",
     });
   } catch (err) {
-    console.error("[training/create] error:", err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`[training/create] error at step "${stepInfo}":`, errorMessage, err);
     return NextResponse.json(
-      { error: "Erro ao iniciar treino. Tente novamente." },
+      { error: `Erro no treino (${stepInfo}): ${errorMessage}` },
       { status: 500 }
     );
   }
