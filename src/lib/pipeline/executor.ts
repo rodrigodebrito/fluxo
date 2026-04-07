@@ -1,7 +1,18 @@
 import { type Node, type Edge } from "@xyflow/react";
 
 // Cache for Replicate results (sync generation, no polling needed)
-export const replicateResultsCache = new Map<string, string[]>();
+// Uses window global to ensure same instance across dynamic imports
+function getReplicateCache(): Map<string, string[]> {
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    if (!w.__replicateResultsCache) {
+      w.__replicateResultsCache = new Map<string, string[]>();
+    }
+    return w.__replicateResultsCache;
+  }
+  return new Map();
+}
 
 interface LLMChain {
   prompt: string;
@@ -538,7 +549,7 @@ export async function startGeneration(
     if (!response.ok) throw new Error(data.error || "Erro ao gerar com modelo treinado");
     // Store URLs for direct retrieval (skip polling)
     const taskId = `replicate_${Date.now()}`;
-    replicateResultsCache.set(taskId, data.urls || []);
+    getReplicateCache().set(taskId, data.urls || []);
     return taskId;
   }
 

@@ -987,12 +987,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       // Custom model (Replicate) — resultados ja estao no cache, nao precisa polling
       if (pipeline.model === "custom-model") {
-        const { replicateResultsCache } = await import("@/lib/pipeline/executor");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
         for (const taskId of taskIds) {
-          const urls = replicateResultsCache.get(taskId) || [];
+          const urls = cache?.get(taskId) || [];
           allUrls.push(...urls);
-          replicateResultsCache.delete(taskId);
+          cache?.delete(taskId);
         }
 
         if (allUrls.length > 0) {
