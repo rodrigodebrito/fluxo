@@ -502,8 +502,8 @@ export async function startGeneration(
     return data.taskId;
   }
 
-  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref, Flux 2)
-  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit"];
+  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref, Flux 2, utilities)
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai
     let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
