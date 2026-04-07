@@ -110,19 +110,20 @@ export interface LoraInput {
 }
 
 export interface ReplicateGenerateInput {
-  loras: LoraInput[]; // Up to 20 LoRAs (NSFW LoRA is auto-added)
+  loras: LoraInput[]; // Up to 20 LoRAs
   prompt: string;
   aspectRatio?: string;
   numOutputs?: number;
   guidanceScale?: number;
+  nsfwEnabled?: boolean; // Auto-inject NSFW uncensor LoRA (default true)
 }
 
 export async function generateWithTrainedModel(
   input: ReplicateGenerateInput
 ): Promise<string[]> {
-  // Auto-inject NSFW uncensor LoRA
+  // Conditionally inject NSFW uncensor LoRA
   const allLoras: LoraInput[] = [
-    { url: NSFW_LORA, scale: NSFW_LORA_SCALE },
+    ...(input.nsfwEnabled !== false ? [{ url: NSFW_LORA, scale: NSFW_LORA_SCALE }] : []),
     ...input.loras,
   ];
 

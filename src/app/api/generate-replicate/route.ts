@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraId } = body;
+  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled } = body;
 
   if (!trainedModelId) {
     return NextResponse.json(
@@ -98,12 +98,14 @@ export async function POST(request: NextRequest) {
     }
     loras.push({ url: mainUrl, scale: 1 });
 
-    // Extra LoRA(s)
-    if (extraLoraId) {
+    // Extra LoRA(s) — supports multiple
+    const loraIds: string[] = Array.isArray(extraLoraIds) ? extraLoraIds : [];
+    for (const loraId of loraIds) {
+      if (!loraId) continue;
       const { data: extraModel } = await supabase
         .from("trained_models")
         .select("id, weights_url, training_id, replicate_model_id")
-        .eq("id", extraLoraId)
+        .eq("id", loraId)
         .eq("user_id", user.id)
         .eq("status", "ready")
         .single();
@@ -123,6 +125,7 @@ export async function POST(request: NextRequest) {
       prompt,
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
+      nsfwEnabled: nsfwEnabled ?? true,
     });
 
     console.log("[generate-replicate] imageUrls:", imageUrls);

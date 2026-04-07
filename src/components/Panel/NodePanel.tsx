@@ -688,14 +688,61 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               triggerWord={(node.data.trainedModelTrigger as string) || ""}
               onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
             />
-            <TrainedModelSelector
-              label="LoRA Extra (opcional)"
-              subtitle="Ex: produto, roupa, estilo"
-              selectedId={(node.data.extraLoraId as string) || ""}
-              triggerWord={(node.data.extraLoraTrigger as string) || ""}
-              onSelect={(id, trigger) => update({ extraLoraId: id, extraLoraTrigger: trigger })}
-              allowEmpty
-            />
+
+            {/* Extra LoRAs - dynamic list */}
+            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).map((lora, idx) => (
+              <div key={idx} className="relative">
+                <TrainedModelSelector
+                  label={`LoRA Extra ${idx + 1}`}
+                  subtitle="Ex: produto, roupa, estilo"
+                  selectedId={lora.id}
+                  triggerWord={lora.trigger}
+                  onSelect={(id, trigger) => {
+                    const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
+                    loras[idx] = { id, trigger };
+                    update({ extraLoras: loras });
+                  }}
+                  allowEmpty
+                />
+                <button
+                  onClick={() => {
+                    const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
+                    loras.splice(idx, 1);
+                    update({ extraLoras: loras });
+                  }}
+                  className="absolute top-0 right-0 text-zinc-500 hover:text-red-400 text-xs"
+                  title="Remover LoRA"
+                >
+                  x
+                </button>
+              </div>
+            ))}
+            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).length < 18 && (
+              <button
+                onClick={() => {
+                  const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
+                  loras.push({ id: "", trigger: "" });
+                  update({ extraLoras: loras });
+                }}
+                className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+              >
+                + Adicionar LoRA Extra
+              </button>
+            )}
+
+            {/* NSFW Toggle */}
+            <div className="flex items-center justify-between py-2 px-1">
+              <div>
+                <span className="text-sm text-zinc-300">Modo NSFW</span>
+                <p className="text-[10px] text-zinc-500">Desbloqueia conteudo adulto</p>
+              </div>
+              <button
+                onClick={() => update({ nsfwEnabled: !(node.data.nsfwEnabled ?? true) })}
+                className={`relative w-10 h-5 rounded-full transition-colors ${(node.data.nsfwEnabled ?? true) ? "bg-purple-600" : "bg-zinc-700"}`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${(node.data.nsfwEnabled ?? true) ? "left-5" : "left-0.5"}`} />
+              </button>
+            </div>
           </>
         )}
 
