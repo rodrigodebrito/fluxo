@@ -20,7 +20,7 @@ export async function createReplicateModel(
 ): Promise<string> {
   const model = await replicate.models.create(REPLICATE_USERNAME, name, {
     visibility: "private",
-    hardware: "gpu-a40-large",
+    hardware: "gpu-l40s",
     description,
   });
   return `${model.owner}/${model.name}`;
