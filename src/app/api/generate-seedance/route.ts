@@ -119,18 +119,11 @@ export async function POST(request: NextRequest) {
       if (referenceAudioUrl) audioUrls.push(referenceAudioUrl);
 
       // Determine mode based on inputs
-      // omni_reference: when mixing image+video+audio or using reference images beyond first/last
-      // first_last_frames: when only 1-2 images as bookend frames
-      // text_to_video: no references
+      // Always use omni_reference when images are present (works better with real faces)
+      // first_last_frames blocks real faces, omni_reference does not
       let mode = "text_to_video";
-      const hasVideo = videoUrls.length > 0;
-      const hasAudio = audioUrls.length > 0;
-      const hasRefImages = referenceImageUrls && referenceImageUrls.length > 0;
-
-      if (hasVideo || hasAudio || hasRefImages) {
+      if (imageUrls.length > 0 || videoUrls.length > 0 || audioUrls.length > 0) {
         mode = "omni_reference";
-      } else if (imageUrls.length > 0) {
-        mode = "first_last_frames";
       }
 
       // Map sdModel to PiAPI task_type
