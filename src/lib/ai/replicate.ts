@@ -96,14 +96,17 @@ export async function getTrainingStatus(trainingId: string) {
 
 // --- Inference ---
 
+// Use flux-dev-lora as base model with safety checker disabled for unrestricted generation
+const INFERENCE_MODEL = "black-forest-labs/flux-dev-lora";
+
 export interface ReplicateGenerateInput {
-  modelVersion: string; // "owner/name:version_hash" or "owner/name"
+  loraWeightsUrl: string; // URL to trained LoRA weights (.safetensors or .tar)
   prompt: string;
   aspectRatio?: string;
   numOutputs?: number;
   guidanceScale?: number;
   loraScale?: number;
-  extraLoraModel?: string; // "owner/name:version" for second LoRA
+  extraLoraUrl?: string; // URL to second LoRA weights
   extraLoraScale?: number;
 }
 
@@ -112,20 +115,22 @@ export async function generateWithTrainedModel(
 ): Promise<string[]> {
   const inferenceInput: Record<string, unknown> = {
     prompt: input.prompt,
+    lora_weights: input.loraWeightsUrl,
     num_outputs: input.numOutputs ?? 1,
     aspect_ratio: input.aspectRatio ?? "1:1",
     guidance_scale: input.guidanceScale ?? 3.5,
     lora_scale: input.loraScale ?? 1,
     output_format: "png",
+    disable_safety_checker: true,
   };
 
   // Combine two LoRAs (e.g. person + product)
-  if (input.extraLoraModel) {
-    inferenceInput.extra_lora = input.extraLoraModel;
+  if (input.extraLoraUrl) {
+    inferenceInput.extra_lora = input.extraLoraUrl;
     inferenceInput.extra_lora_scale = input.extraLoraScale ?? 1;
   }
 
-  const output = await replicate.run(input.modelVersion as `${string}/${string}`, {
+  const output = await replicate.run(INFERENCE_MODEL as `${string}/${string}`, {
     input: inferenceInput,
   });
 

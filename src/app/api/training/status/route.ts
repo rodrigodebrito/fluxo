@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           .update({
             status: "ready",
             replicate_version: status.version,
+            weights_url: status.weightsUrl || null,
             completed_at: new Date().toISOString(),
           })
           .eq("id", id);
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
           ...model,
           status: "ready",
           replicate_version: status.version,
+          weights_url: status.weightsUrl,
         });
       }
 

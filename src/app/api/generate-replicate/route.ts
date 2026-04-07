@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { generateWithTrainedModel } from "@/lib/ai/replicate";
+import { generateWithTrainedModel, getTrainingStatus } from "@/lib/ai/replicate";
 import {
   getAuthUser,
   unauthorizedResponse,
@@ -59,38 +59,59 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!model.replicate_model_id || !model.replicate_version) {
-    return NextResponse.json(
-      { error: "Modelo sem versao valida" },
-      { status: 400 }
-    );
-  }
-
   try {
-    const modelVersion = `${model.replicate_model_id}:${model.replicate_version}`;
+    // Get weights URL — fetch from Replicate API if not cached in DB
+    let weightsUrl = model.weights_url;
+    if (!weightsUrl && model.training_id) {
+      const status = await getTrainingStatus(model.training_id);
+      if (status.weightsUrl) {
+        weightsUrl = status.weightsUrl;
+        // Cache in DB for next time
+        await supabase
+          .from("trained_models")
+          .update({ weights_url: weightsUrl })
+          .eq("id", model.id);
+      }
+    }
+
+    if (!weightsUrl) {
+      return NextResponse.json(
+        { error: "Modelo sem URL de pesos LoRA. Tente retreinar." },
+        { status: 400 }
+      );
+    }
 
     // Look up extra LoRA if provided
-    let extraLoraModel: string | undefined;
+    let extraLoraUrl: string | undefined;
     if (extraLoraId) {
       const { data: extraModel } = await supabase
         .from("trained_models")
-        .select("replicate_model_id, replicate_version")
+        .select("weights_url, training_id")
         .eq("id", extraLoraId)
         .eq("user_id", user.id)
         .eq("status", "ready")
         .single();
 
-      if (extraModel?.replicate_model_id && extraModel?.replicate_version) {
-        extraLoraModel = `${extraModel.replicate_model_id}:${extraModel.replicate_version}`;
+      if (extraModel?.weights_url) {
+        extraLoraUrl = extraModel.weights_url;
+      } else if (extraModel?.training_id) {
+        const extraStatus = await getTrainingStatus(extraModel.training_id);
+        if (extraStatus.weightsUrl) {
+          extraLoraUrl = extraStatus.weightsUrl;
+          await supabase
+            .from("trained_models")
+            .update({ weights_url: extraStatus.weightsUrl })
+            .eq("id", extraLoraId);
+        }
       }
     }
 
     const imageUrls = await generateWithTrainedModel({
-      modelVersion,
+      loraWeightsUrl: weightsUrl,
       prompt,
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
-      extraLoraModel,
+      extraLoraUrl,
     });
 
     if (!imageUrls.length) {

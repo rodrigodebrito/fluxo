@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const status = body.status;
     const version = body.output?.version;
+    const weightsUrl = body.output?.weights;
     const error = body.error;
 
     if (!modelId) {
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: "ready",
           replicate_version: version,
+          weights_url: weightsUrl || null,
           completed_at: new Date().toISOString(),
         })
         .eq("id", modelId);
