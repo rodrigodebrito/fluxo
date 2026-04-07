@@ -4,74 +4,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    credits: 700,
-    price: "R$ 34,90",
-    priceValue: 34.9,
-    perCredit: "R$ 0,050",
-    features: [
-      "700 creditos/mes",
-      "Todos os modelos de IA",
-      "Workflows ilimitados",
-      "Suporte por email",
-    ],
-    popular: false,
-  },
-  {
-    id: "creator",
-    name: "Creator",
-    credits: 1700,
-    price: "R$ 79,90",
-    priceValue: 79.9,
-    perCredit: "R$ 0,047",
-    features: [
-      "1.700 creditos/mes",
-      "Todos os modelos de IA",
-      "Workflows ilimitados",
-      "Suporte prioritario",
-      "Templates de workflow",
-    ],
-    popular: true,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    credits: 4000,
-    price: "R$ 179,90",
-    priceValue: 179.9,
-    perCredit: "R$ 0,045",
-    features: [
-      "4.000 creditos/mes",
-      "Todos os modelos de IA",
-      "Workflows ilimitados",
-      "Suporte prioritario",
-      "Templates de workflow",
-      "Acesso antecipado a novos modelos",
-    ],
-    popular: false,
-  },
-];
-
 const PACKS = [
-  { id: "pack-500", credits: 500, price: "R$ 24,90", priceValue: 24.9 },
-  { id: "pack-1000", credits: 1000, price: "R$ 44,90", priceValue: 44.9 },
-  { id: "pack-2500", credits: 2500, price: "R$ 99,90", priceValue: 99.9 },
+  { id: "pack-500", credits: 500, price: "R$ 24,90", priceValue: 24.9, perCredit: "R$ 0,050" },
+  { id: "pack-1000", credits: 1000, price: "R$ 44,90", priceValue: 44.9, perCredit: "R$ 0,045", popular: true },
+  { id: "pack-2500", credits: 2500, price: "R$ 99,90", priceValue: 99.9, perCredit: "R$ 0,040" },
 ];
 
 export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleCheckout = async (productId: string, mode: "subscription" | "payment") => {
+  const handleCheckout = async (productId: string) => {
     setLoading(productId);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, mode }),
+        body: JSON.stringify({ productId, mode: "payment" }),
       });
 
       if (res.status === 401) {
@@ -112,116 +61,63 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <div className="max-w-4xl mx-auto px-6 py-16">
         {/* Title */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
-            Escolha seu plano
+            Comprar Creditos
           </h1>
           <p className="text-zinc-400 text-lg max-w-xl mx-auto">
-            Comece gratis com 50 creditos. Assine para gerar mais conteudo com IA.
+            Creditos nao expiram. Use quando quiser para gerar imagens e videos com IA.
           </p>
         </div>
 
-        {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-6 mb-20">
-          {PLANS.map((plan) => (
+        {/* Credit Packs */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {PACKS.map((pack) => (
             <div
-              key={plan.id}
-              className={`relative rounded-2xl border p-8 flex flex-col ${
-                plan.popular
+              key={pack.id}
+              className={`relative rounded-2xl border p-8 flex flex-col items-center text-center ${
+                pack.popular
                   ? "border-purple-500/50 bg-purple-500/5 shadow-lg shadow-purple-500/10"
                   : "border-zinc-800 bg-zinc-900/50"
               }`}
             >
-              {plan.popular && (
+              {pack.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-600 rounded-full text-xs font-semibold">
                   Mais popular
                 </div>
               )}
 
-              <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-              <div className="mb-1">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className="text-zinc-500 text-sm">/mes</span>
+              <div className="text-4xl font-bold text-purple-400 mb-1">
+                {pack.credits.toLocaleString("pt-BR")}
               </div>
-              <p className="text-xs text-zinc-500 mb-6">{plan.perCredit} por credito</p>
-
-              <ul className="space-y-3 mb-8 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
-                    <svg className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    {f}
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-zinc-500 mb-1">creditos</p>
+              <p className="text-xs text-zinc-600 mb-6">{pack.perCredit} por credito</p>
+              <p className="text-3xl font-bold mb-6">{pack.price}</p>
 
               <button
-                onClick={() => handleCheckout(plan.id, "subscription")}
+                onClick={() => handleCheckout(pack.id)}
                 disabled={loading !== null}
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
-                  plan.popular
+                className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+                  pack.popular
                     ? "bg-purple-600 hover:bg-purple-500 text-white"
                     : "bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700"
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {loading === plan.id ? (
+                {loading === pack.id ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Processando...
                   </span>
                 ) : (
-                  `Assinar ${plan.name}`
+                  "Comprar"
                 )}
               </button>
-              <p className="text-[10px] text-zinc-600 mt-2 text-center">Recorrente via cartao de credito</p>
+              <p className="text-[10px] text-zinc-600 mt-3">PIX, cartao ou Mercado Pago</p>
             </div>
           ))}
         </div>
-
-        {/* Credit Packs */}
-        <div className="mb-16">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold mb-2">Creditos avulsos</h2>
-            <p className="text-zinc-500 text-sm">
-              Compre creditos extras a qualquer momento. Creditos avulsos nao expiram.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            {PACKS.map((pack) => (
-              <div
-                key={pack.id}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 flex flex-col items-center text-center"
-              >
-                <div className="text-3xl font-bold text-purple-400 mb-1">
-                  {pack.credits.toLocaleString("pt-BR")}
-                </div>
-                <p className="text-xs text-zinc-500 mb-4">creditos</p>
-                <p className="text-xl font-bold mb-4">{pack.price}</p>
-
-                <button
-                  onClick={() => handleCheckout(pack.id, "payment")}
-                  disabled={loading !== null}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading === pack.id ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Processando...
-                    </span>
-                  ) : (
-                    "Comprar"
-                  )}
-                </button>
-                <p className="text-[10px] text-zinc-600 mt-2">PIX, cartao ou Mercado Pago</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
     </div>
   );
