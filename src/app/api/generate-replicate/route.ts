@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateWithTrainedModel, getTrainingStatus } from "@/lib/ai/replicate";
+import type { LoraInput } from "@/lib/ai/replicate";
 import {
   getAuthUser,
   unauthorizedResponse,
@@ -10,6 +11,30 @@ import {
   checkRateLimit,
   rateLimitResponse,
 } from "@/lib/auth-guard";
+
+async function resolveWeightsUrl(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createServiceClient>>,
+  model: { id: string; weights_url?: string | null; training_id?: string | null; replicate_model_id?: string | null }
+): Promise<string | null> {
+  if (model.weights_url) return model.weights_url;
+
+  // Try fetching from Replicate API
+  if (model.training_id) {
+    const status = await getTrainingStatus(model.training_id);
+    if (status.weightsUrl) {
+      await supabase
+        .from("trained_models")
+        .update({ weights_url: status.weightsUrl })
+        .eq("id", model.id);
+      return status.weightsUrl;
+    }
+  }
+
+  // Fallback: use replicate_model_id as HF-style path (lucataco/flux-dev-multi-lora accepts this)
+  if (model.replicate_model_id) return model.replicate_model_id;
+
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -60,59 +85,47 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get weights URL — fetch from Replicate API if not cached in DB
-    let weightsUrl = model.weights_url;
-    if (!weightsUrl && model.training_id) {
-      const status = await getTrainingStatus(model.training_id);
-      if (status.weightsUrl) {
-        weightsUrl = status.weightsUrl;
-        // Cache in DB for next time
-        await supabase
-          .from("trained_models")
-          .update({ weights_url: weightsUrl })
-          .eq("id", model.id);
-      }
-    }
+    // Build LoRA list
+    const loras: LoraInput[] = [];
 
-    if (!weightsUrl) {
+    // Main LoRA
+    const mainUrl = await resolveWeightsUrl(supabase, model);
+    if (!mainUrl) {
       return NextResponse.json(
         { error: "Modelo sem URL de pesos LoRA. Tente retreinar." },
         { status: 400 }
       );
     }
+    loras.push({ url: mainUrl, scale: 1 });
 
-    // Look up extra LoRA if provided
-    let extraLoraUrl: string | undefined;
+    // Extra LoRA(s)
     if (extraLoraId) {
       const { data: extraModel } = await supabase
         .from("trained_models")
-        .select("weights_url, training_id")
+        .select("id, weights_url, training_id, replicate_model_id")
         .eq("id", extraLoraId)
         .eq("user_id", user.id)
         .eq("status", "ready")
         .single();
 
-      if (extraModel?.weights_url) {
-        extraLoraUrl = extraModel.weights_url;
-      } else if (extraModel?.training_id) {
-        const extraStatus = await getTrainingStatus(extraModel.training_id);
-        if (extraStatus.weightsUrl) {
-          extraLoraUrl = extraStatus.weightsUrl;
-          await supabase
-            .from("trained_models")
-            .update({ weights_url: extraStatus.weightsUrl })
-            .eq("id", extraLoraId);
+      if (extraModel) {
+        const extraUrl = await resolveWeightsUrl(supabase, extraModel);
+        if (extraUrl) {
+          loras.push({ url: extraUrl, scale: 1 });
         }
       }
     }
 
+    console.log("[generate-replicate] loras:", loras.map(l => l.url));
+
     const imageUrls = await generateWithTrainedModel({
-      loraWeightsUrl: weightsUrl,
+      loras,
       prompt,
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
-      extraLoraUrl,
     });
+
+    console.log("[generate-replicate] imageUrls:", imageUrls);
 
     if (!imageUrls.length) {
       return NextResponse.json(
@@ -140,8 +153,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[generate-replicate] error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: "Erro ao gerar imagem. Tente novamente." },
+      { error: `Erro ao gerar imagem: ${msg}` },
       { status: 500 }
     );
   }

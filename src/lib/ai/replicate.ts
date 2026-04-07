@@ -2,6 +2,7 @@ import Replicate from "replicate";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
+  useFileOutput: false, // Return plain URL strings instead of FileOutput objects
 });
 
 const REPLICATE_USERNAME = process.env.REPLICATE_USERNAME || "fluxo-ai";
@@ -96,43 +97,46 @@ export async function getTrainingStatus(trainingId: string) {
 
 // --- Inference ---
 
-// Use flux-dev-lora as base model with safety checker disabled for unrestricted generation
-const INFERENCE_MODEL = "black-forest-labs/flux-dev-lora";
+// Multi-LoRA model: supports up to 20 LoRAs, NSFW unrestricted
+const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora";
+
+export interface LoraInput {
+  url: string;   // URL to LoRA weights (Replicate, HuggingFace, or CivitAI)
+  scale?: number; // Weight for this LoRA (default 1)
+}
 
 export interface ReplicateGenerateInput {
-  loraWeightsUrl: string; // URL to trained LoRA weights (.safetensors or .tar)
+  loras: LoraInput[]; // Up to 20 LoRAs
   prompt: string;
   aspectRatio?: string;
   numOutputs?: number;
   guidanceScale?: number;
-  loraScale?: number;
-  extraLoraUrl?: string; // URL to second LoRA weights
-  extraLoraScale?: number;
 }
 
 export async function generateWithTrainedModel(
   input: ReplicateGenerateInput
 ): Promise<string[]> {
+  const hfLoras = input.loras.map((l) => l.url);
+  const loraScales = input.loras.map((l) => l.scale ?? 1);
+
   const inferenceInput: Record<string, unknown> = {
     prompt: input.prompt,
-    lora_weights: input.loraWeightsUrl,
+    hf_loras: hfLoras,
+    lora_scales: loraScales,
     num_outputs: input.numOutputs ?? 1,
     aspect_ratio: input.aspectRatio ?? "1:1",
     guidance_scale: input.guidanceScale ?? 3.5,
-    lora_scale: input.loraScale ?? 1,
     output_format: "png",
     disable_safety_checker: true,
   };
 
-  // Combine two LoRAs (e.g. person + product)
-  if (input.extraLoraUrl) {
-    inferenceInput.extra_lora = input.extraLoraUrl;
-    inferenceInput.extra_lora_scale = input.extraLoraScale ?? 1;
-  }
+  console.log("[replicate] inference input:", JSON.stringify(inferenceInput));
 
   const output = await replicate.run(INFERENCE_MODEL as `${string}/${string}`, {
     input: inferenceInput,
   });
+
+  console.log("[replicate] raw output:", JSON.stringify(output));
 
   // Output is an array of FileOutput objects or URLs
   if (Array.isArray(output)) {
@@ -140,6 +144,11 @@ export async function generateWithTrainedModel(
       if (typeof item === "string") return item;
       if (item && typeof item === "object" && "url" in item)
         return (item as { url: string }).url;
+      // FileOutput from replicate SDK has .toString() returning the URL
+      if (item && typeof item === "object" && typeof item.toString === "function") {
+        const str = String(item);
+        if (str.startsWith("http")) return str;
+      }
       return String(item);
     });
   }
