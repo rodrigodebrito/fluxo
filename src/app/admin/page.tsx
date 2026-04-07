@@ -31,6 +31,19 @@ interface WaitlistEntry {
   created_at: string;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  max_uses: number | null;
+  used_count: number;
+  min_purchase: number;
+  expires_at: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 interface Stats {
   totalUsers: number;
   waitlistCount: number;
@@ -67,13 +80,28 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations" | "coupons">("overview");
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creditAmounts, setCreditAmounts] = useState<Record<string, string>>({});
   const [searchUsers, setSearchUsers] = useState("");
+
+  // Coupons state
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [showCouponForm, setShowCouponForm] = useState(false);
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    discountType: "percent" as "percent" | "fixed",
+    discountValue: "",
+    maxUses: "",
+    minPurchase: "",
+    expiresAt: "",
+  });
+  const [couponSaving, setCouponSaving] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -100,9 +128,80 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    try {
+      const res = await fetch("/api/admin/coupons");
+      if (res.ok) {
+        const data = await res.json();
+        setCoupons(data);
+      }
+    } catch { /* ignore */ } finally {
+      setCouponsLoading(false);
+    }
+  }, []);
+
+  const handleCreateCoupon = async () => {
+    setCouponSaving(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/admin/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponForm.code,
+          discountType: couponForm.discountType,
+          discountValue: parseFloat(couponForm.discountValue),
+          maxUses: couponForm.maxUses ? parseInt(couponForm.maxUses) : null,
+          minPurchase: couponForm.minPurchase ? parseFloat(couponForm.minPurchase) : 0,
+          expiresAt: couponForm.expiresAt || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponError(data.error);
+        return;
+      }
+      setCoupons((prev) => [data, ...prev]);
+      setShowCouponForm(false);
+      setCouponForm({ code: "", discountType: "percent", discountValue: "", maxUses: "", minPurchase: "", expiresAt: "" });
+    } catch {
+      setCouponError("Erro ao criar cupom");
+    } finally {
+      setCouponSaving(false);
+    }
+  };
+
+  const handleToggleCoupon = async (id: string, active: boolean) => {
+    const res = await fetch("/api/admin/coupons", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, active }),
+    });
+    if (res.ok) {
+      setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, active } : c)));
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este cupom?")) return;
+    const res = await fetch("/api/admin/coupons", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setCoupons((prev) => prev.filter((c) => c.id !== id));
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (tab === "coupons" && coupons.length === 0) fetchCoupons();
+  }, [tab, coupons.length, fetchCoupons]);
 
   const handleAddCredits = async (userId: string) => {
     const amount = parseInt(creditAmounts[userId] || "0");
@@ -222,6 +321,7 @@ export default function AdminPage() {
           {[
             { id: "overview" as const, label: "Visao Geral" },
             { id: "users" as const, label: "Usuarios" },
+            { id: "coupons" as const, label: "Cupons" },
             { id: "waitlist" as const, label: "Waitlist" },
             { id: "generations" as const, label: "Geracoes" },
           ].map((t) => (
@@ -459,6 +559,186 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-xs text-zinc-500">{formatDate(entry.created_at)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── COUPONS TAB ── */}
+        {tab === "coupons" && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white">Cupons de Desconto</h2>
+              <button
+                onClick={() => setShowCouponForm(!showCouponForm)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {showCouponForm ? "Cancelar" : "+ Novo Cupom"}
+              </button>
+            </div>
+
+            {/* Form */}
+            {showCouponForm && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
+                <h3 className="text-sm font-semibold text-zinc-300 mb-4">Criar Cupom</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Codigo</label>
+                    <input
+                      type="text"
+                      value={couponForm.code}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                      placeholder="DESCONTO20"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Tipo</label>
+                    <select
+                      value={couponForm.discountType}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, discountType: e.target.value as "percent" | "fixed" }))}
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="percent">Percentual (%)</option>
+                      <option value="fixed">Valor fixo (R$)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">
+                      Valor {couponForm.discountType === "percent" ? "(%)" : "(R$)"}
+                    </label>
+                    <input
+                      type="number"
+                      value={couponForm.discountValue}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, discountValue: e.target.value }))}
+                      placeholder={couponForm.discountType === "percent" ? "20" : "10.00"}
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Max usos (vazio = ilimitado)</label>
+                    <input
+                      type="number"
+                      value={couponForm.maxUses}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, maxUses: e.target.value }))}
+                      placeholder="100"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Compra minima (R$)</label>
+                    <input
+                      type="number"
+                      value={couponForm.minPurchase}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, minPurchase: e.target.value }))}
+                      placeholder="0"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Expira em (opcional)</label>
+                    <input
+                      type="datetime-local"
+                      value={couponForm.expiresAt}
+                      onChange={(e) => setCouponForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+                {couponError && <p className="text-red-400 text-xs mt-3">{couponError}</p>}
+                <button
+                  onClick={handleCreateCoupon}
+                  disabled={couponSaving || !couponForm.code || !couponForm.discountValue}
+                  className="mt-4 px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {couponSaving ? "Criando..." : "Criar Cupom"}
+                </button>
+              </div>
+            )}
+
+            {/* Table */}
+            {couponsLoading ? (
+              <div className="text-center py-10 text-zinc-500 text-sm">Carregando cupons...</div>
+            ) : coupons.length === 0 ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-10 text-center">
+                <p className="text-zinc-600 text-sm">Nenhum cupom criado ainda</p>
+              </div>
+            ) : (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-zinc-800">
+                      <th className="text-left px-4 py-3 text-xs text-zinc-500 font-medium">Codigo</th>
+                      <th className="text-left px-4 py-3 text-xs text-zinc-500 font-medium">Desconto</th>
+                      <th className="text-center px-4 py-3 text-xs text-zinc-500 font-medium">Usos</th>
+                      <th className="text-left px-4 py-3 text-xs text-zinc-500 font-medium">Expira</th>
+                      <th className="text-center px-4 py-3 text-xs text-zinc-500 font-medium">Status</th>
+                      <th className="text-right px-4 py-3 text-xs text-zinc-500 font-medium">Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coupons.map((coupon) => (
+                      <tr key={coupon.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-mono font-semibold text-purple-400">{coupon.code}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-zinc-300">
+                            {coupon.discount_type === "percent"
+                              ? `${coupon.discount_value}%`
+                              : `R$ ${Number(coupon.discount_value).toFixed(2).replace(".", ",")}`}
+                          </span>
+                          {coupon.min_purchase > 0 && (
+                            <span className="text-[10px] text-zinc-600 ml-2">
+                              min R$ {Number(coupon.min_purchase).toFixed(2).replace(".", ",")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm text-zinc-300">
+                            {coupon.used_count}{coupon.max_uses ? `/${coupon.max_uses}` : ""}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-zinc-500">
+                            {coupon.expires_at
+                              ? new Date(coupon.expires_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+                              : "Sem limite"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            coupon.active
+                              ? "bg-green-500/10 text-green-400"
+                              : "bg-zinc-700/20 text-zinc-500"
+                          }`}>
+                            {coupon.active ? "Ativo" : "Inativo"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleToggleCoupon(coupon.id, !coupon.active)}
+                              className={`px-2.5 py-1 text-[11px] rounded transition-colors ${
+                                coupon.active
+                                  ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-400"
+                                  : "bg-green-600/20 hover:bg-green-600/30 text-green-400"
+                              }`}
+                            >
+                              {coupon.active ? "Desativar" : "Ativar"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCoupon(coupon.id)}
+                              className="px-2.5 py-1 text-[11px] bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded transition-colors"
+                            >
+                              Excluir
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

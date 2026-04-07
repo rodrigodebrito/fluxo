@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     const metadata = payment.metadata as any;
     const userId = metadata?.user_id;
     const productId = metadata?.product_id;
+    const couponId = metadata?.coupon_id;
 
     if (!userId || !productId) {
       console.error("[mp-webhook] Missing metadata:", { userId, productId });
@@ -51,6 +52,20 @@ export async function POST(request: NextRequest) {
     if (!info) {
       console.error("[mp-webhook] Unknown product:", productId);
       return NextResponse.json({ received: true });
+    }
+
+    // Registrar uso do cupom se aplicavel
+    if (couponId) {
+      await supabase.from("coupon_uses").insert({
+        coupon_id: couponId,
+        user_id: userId,
+        payment_id: String(paymentId),
+      });
+      const { data: coupon } = await supabase.from("coupons").select("used_count").eq("id", couponId).single();
+      if (coupon) {
+        await supabase.from("coupons").update({ used_count: (coupon.used_count || 0) + 1 }).eq("id", couponId);
+      }
+      console.log(`[mp-webhook] Coupon ${couponId} used by ${userId}`);
     }
 
     // Verificar primeira compra (bonus +50)
