@@ -20,6 +20,7 @@ export default function ModelNode({ id, data }: NodeProps) {
 
   // Para Veo3/Seedance/Kling, handles vêm do modelo. Para nano-banana, são dinâmicos
   const modelHandles = selectedModel?.handles.filter((h) => h.id !== "prompt") || [];
+  const hasPrompt = selectedModel ? selectedModel.handles.some((h) => h.id === "prompt") : true;
   const useFixedHandles = modelHandles.length > 0 && model !== "nano-banana-pro" && model !== "flux-2-edit";
   // Modelos que só têm Prompt (sem handles de imagem definidos) e não são nano-banana/flux-edit: 0 image handles
   const hasDynamicImages = model === "nano-banana-pro" || model === "flux-2-edit";
@@ -72,13 +73,15 @@ export default function ModelNode({ id, data }: NodeProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg w-[240px] relative">
       {/* Prompt Handle */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="prompt"
-        style={{ top: "16px" }}
-        className="!w-2.5 !h-2.5 !bg-purple-500 !border-2 !border-purple-300"
-      />
+      {hasPrompt && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="prompt"
+          style={{ top: "16px" }}
+          className="!w-2.5 !h-2.5 !bg-purple-500 !border-2 !border-purple-300"
+        />
+      )}
 
       {/* Image Handles */}
       {useFixedHandles
@@ -136,9 +139,11 @@ export default function ModelNode({ id, data }: NodeProps) {
       />
 
       {/* Labels */}
-      <div className="absolute text-[10px] text-purple-400 font-medium" style={{ left: "-50px", top: "10px" }}>
-        Prompt*
-      </div>
+      {hasPrompt && (
+        <div className="absolute text-[10px] text-purple-400 font-medium" style={{ left: "-50px", top: "10px" }}>
+          Prompt*
+        </div>
+      )}
       {useFixedHandles
         ? modelHandles.map((h, i) => (
             <div
