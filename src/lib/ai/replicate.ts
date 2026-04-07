@@ -102,7 +102,7 @@ const INFERENCE_MODEL = "lucataco/flux-dev-multi-lora:ad0314563856e714367fdc7244
 
 // NSFW uncensor LoRA — always injected to remove FLUX.1-dev built-in content restrictions
 const NSFW_LORA = "enhanceaiteam/Flux-Uncensored-V2";
-const NSFW_LORA_SCALE = 0.8;
+const NSFW_LORA_SCALE = 0.6;
 
 export interface LoraInput {
   url: string;   // URL to LoRA weights (Replicate, HuggingFace, or CivitAI)
