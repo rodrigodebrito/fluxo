@@ -126,11 +126,18 @@ export async function POST(request: NextRequest) {
         mode = "omni_reference";
       }
 
-      // Map sdModel to PiAPI task_type
-      const taskType = sdModel.includes("fast") ? "seedance-2-fast" : "seedance-2";
+      // Map sdModel to PiAPI task_type (preview versions accept real faces)
+      const taskType = sdModel.includes("fast") ? "seedance-2-fast-preview" : "seedance-2-preview";
+
+      // Auto-inject @image references in prompt (like PiAPI playground does)
+      let piPrompt = prompt;
+      if (imageUrls.length > 0 && !prompt.includes("@image")) {
+        const refs = imageUrls.map((_, i) => `@image${i + 1}`).join(" ");
+        piPrompt = `${refs} ${prompt}`;
+      }
 
       const taskId = await createPiAPITask({
-        prompt,
+        prompt: piPrompt,
         mode,
         duration: duration || 5,
         aspectRatio: aspectRatio || "16:9",

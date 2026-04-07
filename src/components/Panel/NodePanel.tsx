@@ -220,10 +220,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
     if (sdModel.includes("seedance-2")) {
-      // PiAPI pricing: $0.08/seg (fast) / $0.10/seg (normal)
+      // PiAPI pricing (preview): $0.10/seg (fast-preview) / $0.15/seg (preview)
       // 1 credit ≈ R$0.05, $1 ≈ R$5.50 ≈ 110 credits
       const isFast = sdModel === "bytedance/seedance-2-fast";
-      const perSec = isFast ? 9 : 11; // creditos por segundo
+      const perSec = isFast ? 11 : 17; // creditos por segundo
       costPerRun = Math.round(perSec * sdDuration);
     } else {
       // Kie AI (Seedance 1.5 Pro) pricing
