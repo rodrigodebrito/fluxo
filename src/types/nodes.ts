@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit";
 
 export interface ModelInfo {
   id: AIModel;
@@ -149,6 +149,29 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "video-1", label: "Motion Video*", required: true },
     ],
     params: ["motionVersion", "motionMode", "characterOrientation", "runs"],
+  },
+  {
+    id: "flux-2-pro",
+    name: "Flux 2 Pro",
+    type: "image",
+    description: "Imagem de alta qualidade (Flux 2 Pro via fal.ai)",
+    costPerRun: 6,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+    ],
+    params: ["fluxImageSize", "seed", "runs"],
+  },
+  {
+    id: "flux-2-edit",
+    name: "Flux 2 Edit",
+    type: "image",
+    description: "Editar imagem com texto (Flux 2 Pro Edit via fal.ai)",
+    costPerRun: 6,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["fluxImageSize", "seed", "runs"],
   },
 ];
 

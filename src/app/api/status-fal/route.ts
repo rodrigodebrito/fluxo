@@ -26,10 +26,20 @@ export async function GET(request: NextRequest) {
 
     if (status.status === "COMPLETED") {
       // Fetch actual result
-      const result = await getFalResult(falKey, falEndpoint, taskId, responseUrl);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await getFalResult(falKey, falEndpoint, taskId, responseUrl) as any;
+
+      // Handle both video and image results
+      let resultUrls: string[] = [];
+      if (result.video?.url) {
+        resultUrls = [result.video.url];
+      } else if (result.images && result.images.length > 0) {
+        resultUrls = result.images.map((img: { url: string }) => img.url);
+      }
+
       return NextResponse.json({
         state: "success",
-        resultUrls: result.video?.url ? [result.video.url] : [],
+        resultUrls,
         progress: 100,
       });
     }

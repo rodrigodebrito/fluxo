@@ -101,6 +101,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const gptQuality = (node.data.gptQuality as string) || "medium";
   const gptBackground = (node.data.gptBackground as string) || "opaque";
 
+  // Flux 2
+  const isFlux = model === "flux-2-pro" || model === "flux-2-edit";
+  const fluxImageSize = (node.data.fluxImageSize as string) || "landscape_4_3";
+
   // Kling-specific
   const klingMode = (node.data.klingMode as string) || "std";
   const klingDuration = (node.data.klingDuration as number) || 5;
@@ -158,6 +162,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const isPro = falTier === "pro";
     const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
     costPerRun = (isPro ? 36 : 24) * dur;
+  }
+  if (isFlux) {
+    const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+    costPerRun = hdSizes.includes(fluxImageSize) ? 9 : 6;
   }
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
@@ -569,6 +577,29 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               {GPT_BACKGROUNDS.map((b) => (
                 <option key={b.value} value={b.value}>{b.label}</option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {/* Flux Image Size */}
+        {params.includes("fluxImageSize") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Tamanho</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="HD = mais caro (9 cred). Padrao = 6 cred">i</span>
+            </div>
+            <select
+              value={fluxImageSize}
+              onChange={(e) => update({ fluxImageSize: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="auto">Auto</option>
+              <option value="square">Square (1:1)</option>
+              <option value="square_hd">Square HD (1:1)</option>
+              <option value="landscape_4_3">Landscape 4:3</option>
+              <option value="landscape_16_9">Landscape 16:9 (HD)</option>
+              <option value="portrait_4_3">Portrait 4:3</option>
+              <option value="portrait_16_9">Portrait 16:9 (HD)</option>
             </select>
           </div>
         )}

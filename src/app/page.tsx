@@ -709,6 +709,7 @@ export default function LandingPage() {
               {[
                 { name: "Nano Banana Pro", type: "Imagem", desc: "Imagens ate 4K. Qualidade de estudio.", cost: "18 cred", badge: "bg-purple-500/10 text-purple-400 border-purple-500/20", icon: "🖼️" },
                 { name: "GPT Image 1.5", type: "Imagem", desc: "Motor OpenAI. Texto perfeito em imagens.", cost: "4 cred", badge: "bg-green-500/10 text-green-400 border-green-500/20", icon: "✨" },
+                { name: "Flux 2 Pro", type: "Imagem", desc: "Black Forest Labs. Qualidade top, barato.", cost: "6 cred", badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: "⚡" },
                 { name: "Veo 3.1", type: "Video", desc: "Google Veo. Videos realistas com audio.", cost: "60 cred", badge: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: "🎬" },
                 { name: "Kling 3.0", type: "Video", desc: "Controle total. Elementos customizados.", cost: "70 cred", badge: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: "🎥" },
                 { name: "Seedance 2.0", type: "Video", desc: "ByteDance. Danca e movimentos naturais.", cost: "40 cred", badge: "bg-pink-500/10 text-pink-400 border-pink-500/20", icon: "💃" },

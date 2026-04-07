@@ -17,14 +17,22 @@ const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
   },
 };
 
+// Flux 2 endpoints (no tier distinction)
+const FLUX_ENDPOINTS: Record<string, string> = {
+  "flux-2-pro": "fal-ai/flux-2-pro",
+  "flux-2-edit": "fal-ai/flux-2-pro/edit",
+};
+
 export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro"): string | null {
+  // Check Flux endpoints first
+  if (FLUX_ENDPOINTS[model]) return FLUX_ENDPOINTS[model];
   const template = FAL_ENDPOINT_TEMPLATES[model];
   if (!template) return null;
   return template[tier];
 }
 
 // Keep a flat lookup for validation
-export const FAL_MODELS = new Set(Object.keys(FAL_ENDPOINT_TEMPLATES));
+export const FAL_MODELS = new Set([...Object.keys(FAL_ENDPOINT_TEMPLATES), ...Object.keys(FLUX_ENDPOINTS)]);
 
 // Retry config (same pattern as kie.ts)
 const MAX_RETRIES = 3;
@@ -166,12 +174,21 @@ interface FalVideoResult {
   };
 }
 
+interface FalImageResult {
+  images: {
+    url: string;
+    width: number;
+    height: number;
+    content_type: string;
+  }[];
+}
+
 export async function getFalResult(
   falKey: string,
   endpoint: string,
   requestId: string,
   responseUrl?: string
-): Promise<FalVideoResult> {
+): Promise<FalVideoResult | FalImageResult> {
   // Use response_url from submit response if available, otherwise try multiple URL formats
   const urls = responseUrl
     ? [responseUrl]
@@ -227,6 +244,9 @@ interface FalGenerateInput {
   elements?: { frontal_image_url: string; reference_image_urls?: string[] }[];
   multiShotEnabled?: boolean;
   multiShots?: { prompt: string; duration: number }[];
+  // Flux 2
+  fluxImageSize?: string;
+  seed?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -284,6 +304,31 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     if (input.elements && input.elements.length > 0) body.elements = input.elements;
     body.aspect_ratio = input.aspectRatio || "auto";
     body.duration = String(input.duration || 5);
+    return body;
+  }
+
+  if (model === "flux-2-pro") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_size: input.fluxImageSize || "landscape_4_3",
+      output_format: "png",
+      safety_tolerance: "5",
+    };
+    if (input.seed != null) body.seed = input.seed;
+    return body;
+  }
+
+  if (model === "flux-2-edit") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_urls: input.imageUrls || [],
+      image_size: input.fluxImageSize || "auto",
+      output_format: "png",
+      safety_tolerance: "5",
+    };
+    if (input.seed != null) body.seed = input.seed;
     return body;
   }
 

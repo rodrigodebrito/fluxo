@@ -53,6 +53,8 @@ interface PipelineData {
   motionMode?: string;
   characterOrientation?: string;
   videoDuration?: number;
+  // Flux 2
+  fluxImageSize?: string;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -105,6 +107,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.motionVersion = (modelNode.data.motionVersion as string) || "2.6";
   result.motionMode = (modelNode.data.motionMode as string) || "720p";
   result.characterOrientation = (modelNode.data.characterOrientation as string) || "video";
+  result.fluxImageSize = (modelNode.data.fluxImageSize as string) || "landscape_4_3";
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -468,6 +471,7 @@ export async function startGeneration(
     motionVersion?: string;
     motionMode?: string;
     characterOrientation?: string;
+    fluxImageSize?: string;
     cost?: number;
   }
 ): Promise<string> {
@@ -494,8 +498,8 @@ export async function startGeneration(
     return data.taskId;
   }
 
-  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref)
-  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref"];
+  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref, Flux 2)
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai
     let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
@@ -539,6 +543,8 @@ export async function startGeneration(
         elements: falElements && falElements.length > 0 ? falElements : undefined,
         multiShotEnabled: options.multiShotEnabled,
         multiShots: options.multiShots && options.multiShots.length > 0 ? options.multiShots : undefined,
+        fluxImageSize: options.fluxImageSize,
+        seed: options.seed ?? undefined,
         cost: options.cost,
       }),
     });

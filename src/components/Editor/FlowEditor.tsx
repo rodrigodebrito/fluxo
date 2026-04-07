@@ -54,6 +54,10 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
       return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium" };
+    case "model-flux-2-pro":
+      return { label: "Flux 2 Pro", model: "flux-2-pro", isRunning: false, results: [], imageInputCount: 0, fluxImageSize: "landscape_4_3", seed: null };
+    case "model-flux-2-edit":
+      return { label: "Flux 2 Edit", model: "flux-2-edit", isRunning: false, results: [], imageInputCount: 1, fluxImageSize: "auto", seed: null };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -902,6 +906,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const perSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 9 : 6);
         const motionDur = pipeline.videoDuration || 10;
         costPerRun = perSec * motionDur;
+      } else if (m === "flux-2-pro" || m === "flux-2-edit") {
+        // HD (>1MP) = 9 cred, padrao = 6 cred
+        const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+        costPerRun = hdSizes.includes(pipeline.fluxImageSize || "") ? 9 : 6;
       }
 
       const genOptions = {
@@ -934,6 +942,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         motionVersion: pipeline.motionVersion,
         motionMode: pipeline.motionMode,
         characterOrientation: pipeline.characterOrientation,
+        fluxImageSize: pipeline.fluxImageSize,
         cost: costPerRun,
       };
 
@@ -1498,6 +1507,8 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model", label: "Nano Banana Pro" },
       { type: "model-gpt-image-txt", label: "GPT Image 1.5" },
       { type: "model-gpt-image-img", label: "GPT Image 1.5 Edit" },
+      { type: "model-flux-2-pro", label: "Flux 2 Pro" },
+      { type: "model-flux-2-edit", label: "Flux 2 Edit" },
     ],
   },
   {

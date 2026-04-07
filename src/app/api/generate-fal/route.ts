@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       elements: body.elements,
       multiShotEnabled: body.multiShotEnabled,
       multiShots: body.multiShots,
+      fluxImageSize: body.fluxImageSize,
+      seed: body.seed,
     });
 
     console.log("[generate-fal] model:", model, "endpoint:", endpoint, "input:", JSON.stringify(input));
