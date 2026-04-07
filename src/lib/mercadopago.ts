@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
+import { MercadoPagoConfig, Preference, Payment, PreApproval } from "mercadopago";
 
 // Lazy init
 let _client: MercadoPagoConfig | null = null;
@@ -18,6 +18,10 @@ export function getPreferenceClient() {
 
 export function getPaymentClient() {
   return new Payment(getMP());
+}
+
+export function getPreApprovalClient() {
+  return new PreApproval(getMP());
 }
 
 // -- Planos de assinatura (mensal) --

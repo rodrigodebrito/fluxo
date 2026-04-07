@@ -176,6 +176,7 @@ export default function PricingPage() {
                   `Assinar ${plan.name}`
                 )}
               </button>
+              <p className="text-[10px] text-zinc-600 mt-2 text-center">Recorrente via cartao de credito</p>
             </div>
           ))}
         </div>
@@ -215,6 +216,7 @@ export default function PricingPage() {
                     "Comprar"
                   )}
                 </button>
+                <p className="text-[10px] text-zinc-600 mt-2">PIX, cartao ou Mercado Pago</p>
               </div>
             ))}
           </div>

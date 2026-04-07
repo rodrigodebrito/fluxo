@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser, unauthorizedResponse } from "@/lib/auth-guard";
-import { getPreferenceClient, PLANS, CREDIT_PACKS } from "@/lib/mercadopago";
+import { getPreferenceClient, getPreApprovalClient, PLANS, CREDIT_PACKS } from "@/lib/mercadopago";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -12,39 +12,49 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "productId obrigatorio" }, { status: 400 });
   }
 
-  // Resolver produto
-  let title: string;
-  let price: number;
-  let productType: string;
-
-  if (mode === "subscription") {
-    const plan = PLANS.find((p) => p.id === productId);
-    if (!plan) return NextResponse.json({ error: "Plano nao encontrado" }, { status: 400 });
-    title = `Fluxo AI - Plano ${plan.name} (${plan.credits} creditos)`;
-    price = plan.priceValue;
-    productType = `subscription_${plan.id}`;
-  } else {
-    const pack = CREDIT_PACKS.find((p) => p.id === productId);
-    if (!pack) return NextResponse.json({ error: "Pacote nao encontrado" }, { status: 400 });
-    title = `Fluxo AI - ${pack.credits} Creditos`;
-    price = pack.priceValue;
-    productType = `pack_${pack.id}`;
-  }
-
   const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const webhookUrl = process.env.MP_WEBHOOK_URL || `${origin}/api/webhook/mercadopago`;
 
   try {
+    // ── Assinatura recorrente (cartão) via PreApproval ──
+    if (mode === "subscription") {
+      const plan = PLANS.find((p) => p.id === productId);
+      if (!plan) return NextResponse.json({ error: "Plano nao encontrado" }, { status: 400 });
+
+      const preApproval = getPreApprovalClient();
+
+      const result = await preApproval.create({
+        body: {
+          reason: `Fluxo AI - Plano ${plan.name}`,
+          external_reference: `${user.id}|${plan.id}`,
+          payer_email: user.email || undefined,
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: "months",
+            transaction_amount: plan.priceValue,
+            currency_id: "BRL",
+          },
+          back_url: `${origin}/dashboard?checkout=success`,
+        },
+      });
+
+      return NextResponse.json({ url: result.init_point });
+    }
+
+    // ── Pacote avulso (PIX + cartão) via Preference ──
+    const pack = CREDIT_PACKS.find((p) => p.id === productId);
+    if (!pack) return NextResponse.json({ error: "Pacote nao encontrado" }, { status: 400 });
+
     const preference = getPreferenceClient();
+    const webhookUrl = process.env.MP_WEBHOOK_URL || `${origin}/api/webhook/mercadopago`;
 
     const result = await preference.create({
       body: {
         items: [
           {
             id: productId,
-            title,
+            title: `Fluxo AI - ${pack.credits} Creditos`,
             quantity: 1,
-            unit_price: price,
+            unit_price: pack.priceValue,
             currency_id: "BRL",
           },
         ],
@@ -54,8 +64,8 @@ export async function POST(request: NextRequest) {
         metadata: {
           user_id: user.id,
           product_id: productId,
-          product_type: productType,
-          mode,
+          product_type: `pack_${pack.id}`,
+          mode: "payment",
         },
         back_urls: {
           success: `${origin}/dashboard?checkout=success`,
@@ -64,17 +74,12 @@ export async function POST(request: NextRequest) {
         },
         auto_return: "approved",
         notification_url: webhookUrl,
-        payment_methods: {
-          excluded_payment_types: [
-            { id: "ticket" }, // exclui boleto (opcional, remova se quiser boleto)
-          ],
-        },
       },
     });
 
     return NextResponse.json({ url: result.init_point });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro ao criar preferencia";
+    const message = err instanceof Error ? err.message : "Erro ao criar checkout";
     console.error("[checkout] MP error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
