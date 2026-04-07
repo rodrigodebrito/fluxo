@@ -65,13 +65,13 @@ export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleCheckout = async (priceEnvKey: string, mode: "subscription" | "payment") => {
-    setLoading(priceEnvKey);
+  const handleCheckout = async (productId: string, mode: "subscription" | "payment") => {
+    setLoading(productId);
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: priceEnvKey, mode }),
+        body: JSON.stringify({ productId, mode }),
       });
 
       if (res.status === 401) {
