@@ -29,12 +29,14 @@ export async function GET(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await getFalResult(falKey, falEndpoint, taskId, responseUrl) as any;
 
-      // Handle both video and image results
+      // Handle video, image array, and single image results
       let resultUrls: string[] = [];
       if (result.video?.url) {
         resultUrls = [result.video.url];
       } else if (result.images && result.images.length > 0) {
         resultUrls = result.images.map((img: { url: string }) => img.url);
+      } else if (result.image?.url) {
+        resultUrls = [result.image.url];
       }
 
       return NextResponse.json({

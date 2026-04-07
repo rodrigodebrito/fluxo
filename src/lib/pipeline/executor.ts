@@ -55,6 +55,8 @@ interface PipelineData {
   videoDuration?: number;
   // Flux 2
   fluxImageSize?: string;
+  // Upscale
+  upscaleScale?: number;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -108,6 +110,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.motionMode = (modelNode.data.motionMode as string) || "720p";
   result.characterOrientation = (modelNode.data.characterOrientation as string) || "video";
   result.fluxImageSize = (modelNode.data.fluxImageSize as string) || "landscape_4_3";
+  result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -472,6 +475,7 @@ export async function startGeneration(
     motionMode?: string;
     characterOrientation?: string;
     fluxImageSize?: string;
+    upscaleScale?: number;
     cost?: number;
   }
 ): Promise<string> {
@@ -545,6 +549,7 @@ export async function startGeneration(
         multiShots: options.multiShots && options.multiShots.length > 0 ? options.multiShots : undefined,
         fluxImageSize: options.fluxImageSize,
         seed: options.seed ?? undefined,
+        upscaleScale: options.upscaleScale,
         cost: options.cost,
       }),
     });

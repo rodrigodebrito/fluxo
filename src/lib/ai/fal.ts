@@ -17,10 +17,12 @@ const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
   },
 };
 
-// Flux 2 endpoints (no tier distinction)
+// Flux 2 + utility endpoints (no tier distinction)
 const FLUX_ENDPOINTS: Record<string, string> = {
   "flux-2-pro": "fal-ai/flux-2-pro",
   "flux-2-edit": "fal-ai/flux-2-pro/edit",
+  "bg-removal": "fal-ai/birefnet/v2",
+  "upscale": "fal-ai/esrgan",
 };
 
 export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro"): string | null {
@@ -247,6 +249,8 @@ interface FalGenerateInput {
   // Flux 2
   fluxImageSize?: string;
   seed?: number;
+  // Upscale
+  upscaleScale?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -330,6 +334,25 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     };
     if (input.seed != null) body.seed = input.seed;
     return body;
+  }
+
+  if (model === "bg-removal") {
+    return {
+      image_url: input.imageUrls?.[0] || "",
+      model: "General Use (Light)",
+      operating_resolution: "1024x1024",
+      output_format: "png",
+    };
+  }
+
+  if (model === "upscale") {
+    return {
+      image_url: input.imageUrls?.[0] || "",
+      scale: input.upscaleScale || 2,
+      model: "RealESRGAN_x4plus",
+      face: false,
+      output_format: "png",
+    };
   }
 
   throw new Error(`Modelo fal.ai desconhecido: ${model}`);

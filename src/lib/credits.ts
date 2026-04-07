@@ -92,6 +92,8 @@ export function getModelCost(model: string): number {
     case "gpt-image-img": return 4;
     case "flux-2-pro": return 6;
     case "flux-2-edit": return 6;
+    case "bg-removal": return 1;
+    case "upscale": return 2;
     case "llm": return 1;
     default: return 18;
   }

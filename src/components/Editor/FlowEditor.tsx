@@ -58,6 +58,10 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Flux 2 Pro", model: "flux-2-pro", isRunning: false, results: [], imageInputCount: 0, fluxImageSize: "landscape_4_3", seed: null };
     case "model-flux-2-edit":
       return { label: "Flux 2 Edit", model: "flux-2-edit", isRunning: false, results: [], imageInputCount: 1, fluxImageSize: "auto", seed: null };
+    case "model-bg-removal":
+      return { label: "BG Removal", model: "bg-removal", isRunning: false, results: [], imageInputCount: 1 };
+    case "model-upscale":
+      return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -838,7 +842,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     }
 
     const isMultiShot = pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0;
-    const isPromptOptional = pipeline.model === "kling-motion";
+    const isPromptOptional = pipeline.model === "kling-motion" || pipeline.model === "bg-removal" || pipeline.model === "upscale";
     if (!pipeline.prompt && !isMultiShot && !isPromptOptional) {
       alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
       return;
@@ -910,6 +914,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         // HD (>1MP) = 9 cred, padrao = 6 cred
         const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
         costPerRun = hdSizes.includes(pipeline.fluxImageSize || "") ? 9 : 6;
+      } else if (m === "bg-removal") {
+        costPerRun = 1;
+      } else if (m === "upscale") {
+        costPerRun = 2;
       }
 
       const genOptions = {
@@ -943,6 +951,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         motionMode: pipeline.motionMode,
         characterOrientation: pipeline.characterOrientation,
         fluxImageSize: pipeline.fluxImageSize,
+        upscaleScale: pipeline.upscaleScale,
         cost: costPerRun,
       };
 
@@ -1509,6 +1518,8 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-gpt-image-img", label: "GPT Image 1.5 Edit" },
       { type: "model-flux-2-pro", label: "Flux 2 Pro" },
       { type: "model-flux-2-edit", label: "Flux 2 Edit" },
+      { type: "model-bg-removal", label: "BG Removal" },
+      { type: "model-upscale", label: "Upscale" },
     ],
   },
   {

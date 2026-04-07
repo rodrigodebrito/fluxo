@@ -61,6 +61,8 @@ const MODEL_LABELS: Record<string, string> = {
   "gpt-image-img": "GPT Image",
   "flux-2-pro": "Flux 2 Pro",
   "flux-2-edit": "Flux 2 Edit",
+  "bg-removal": "BG Removal",
+  "upscale": "Upscale",
   veo3: "Veo 3.1",
   kling: "Kling 3.0",
   seedance: "Seedance 2.0",

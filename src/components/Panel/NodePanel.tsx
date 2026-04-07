@@ -581,6 +581,23 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
+        {/* Upscale Scale */}
+        {params.includes("upscaleScale") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Escala</span>
+            </div>
+            <select
+              value={(node.data.upscaleScale as number) || 2}
+              onChange={(e) => update({ upscaleScale: parseInt(e.target.value) })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value={2}>2x</option>
+              <option value={4}>4x</option>
+            </select>
+          </div>
+        )}
+
         {/* Flux Image Size */}
         {params.includes("fluxImageSize") && (
           <div>

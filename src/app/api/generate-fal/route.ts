@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
 
   const { prompt } = body;
   const isMultiShot = body.multiShotEnabled && body.multiShots?.length > 0;
-  if (!prompt && !isMultiShot) {
+  const isUtilityTool = model === "bg-removal" || model === "upscale";
+  if (!prompt && !isMultiShot && !isUtilityTool) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       multiShots: body.multiShots,
       fluxImageSize: body.fluxImageSize,
       seed: body.seed,
+      upscaleScale: body.upscaleScale,
     });
 
     console.log("[generate-fal] model:", model, "endpoint:", endpoint, "input:", JSON.stringify(input));

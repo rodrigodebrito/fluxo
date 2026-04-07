@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale";
 
 export interface ModelInfo {
   id: AIModel;
@@ -171,6 +171,28 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "prompt", label: "Prompt*", required: true },
     ],
     params: ["fluxImageSize", "seed", "runs"],
+  },
+  {
+    id: "bg-removal",
+    name: "Background Removal",
+    type: "image",
+    description: "Remover fundo de imagem (BiRefNet via fal.ai)",
+    costPerRun: 1,
+    handles: [
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["runs"],
+  },
+  {
+    id: "upscale",
+    name: "Upscale",
+    type: "image",
+    description: "Aumentar resolucao de imagem (ESRGAN via fal.ai)",
+    costPerRun: 2,
+    handles: [
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["upscaleScale", "runs"],
   },
 ];
 
