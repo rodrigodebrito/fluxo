@@ -26,6 +26,7 @@ const MODEL_LABELS: Record<string, string> = {
   kling: "Kling 3.0",
   seedance: "Seedance 2.0",
   llm: "LLM",
+  "custom-model": "Modelo Treinado",
 };
 
 const MODEL_COLORS: Record<string, string> = {
@@ -40,6 +41,7 @@ const MODEL_COLORS: Record<string, string> = {
   kling: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   seedance: "bg-pink-500/10 text-pink-400 border-pink-500/20",
   llm: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  "custom-model": "bg-violet-500/10 text-violet-400 border-violet-500/20",
 };
 
 export default function HistoryPage() {
@@ -111,6 +113,9 @@ export default function HistoryPage() {
               </Link>
               <Link href="/history" className="px-3 py-1.5 text-sm text-white bg-zinc-800 rounded-lg">
                 Historico
+              </Link>
+              <Link href="/models" className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+                Meus Modelos
               </Link>
             </nav>
           </div>

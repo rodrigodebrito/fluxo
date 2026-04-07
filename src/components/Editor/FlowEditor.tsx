@@ -62,6 +62,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "BG Removal", model: "bg-removal", isRunning: false, results: [], imageInputCount: 1 };
     case "model-upscale":
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
+    case "model-custom":
+      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", customAspectRatio: "1:1", customNumOutputs: 1 };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -918,6 +920,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         costPerRun = 1;
       } else if (m === "upscale") {
         costPerRun = 2;
+      } else if (m === "custom-model") {
+        costPerRun = 10 * (pipeline.customNumOutputs || 1);
       }
 
       const genOptions = {
@@ -952,6 +956,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         characterOrientation: pipeline.characterOrientation,
         fluxImageSize: pipeline.fluxImageSize,
         upscaleScale: pipeline.upscaleScale,
+        trainedModelId: pipeline.trainedModelId,
+        customAspectRatio: pipeline.customAspectRatio,
+        customNumOutputs: pipeline.customNumOutputs,
         cost: costPerRun,
       };
 
@@ -976,6 +983,35 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       // Atualizar creditos na UI apos cobranca
       window.dispatchEvent(new Event("fluxo-credits-update"));
+
+      // Custom model (Replicate) — resultados ja estao no cache, nao precisa polling
+      if (pipeline.model === "custom-model") {
+        const { replicateResultsCache } = await import("@/lib/pipeline/executor");
+        const allUrls: string[] = [];
+        for (const taskId of taskIds) {
+          const urls = replicateResultsCache.get(taskId) || [];
+          allUrls.push(...urls);
+          replicateResultsCache.delete(taskId);
+        }
+
+        if (allUrls.length > 0) {
+          setNodes((nds) =>
+            nds.map((n) => {
+              if (n.id === pipeline.modelNodeId) {
+                const prevResults = (n.data.results as string[]) || [];
+                return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls] } };
+              }
+              return n;
+            })
+          );
+        } else {
+          alert("Nenhuma imagem gerada");
+          setNodes((nds) =>
+            nds.map((n) => n.id === pipeline.modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n)
+          );
+        }
+        return;
+      }
 
       // Veo usa endpoint diferente de polling, os outros usam recordInfo
       const pollType = pipeline.model === "veo3" ? "video" : "image";
@@ -1520,6 +1556,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-flux-2-edit", label: "Flux 2 Edit" },
       { type: "model-bg-removal", label: "BG Removal" },
       { type: "model-upscale", label: "Upscale" },
+      { type: "model-custom", label: "Modelo Treinado" },
     ],
   },
   {

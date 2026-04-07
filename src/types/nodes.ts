@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model";
 
 export interface ModelInfo {
   id: AIModel;
@@ -193,6 +193,17 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["upscaleScale", "runs"],
+  },
+  {
+    id: "custom-model",
+    name: "Modelo Treinado",
+    type: "image",
+    description: "Gere imagens com seu modelo personalizado (LoRA via Replicate)",
+    costPerRun: 10,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+    ],
+    params: ["trainedModel", "customAspectRatio", "customNumOutputs", "runs"],
   },
 ];
 

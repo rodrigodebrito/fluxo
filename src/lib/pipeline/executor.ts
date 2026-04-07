@@ -1,5 +1,8 @@
 import { type Node, type Edge } from "@xyflow/react";
 
+// Cache for Replicate results (sync generation, no polling needed)
+export const replicateResultsCache = new Map<string, string[]>();
+
 interface LLMChain {
   prompt: string;
   systemPrompt?: string;
@@ -57,6 +60,10 @@ interface PipelineData {
   fluxImageSize?: string;
   // Upscale
   upscaleScale?: number;
+  // Custom Model (Replicate LoRA)
+  trainedModelId?: string;
+  customAspectRatio?: string;
+  customNumOutputs?: number;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -111,6 +118,9 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.characterOrientation = (modelNode.data.characterOrientation as string) || "video";
   result.fluxImageSize = (modelNode.data.fluxImageSize as string) || "landscape_4_3";
   result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
+  result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
+  result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
+  result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -476,6 +486,9 @@ export async function startGeneration(
     characterOrientation?: string;
     fluxImageSize?: string;
     upscaleScale?: number;
+    trainedModelId?: string;
+    customAspectRatio?: string;
+    customNumOutputs?: number;
     cost?: number;
   }
 ): Promise<string> {
@@ -500,6 +513,29 @@ export async function startGeneration(
     try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
     return data.taskId;
+  }
+
+  // Custom Model (Replicate LoRA) — retorno sincrono, nao precisa de polling
+  if (options?.model === "custom-model") {
+    const response = await fetch("/api/generate-replicate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        trainedModelId: options.trainedModelId,
+        prompt,
+        aspectRatio: options.customAspectRatio || "1:1",
+        numOutputs: options.customNumOutputs || 1,
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao gerar com modelo treinado");
+    // Store URLs for direct retrieval (skip polling)
+    const taskId = `replicate_${Date.now()}`;
+    replicateResultsCache.set(taskId, data.urls || []);
+    return taskId;
   }
 
   // fal.ai models (Kling O3 i2v, O3 edit, O1 ref, Flux 2, utilities)

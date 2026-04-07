@@ -90,6 +90,9 @@ export default function Dashboard() {
               <Link href="/history" className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
                 Historico
               </Link>
+              <Link href="/models" className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+                Meus Modelos
+              </Link>
             </nav>
           </div>
 

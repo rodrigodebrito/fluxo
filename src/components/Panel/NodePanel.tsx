@@ -2,6 +2,7 @@
 
 import { type Node } from "@xyflow/react";
 import { AVAILABLE_MODELS } from "@/types/nodes";
+import { useState, useEffect } from "react";
 
 interface NodePanelProps {
   node: Node;
@@ -70,6 +71,77 @@ const KLING_ASPECT_RATIOS = [
   { value: "9:16", label: "9:16" },
   { value: "1:1", label: "1:1" },
 ];
+
+function TrainedModelSelector({ selectedId, triggerWord, onSelect }: {
+  selectedId: string;
+  triggerWord: string;
+  onSelect: (id: string, trigger: string) => void;
+}) {
+  const [models, setModels] = useState<{ id: string; name: string; trigger_word: string; thumbnail_url: string | null; status: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/training/list")
+      .then((r) => r.json())
+      .then((data) => {
+        setModels((data.models || []).filter((m: { status: string }) => m.status === "ready"));
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-sm text-zinc-300">Modelo</span>
+        </div>
+        <div className="text-xs text-zinc-500">Carregando modelos...</div>
+      </div>
+    );
+  }
+
+  if (models.length === 0) {
+    return (
+      <div>
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-sm text-zinc-300">Modelo</span>
+        </div>
+        <div className="text-xs text-zinc-500 mb-2">Nenhum modelo treinado</div>
+        <a href="/models" className="text-xs text-purple-400 hover:text-purple-300">
+          → Treinar um modelo
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-1 mb-2">
+        <span className="text-sm text-zinc-300">Modelo Treinado</span>
+      </div>
+      <select
+        value={selectedId}
+        onChange={(e) => {
+          const m = models.find((m) => m.id === e.target.value);
+          onSelect(e.target.value, m?.trigger_word || "");
+        }}
+        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+      >
+        <option value="">Selecione um modelo...</option>
+        {models.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.name} ({m.trigger_word})
+          </option>
+        ))}
+      </select>
+      {triggerWord && (
+        <p className="text-[10px] text-zinc-500 mt-1.5">
+          Use <span className="text-purple-400 font-mono">{triggerWord}</span> no prompt para ativar o modelo
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function NodePanel({ node, onRun, onClose, onUpdateData, iteratorCount = 0 }: NodePanelProps) {
   const model = (node.data.model as string) || "nano-banana-pro";
@@ -166,6 +238,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (isFlux) {
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
     costPerRun = hdSizes.includes(fluxImageSize) ? 9 : 6;
+  }
+  if (model === "custom-model") {
+    costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
   }
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
@@ -594,6 +669,55 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
             >
               <option value={2}>2x</option>
               <option value={4}>4x</option>
+            </select>
+          </div>
+        )}
+
+        {/* Trained Model Selection */}
+        {params.includes("trainedModel") && (
+          <TrainedModelSelector
+            selectedId={(node.data.trainedModelId as string) || ""}
+            triggerWord={(node.data.trainedModelTrigger as string) || ""}
+            onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
+          />
+        )}
+
+        {/* Custom Aspect Ratio */}
+        {params.includes("customAspectRatio") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Aspecto</span>
+            </div>
+            <select
+              value={(node.data.customAspectRatio as string) || "1:1"}
+              onChange={(e) => update({ customAspectRatio: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="1:1">1:1 (Quadrado)</option>
+              <option value="16:9">16:9 (Paisagem)</option>
+              <option value="9:16">9:16 (Retrato)</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+            </select>
+          </div>
+        )}
+
+        {/* Custom Num Outputs */}
+        {params.includes("customNumOutputs") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Quantidade</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Cada imagem adicional custa 10 creditos">i</span>
+            </div>
+            <select
+              value={(node.data.customNumOutputs as number) || 1}
+              onChange={(e) => update({ customNumOutputs: parseInt(e.target.value) })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value={1}>1 imagem</option>
+              <option value={2}>2 imagens</option>
+              <option value={3}>3 imagens</option>
+              <option value={4}>4 imagens</option>
             </select>
           </div>
         )}
