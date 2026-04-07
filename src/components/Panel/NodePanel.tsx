@@ -219,14 +219,21 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if ((model === "gpt-image-txt" || model === "gpt-image-img") && gptQuality === "high") costPerRun = 22;
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
-    // with video input = tem first frame conectado, sem = text-to-video (no video input)
-    // Por simplicidade, assume "no video input" (mais caro) como padrão
-    const is720 = sdResolution === "720p";
-    const isFast = sdModel === "bytedance/seedance-2-fast";
-    let perSec: number;
-    if (isFast) { perSec = is720 ? 33 : 15.5; }
-    else { perSec = is720 ? 41 : 19; }
-    costPerRun = Math.round(perSec * sdDuration);
+    if (sdModel.includes("seedance-2")) {
+      // PiAPI pricing: $0.08/seg (fast) / $0.10/seg (normal)
+      // 1 credit ≈ R$0.05, $1 ≈ R$5.50 ≈ 110 credits
+      const isFast = sdModel === "bytedance/seedance-2-fast";
+      const perSec = isFast ? 9 : 11; // creditos por segundo
+      costPerRun = Math.round(perSec * sdDuration);
+    } else {
+      // Kie AI (Seedance 1.5 Pro) pricing
+      const is720 = sdResolution === "720p";
+      const isFast = sdModel === "bytedance/seedance-2-fast";
+      let perSec: number;
+      if (isFast) { perSec = is720 ? 33 : 15.5; }
+      else { perSec = is720 ? 41 : 19; }
+      costPerRun = Math.round(perSec * sdDuration);
+    }
   }
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);

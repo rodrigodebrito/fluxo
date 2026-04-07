@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
-// Registra imagem na Asset Library e aguarda ficar pronta
+// Registra imagem na Asset Library e aguarda ficar pronta (Kie AI)
 async function registerAndWaitAsset(apiKey: string, url: string): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any = await createByteDanceAsset(apiKey, url, "Image");
@@ -32,6 +32,58 @@ async function registerAndWaitAsset(apiKey: string, url: string): Promise<string
   throw new Error("Timeout: asset demorou muito para processar");
 }
 
+// --- PiAPI Seedance 2.0 ---
+async function createPiAPITask(input: {
+  prompt: string;
+  mode: string;
+  duration: number;
+  aspectRatio: string;
+  taskType: string;
+  imageUrls?: string[];
+  videoUrls?: string[];
+  audioUrls?: string[];
+}) {
+  const apiKey = process.env.PIAPI_API_KEY;
+  if (!apiKey) throw new Error("PIAPI_API_KEY nao configurada");
+
+  const piInput: Record<string, unknown> = {
+    prompt: input.prompt,
+    mode: input.mode,
+    duration: input.duration,
+    aspect_ratio: input.aspectRatio,
+  };
+
+  if (input.imageUrls && input.imageUrls.length > 0) piInput.image_urls = input.imageUrls;
+  if (input.videoUrls && input.videoUrls.length > 0) piInput.video_urls = input.videoUrls;
+  if (input.audioUrls && input.audioUrls.length > 0) piInput.audio_urls = input.audioUrls;
+
+  const body: Record<string, unknown> = {
+    model: "seedance",
+    task_type: input.taskType,
+    input: piInput,
+  };
+
+  console.log("[seedance-piapi] creating task:", JSON.stringify(body));
+
+  const res = await fetch("https://api.piapi.ai/api/v1/task", {
+    method: "POST",
+    headers: {
+      "X-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  console.log("[seedance-piapi] response:", JSON.stringify(data));
+
+  if (data.code !== 200 || !data.data?.task_id) {
+    throw new Error(data.message || data.error?.message || "Erro ao criar task PiAPI");
+  }
+
+  return data.data.task_id;
+}
+
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
@@ -40,29 +92,76 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const body = await request.json();
-
-  // Block Seedance 2.0 (still disabled)
   const sdModel = body.sdModel || "bytedance/seedance-2";
-  if (sdModel.includes("seedance-2")) {
-    return NextResponse.json(
-      { error: "Seedance 2.0 esta temporariamente indisponivel." },
-      { status: 503 }
-    );
-  }
 
   const costModel = "seedance";
   const { hasCredits, cost } = await verifyCredits(user.id, costModel, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
-  const apiKey = process.env.KIE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
-  }
-
-  const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, resolution, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
+  const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, referenceVideoUrl, referenceAudioUrl, resolution, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  // --- Seedance 2.0 via PiAPI ---
+  if (sdModel.includes("seedance-2")) {
+    try {
+      // Collect all reference inputs
+      const imageUrls: string[] = [];
+      const videoUrls: string[] = [];
+      const audioUrls: string[] = [];
+
+      if (firstFrameUrl) imageUrls.push(firstFrameUrl);
+      if (lastFrameUrl) imageUrls.push(lastFrameUrl);
+      if (referenceImageUrls && referenceImageUrls.length > 0) imageUrls.push(...referenceImageUrls);
+      if (referenceVideoUrl) videoUrls.push(referenceVideoUrl);
+      if (referenceAudioUrl) audioUrls.push(referenceAudioUrl);
+
+      // Determine mode based on inputs
+      // omni_reference: when mixing image+video+audio or using reference images beyond first/last
+      // first_last_frames: when only 1-2 images as bookend frames
+      // text_to_video: no references
+      let mode = "text_to_video";
+      const hasVideo = videoUrls.length > 0;
+      const hasAudio = audioUrls.length > 0;
+      const hasRefImages = referenceImageUrls && referenceImageUrls.length > 0;
+
+      if (hasVideo || hasAudio || hasRefImages) {
+        mode = "omni_reference";
+      } else if (imageUrls.length > 0) {
+        mode = "first_last_frames";
+      }
+
+      // Map sdModel to PiAPI task_type
+      const taskType = sdModel.includes("fast") ? "seedance-2-fast" : "seedance-2";
+
+      const taskId = await createPiAPITask({
+        prompt,
+        mode,
+        duration: duration || 5,
+        aspectRatio: aspectRatio || "16:9",
+        taskType,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
+        audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
+      });
+
+      await chargeCredits(user.id, costModel, cost);
+
+      // Return with piapi: prefix so status polling knows which provider to use
+      return NextResponse.json({ taskId: `piapi:${taskId}` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      console.error("[seedance-piapi] error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  // --- Seedance 1.5 via Kie AI (fallback when available) ---
+  const apiKey = process.env.KIE_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "KIE API key nao configurada" }, { status: 500 });
   }
 
   try {

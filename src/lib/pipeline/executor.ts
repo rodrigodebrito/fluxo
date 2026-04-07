@@ -858,6 +858,9 @@ export async function pollTaskStatus(
 ): Promise<{ resultUrls: string[]; error: string | null }> {
   // Detect fal.ai tasks (taskId contains "|" separator with endpoint)
   const isFal = taskId.includes("|");
+  // Detect PiAPI tasks (taskId starts with "piapi:")
+  const isPiAPI = taskId.startsWith("piapi:");
+  const piApiTaskId = isPiAPI ? taskId.slice(6) : "";
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -880,7 +883,9 @@ export async function pollTaskStatus(
 
     try {
       let statusUrl: string;
-      if (isFal) {
+      if (isPiAPI) {
+        statusUrl = `/api/status-piapi?taskId=${encodeURIComponent(piApiTaskId)}`;
+      } else if (isFal) {
         const parts = taskId.split("|");
         const [falTaskId, falEndpoint] = parts;
         const falStatusUrl = parts[2] || "";
