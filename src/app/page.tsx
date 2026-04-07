@@ -910,6 +910,7 @@ export default function LandingPage() {
               <a href="#precos" className="hover:text-zinc-400 transition-colors">Precos</a>
               <Link href="/pricing" className="hover:text-zinc-400 transition-colors">Planos</Link>
               <Link href="/login" className="hover:text-zinc-400 transition-colors">Entrar</Link>
+              <Link href="/terms" className="hover:text-zinc-400 transition-colors">Termos de Uso</Link>
             </div>
             <p className="text-[11px] text-zinc-700">&copy; 2026 Fluxo AI. Todos os direitos reservados.</p>
           </div>

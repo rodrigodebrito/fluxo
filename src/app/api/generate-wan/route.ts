@@ -9,6 +9,7 @@ import {
   checkRateLimit,
   rateLimitResponse,
 } from "@/lib/auth-guard";
+import { checkPromptSafety } from "@/lib/content-filter";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
@@ -37,6 +38,11 @@ export async function POST(request: NextRequest) {
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  const safety = checkPromptSafety(prompt);
+  if (!safety.safe) {
+    return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
   if (!imageUrl) {

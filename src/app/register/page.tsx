@@ -114,6 +114,13 @@ export default function RegisterPage() {
             <div className="text-red-400 text-sm text-center">{error}</div>
           )}
 
+          <p className="text-xs text-zinc-500 text-center">
+            Ao criar sua conta, voce concorda com os{" "}
+            <a href="/terms" target="_blank" className="text-purple-400 hover:text-purple-300 underline">
+              Termos de Uso
+            </a>.
+          </p>
+
           <button
             type="submit"
             disabled={loading}

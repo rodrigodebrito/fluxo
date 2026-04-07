@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createImageTask } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
+import { checkPromptSafety } from "@/lib/content-filter";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -28,6 +29,11 @@ export async function POST(request: NextRequest) {
       { error: "Prompt e obrigatorio" },
       { status: 400 }
     );
+  }
+
+  const safety = checkPromptSafety(prompt);
+  if (!safety.safe) {
+    return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
   const result = await createImageTask(apiKey, {

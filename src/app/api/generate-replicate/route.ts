@@ -11,6 +11,7 @@ import {
   checkRateLimit,
   rateLimitResponse,
 } from "@/lib/auth-guard";
+import { checkPromptSafety } from "@/lib/content-filter";
 
 async function resolveWeightsUrl(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createServiceClient>>,
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  const safety = checkPromptSafety(prompt);
+  if (!safety.safe) {
+    return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
   const finalCost = cost || 10;

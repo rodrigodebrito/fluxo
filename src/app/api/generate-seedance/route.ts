@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
+import { checkPromptSafety } from "@/lib/content-filter";
 
 // Registra imagem na Asset Library e aguarda ficar pronta (Kie AI)
 async function registerAndWaitAsset(apiKey: string, url: string): Promise<string> {
@@ -102,6 +103,11 @@ export async function POST(request: NextRequest) {
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  const safety = checkPromptSafety(prompt);
+  if (!safety.safe) {
+    return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
   // --- Seedance 2.0 via PiAPI ---

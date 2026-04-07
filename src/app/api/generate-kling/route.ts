@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createKlingTask, createKlingMotionTask } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
+import { checkPromptSafety } from "@/lib/content-filter";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -36,6 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Video de referencia e obrigatorio" }, { status: 400 });
     }
 
+    if (prompt) {
+      const safety = checkPromptSafety(prompt);
+      if (!safety.safe) {
+        return NextResponse.json({ error: safety.reason }, { status: 403 });
+      }
+    }
+
     try {
       const result = await createKlingMotionTask(apiKey, {
         prompt: prompt || undefined,
@@ -68,6 +76,13 @@ export async function POST(request: NextRequest) {
   const isMultiShot = multiShotEnabled && multiShots?.length > 0;
   if (!prompt && !isMultiShot) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  if (prompt) {
+    const safety = checkPromptSafety(prompt);
+    if (!safety.safe) {
+      return NextResponse.json({ error: safety.reason }, { status: 403 });
+    }
   }
 
   try {
