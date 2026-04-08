@@ -100,14 +100,13 @@ function MobileMenu() {
       {open && (
         <div className="absolute top-full left-0 right-0 bg-zinc-950/98 border-b border-zinc-800 md:hidden backdrop-blur-xl">
           <div className="flex flex-col px-6 py-4 gap-3">
-            <a href="#galeria" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Galeria</a>
             <a href="#como-funciona" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Como funciona</a>
             <a href="#modelos" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Modelos</a>
             <a href="#precos" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">Precos</a>
             <a href="#faq" onClick={() => setOpen(false)} className="text-sm text-zinc-300 hover:text-white py-2">FAQ</a>
             <hr className="border-zinc-800" />
             <Link href="/login" className="text-sm text-zinc-400 py-2">Entrar</Link>
-            <Link href="/register" className="text-sm bg-purple-600 hover:bg-purple-500 px-4 py-2.5 rounded-lg font-medium text-center">Comecar Gratis</Link>
+            <Link href="/register" className="text-sm bg-purple-600 hover:bg-purple-500 px-4 py-2.5 rounded-lg font-medium text-center">Criar Conta</Link>
           </div>
         </div>
       )}
@@ -345,7 +344,6 @@ export default function LandingPage() {
             </Link>
 
             <div className="hidden md:flex items-center gap-8 text-[13px] text-zinc-400">
-              <a href="#galeria" className="hover:text-white transition-colors">Galeria</a>
               <a href="#como-funciona" className="hover:text-white transition-colors">Como funciona</a>
               <a href="#modelos" className="hover:text-white transition-colors">Modelos</a>
               <a href="#precos" className="hover:text-white transition-colors">Precos</a>
@@ -357,7 +355,7 @@ export default function LandingPage() {
                 Entrar
               </Link>
               <Link href="/register" className="text-sm bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-purple-600/25">
-                Comecar Gratis
+                Criar Conta
               </Link>
               <MobileMenu />
             </div>
@@ -376,7 +374,7 @@ export default function LandingPage() {
             <Reveal>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-600/10 border border-purple-500/20 rounded-full text-xs text-purple-300 mb-8">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                Beta exclusivo — vagas limitadas
+                Plataforma de criacao com IA — pague so o que usar
               </div>
             </Reveal>
 
@@ -405,13 +403,13 @@ export default function LandingPage() {
                   href="/register"
                   className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-lg transition-all hover:shadow-2xl hover:shadow-purple-600/30 hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  Comecar Agora — E Gratis
+                  Comecar Agora
                 </Link>
                 <a
-                  href="#galeria"
+                  href="#modelos"
                   className="w-full sm:w-auto px-10 py-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium rounded-xl text-lg transition-all border border-zinc-700/80 hover:border-zinc-600 flex items-center justify-center gap-2 group"
                 >
-                  Ver galeria
+                  Ver modelos
                   <svg className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
@@ -420,7 +418,7 @@ export default function LandingPage() {
               <div className="mt-6 flex items-center justify-center gap-5 text-xs text-zinc-600">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Sem cartao
+                  Pague so o que usar
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -520,49 +518,7 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        {/* ── GALERIA DE EXEMPLOS ── */}
-        <section id="galeria" className="py-16 md:py-24 px-6 border-y border-zinc-800/50 bg-zinc-900/20">
-          <div className="max-w-6xl mx-auto">
-            <Reveal>
-              <div className="text-center mb-12">
-                <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Resultados reais</p>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Tudo isso foi feito no{" "}
-                  <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Fluxo AI</span>
-                </h2>
-                <p className="text-zinc-500 max-w-lg mx-auto">
-                  Imagens em 4K e videos HD gerados por nossos usuarios. Clique pra ver detalhes.
-                </p>
-              </div>
-            </Reveal>
-
-            {/* Grid de imagens */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-4">
-              {GALLERY_IMAGES.map((img, i) => (
-                <GalleryItem key={i} src={img.src} label={img.label} model={img.model} delay={i * 80} />
-              ))}
-            </div>
-
-            {/* Grid de videos */}
-            <div className="grid md:grid-cols-3 gap-3 md:gap-4">
-              {GALLERY_VIDEOS.map((vid, i) => (
-                <GalleryVideoItem key={i} src={vid.src} label={vid.label} model={vid.model} delay={i * 100 + 200} />
-              ))}
-            </div>
-
-            <Reveal delay={500}>
-              <div className="text-center mt-10">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 rounded-xl text-sm font-medium transition-all"
-                >
-                  Criar meus proprios resultados
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </Link>
-              </div>
-            </Reveal>
-          </div>
-        </section>
+        {/* ── GALERIA removida temporariamente ── */}
 
         {/* ── DOR / PROBLEMA ── */}
         <section className="py-16 md:py-24 px-6">
@@ -675,7 +631,7 @@ export default function LandingPage() {
         <section className="py-14 px-6 border-y border-zinc-800/50">
           <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: <CountUp end={6} suffix="+" />, label: "Modelos de IA" },
+              { value: <CountUp end={9} suffix="+" />, label: "Modelos de IA" },
               { value: "4K", label: "Resolucao maxima" },
               { value: <CountUp end={30} suffix="s" />, label: "Pra comecar" },
               { value: <><CountUp end={25} suffix="%" /></>, label: "Mais barato", gradient: true },
@@ -698,7 +654,7 @@ export default function LandingPage() {
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Arsenal completo</p>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">6 modelos. 1 plataforma.</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">9+ modelos. 1 plataforma.</h2>
                 <p className="text-zinc-500 max-w-lg mx-auto">
                   Os mesmos modelos das grandes agencias — voce paga por uso, nao por assinatura.
                 </p>
@@ -709,11 +665,13 @@ export default function LandingPage() {
               {[
                 { name: "Nano Banana Pro", type: "Imagem", desc: "Imagens ate 4K. Qualidade de estudio.", cost: "18 cred", badge: "bg-purple-500/10 text-purple-400 border-purple-500/20", icon: "🖼️" },
                 { name: "GPT Image 1.5", type: "Imagem", desc: "Motor OpenAI. Texto perfeito em imagens.", cost: "4 cred", badge: "bg-green-500/10 text-green-400 border-green-500/20", icon: "✨" },
-                { name: "Flux 2 Pro", type: "Imagem", desc: "Black Forest Labs. Qualidade top, barato.", cost: "6 cred", badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: "⚡" },
+                { name: "Modelo Treinado (LoRA)", type: "Imagem", desc: "Treine seu proprio modelo com suas fotos. Gere imagens personalizadas.", cost: "10 cred", badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: "🧠" },
                 { name: "Veo 3.1", type: "Video", desc: "Google Veo. Videos realistas com audio.", cost: "60 cred", badge: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: "🎬" },
                 { name: "Kling 3.0", type: "Video", desc: "Controle total. Elementos customizados.", cost: "70 cred", badge: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: "🎥" },
-                { name: "Seedance 2.0", type: "Video", desc: "ByteDance. Danca e movimentos naturais.", cost: "40 cred", badge: "bg-pink-500/10 text-pink-400 border-pink-500/20", icon: "💃" },
-                { name: "Video Concat", type: "Gratis", desc: "Junte multiplos videos em um so clique.", cost: "0 cred", badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", icon: "🔗" },
+                { name: "Seedance 2.0", type: "Video", desc: "ByteDance. Danca e movimentos naturais.", cost: "30 cred", badge: "bg-pink-500/10 text-pink-400 border-pink-500/20", icon: "💃" },
+                { name: "Avatar TTS", type: "Video", desc: "Foto + texto vira video falando. 21 vozes. Ideal pra UGC.", cost: "40 cred", badge: "bg-rose-500/10 text-rose-400 border-rose-500/20", icon: "🗣️" },
+                { name: "Any LLM", type: "Texto", desc: "GPT-4o, GPT-4.1, GPT-5. Pre-processe prompts com IA.", cost: "1 cred", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: "💬" },
+                { name: "Video Concat", type: "Ferramenta", desc: "Junte multiplos videos em um so clique.", cost: "0 cred", badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", icon: "🔗" },
               ].map((m, i) => (
                 <Reveal key={m.name} delay={i * 80}>
                   <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-all hover:-translate-y-1 h-full">
@@ -795,7 +753,9 @@ export default function LandingPage() {
                       { label: "Editor visual (nos)", vals: ["✓", "✓", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Imagem 1K", vals: ["18 cred", "24 cred", "40 cred", "—"], highlight: [true, false, false, false] },
                       { label: "Video basico", vals: ["60 cred", "80 cred", "100 cred", "50 cred"], highlight: [true, false, false, false] },
-                      { label: "Modelos disponiveis", vals: ["6", "5", "1", "1"], highlight: [true, false, false, false] },
+                      { label: "Modelos disponiveis", vals: ["9+", "5", "1", "1"], highlight: [true, false, false, false] },
+                      { label: "Avatar TTS (talking head)", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
+                      { label: "Treinar modelo proprio", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Concatenar videos", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Paga so o que usa", vals: ["✓", "✓", "✗", "✗"], highlight: [true, false, false, false] },
                     ].map((row) => (
@@ -833,10 +793,12 @@ export default function LandingPage() {
             <div className="space-y-3">
               {[
                 { q: "Preciso saber programar?", a: "Nao. Zero codigo. A interface e 100% visual — voce arrasta blocos e conecta com cliques. Se sabe usar PowerPoint, sabe usar o Fluxo." },
-                { q: "Quanto custa?", a: "Voce compra creditos e gasta como quiser. Uma imagem custa a partir de 4 creditos, um video a partir de 40. Sem assinatura mensal, sem surpresas na fatura." },
+                { q: "Quanto custa?", a: "Voce compra creditos e gasta como quiser. Uma imagem custa a partir de 4 creditos, um video a partir de 30. Sem surpresas na fatura." },
                 { q: "E se a geracao falhar?", a: "Seus creditos sao devolvidos automaticamente. Erro = reembolso instantaneo. Voce so paga por resultados." },
                 { q: "Meus creditos expiram?", a: "Nao. Comprou, e seu. Sem prazo, sem fidelidade, sem contrato. Use quando quiser." },
                 { q: "Qual a qualidade dos videos?", a: "Profissional. Usamos Google Veo 3.1, Kling 3.0 e ByteDance Seedance — os mesmos motores das maiores agencias do mundo." },
+                { q: "Posso treinar meu proprio modelo?", a: "Sim. Suba 5-30 fotos, treine em ~2 minutos e gere imagens personalizadas com seu rosto ou produto. Ideal pra criar conteudo unico." },
+                { q: "O que e o Avatar TTS?", a: "Voce envia uma foto e digita um texto. A IA gera um video da pessoa falando com voz realista. Perfeito pra UGC e conteudo de redes sociais." },
                 { q: "Posso usar pra conteudo comercial?", a: "Sim. Todo conteudo gerado e seu. Use em ads, redes sociais, e-commerce — sem restricao." },
               ].map((faq, i) => (
                 <Reveal key={faq.q} delay={i * 60}>
@@ -855,37 +817,50 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── CTA FINAL — LISTA DE ESPERA ── */}
+        {/* ── CTA FINAL ── */}
         <section className="py-20 md:py-32 px-6 relative">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-600/10 rounded-full blur-[150px]" />
           </div>
           <Reveal>
             <div className="max-w-2xl mx-auto text-center relative z-10">
-              <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-6">Falta pouco</p>
+              <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-6">Comece agora</p>
               <h2 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
                 Enquanto voce pensa,
                 <br />
                 outros ja estao criando.
               </h2>
               <p className="text-lg text-zinc-400 mb-10 leading-relaxed">
-                Apenas 50 vagas no beta. Deixe seu contato e seja um dos primeiros.
+                Crie sua conta, compre creditos e comece a gerar conteudo profissional com IA.
               </p>
 
-              <WaitlistForm />
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  href="/register"
+                  className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-lg transition-all hover:shadow-2xl hover:shadow-purple-600/30 hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  Criar Conta
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="w-full sm:w-auto px-10 py-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-medium rounded-xl text-lg transition-all border border-zinc-700/80 hover:border-zinc-600"
+                >
+                  Ver Planos
+                </Link>
+              </div>
 
               <div className="mt-8 flex items-center justify-center gap-5 text-xs text-zinc-600">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Acesso antecipado
+                  Pague so o que usar
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Bonus exclusivo
+                  Creditos nao expiram
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Sem compromisso
+                  Reembolso em falhas
                 </span>
               </div>
             </div>
@@ -904,7 +879,6 @@ export default function LandingPage() {
               <span className="text-sm font-bold text-zinc-400">Fluxo AI</span>
             </Link>
             <div className="flex items-center gap-6 text-xs text-zinc-600">
-              <a href="#galeria" className="hover:text-zinc-400 transition-colors">Galeria</a>
               <a href="#como-funciona" className="hover:text-zinc-400 transition-colors">Como funciona</a>
               <a href="#modelos" className="hover:text-zinc-400 transition-colors">Modelos</a>
               <a href="#precos" className="hover:text-zinc-400 transition-colors">Precos</a>
