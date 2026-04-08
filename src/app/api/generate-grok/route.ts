@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWan27Task } from "@/lib/ai/kie";
+import { createGrokImagineTask } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 import { checkPromptSafety } from "@/lib/content-filter";
 
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const body = await request.json();
-  const { hasCredits, cost } = await verifyCredits(user.id, "wan-i2v", body.cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, "grok-i2v", body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -19,39 +19,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
-  const { prompt, negativePrompt, firstFrameUrl, lastFrameUrl, firstClipUrl, drivingAudioUrl, resolution, duration, promptExtend, seed } = body;
+  const { prompt, imageUrls, mode, duration, resolution, aspectRatio } = body;
 
-  if (!prompt) {
-    return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  if (!imageUrls || imageUrls.length === 0) {
+    return NextResponse.json({ error: "Imagem e obrigatoria" }, { status: 400 });
   }
 
-  const safety = checkPromptSafety(prompt);
-  if (!safety.safe) {
-    return NextResponse.json({ error: safety.reason }, { status: 403 });
+  if (prompt) {
+    const safety = checkPromptSafety(prompt);
+    if (!safety.safe) {
+      return NextResponse.json({ error: safety.reason }, { status: 403 });
+    }
   }
 
-  const result = await createWan27Task(apiKey, {
+  const result = await createGrokImagineTask(apiKey, {
+    imageUrls,
     prompt,
-    negativePrompt,
-    firstFrameUrl,
-    lastFrameUrl,
-    firstClipUrl,
-    drivingAudioUrl,
-    resolution: resolution || "720p",
-    duration: duration || 5,
-    promptExtend: promptExtend ?? true,
-    seed,
+    mode: mode || "normal",
+    duration: duration || 6,
+    resolution: resolution || "480p",
+    aspectRatio: aspectRatio || "16:9",
     nsfwChecker: false,
   });
 
   if (result.code !== 200 || !result.data) {
     return NextResponse.json(
-      { error: result.msg || "Erro ao criar task Wan 2.7" },
+      { error: result.msg || "Erro ao criar task Grok Imagine" },
       { status: result.code || 500 }
     );
   }
 
-  await chargeCredits(user.id, "wan-i2v", cost);
+  await chargeCredits(user.id, "grok-i2v", cost);
 
   return NextResponse.json({ taskId: result.data.taskId });
 }

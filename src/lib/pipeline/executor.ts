@@ -84,6 +84,14 @@ interface PipelineData {
   mainLoraScale?: number;
   customAspectRatio?: string;
   customNumOutputs?: number;
+  // Grok Imagine
+  grokResolution?: string;
+  grokDuration?: number;
+  grokMode?: string;
+  // Negative prompt (separate for models that need it)
+  negativePrompt?: string;
+  // Prompt extend
+  promptExtend?: boolean;
   // Kling Avatar
   avatarTier?: string;
   avatarText?: string;
@@ -156,6 +164,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.mainLoraScale = (modelNode.data.mainLoraScale as number) ?? 1;
   result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
   result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
+  result.grokResolution = (modelNode.data.grokResolution as string) || "480p";
+  result.grokDuration = (modelNode.data.grokDuration as number) || 6;
+  result.grokMode = (modelNode.data.grokMode as string) || "normal";
+  result.promptExtend = (modelNode.data.promptExtend as boolean) ?? true;
   result.avatarTier = (modelNode.data.avatarTier as string) || "standard";
   result.avatarText = (modelNode.data.avatarText as string) || "";
   result.avatarVoice = (modelNode.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
@@ -353,9 +365,14 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
     }
   }
 
-  // Concatenar negative prompt ao prompt
+  // Store negative prompt separately for models that support it, otherwise concatenate
   if (negativePrompt.trim()) {
-    result.prompt = `${result.prompt}\n${negativePrompt.trim()}`;
+    result.negativePrompt = negativePrompt.trim();
+    // For models without native negative prompt support, append to main prompt
+    const modelsWithNativeNeg = ["wan-i2v", "seedance", "veo3", "kling"];
+    if (!modelsWithNativeNeg.includes(result.model)) {
+      result.prompt = `${result.prompt}\n${negativePrompt.trim()}`;
+    }
   }
 
   // Ordenar imagens por handle (image-1 primeiro, image-2 depois, etc.)
@@ -547,6 +564,11 @@ export async function startGeneration(
     avatarVoice?: string;
     avatarSpeed?: number;
     audioUrl?: string;
+    grokResolution?: string;
+    grokDuration?: number;
+    grokMode?: string;
+    negativePrompt?: string;
+    promptExtend?: boolean;
     cost?: number;
   }
 ): Promise<string> {
@@ -604,16 +626,17 @@ export async function startGeneration(
     return data.taskId;
   }
 
-  // Wan 2.1 I2V (Replicate) — retorno sincrono
-  if (options?.model === "wan-i2v") {
-    const response = await fetch("/api/generate-wan", {
+  // Grok Imagine I2V (Kie.ai) — polling padrao
+  if (options?.model === "grok-i2v") {
+    const response = await fetch("/api/generate-grok", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        imageUrl: publicUrls[0] || "",
-        resolution: options.wanResolution || "720p",
-        numFrames: options.wanDuration || 81,
+        imageUrls: publicUrls,
+        mode: options.grokMode || "normal",
+        duration: options.grokDuration || 6,
+        resolution: options.grokResolution || "480p",
         aspectRatio: options.aspectRatio || "16:9",
         cost: options.cost,
       }),
@@ -621,10 +644,54 @@ export async function startGeneration(
     const text = await response.text();
     let data;
     try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao gerar video com Wan 2.1");
-    const taskId = `replicate_${Date.now()}`;
-    getReplicateCache().set(taskId, data.urls || []);
-    return taskId;
+    if (!response.ok) throw new Error(data.error || "Erro ao criar task Grok Imagine");
+    return data.taskId;
+  }
+
+  // Wan 2.7 I2V (Kie.ai) — polling padrao
+  if (options?.model === "wan-i2v") {
+    // Upload video/audio references if connected (blob → public URL)
+    let firstClipUrl: string | undefined;
+    if (options.videoUrl) {
+      if (options.videoUrl.startsWith("blob:")) {
+        const uploaded = await uploadImages([options.videoUrl]);
+        firstClipUrl = uploaded[0] || undefined;
+      } else {
+        firstClipUrl = options.videoUrl;
+      }
+    }
+    let drivingAudioUrl: string | undefined;
+    if (options.audioUrl) {
+      if (options.audioUrl.startsWith("blob:")) {
+        const uploaded = await uploadImages([options.audioUrl]);
+        drivingAudioUrl = uploaded[0] || undefined;
+      } else {
+        drivingAudioUrl = options.audioUrl;
+      }
+    }
+
+    const response = await fetch("/api/generate-wan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        negativePrompt: options.negativePrompt || undefined,
+        firstFrameUrl: publicUrls[0] || undefined,
+        lastFrameUrl: publicUrls[1] || undefined,
+        firstClipUrl: firstClipUrl || undefined,
+        drivingAudioUrl: drivingAudioUrl || undefined,
+        resolution: options.wanResolution || "720p",
+        duration: options.wanDuration || 5,
+        promptExtend: options.promptExtend ?? true,
+        seed: options.seed ?? undefined,
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao criar task Wan 2.7");
+    return data.taskId;
   }
 
   // Custom Model (Replicate LoRA) — retorno sincrono, nao precisa de polling

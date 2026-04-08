@@ -65,9 +65,11 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-custom":
       return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "model-wan-i2v":
-      return { label: "Wan 2.1 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", wanResolution: "720p", wanDuration: 81 };
+      return { label: "Wan 2.7 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, wanResolution: "720p", wanDuration: 5, promptExtend: true };
     case "model-kling-avatar":
       return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
+    case "model-grok-i2v":
+      return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "16:9" };
     case "audioInput":
       return { label: "Audio", audioUrl: "", fileName: "", audioDuration: 0 };
     case "klingElement":
@@ -980,6 +982,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         costPerRun = 2;
       } else if (m === "custom-model") {
         costPerRun = 10 * (pipeline.customNumOutputs || 1);
+      } else if (m === "wan-i2v") {
+        const wanPerSec = pipeline.wanResolution === "1080p" ? 24 : 16;
+        costPerRun = wanPerSec * (pipeline.wanDuration || 5);
+      } else if (m === "grok-i2v") {
+        const grokPerSec = pipeline.grokResolution === "720p" ? 3 : 1.6;
+        costPerRun = Math.ceil(grokPerSec * (pipeline.grokDuration || 6));
       }
 
       const genOptions = {
@@ -1016,6 +1024,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         upscaleScale: pipeline.upscaleScale,
         wanResolution: pipeline.wanResolution,
         wanDuration: pipeline.wanDuration,
+        promptExtend: pipeline.promptExtend,
+        negativePrompt: pipeline.negativePrompt,
         trainedModelId: pipeline.trainedModelId,
         extraLoraIds: pipeline.extraLoraIds,
         nsfwEnabled: pipeline.nsfwEnabled,
@@ -1030,6 +1040,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         avatarVoice: pipeline.avatarVoice,
         avatarSpeed: pipeline.avatarSpeed,
         audioUrl: pipeline.audioUrl,
+        grokResolution: pipeline.grokResolution,
+        grokDuration: pipeline.grokDuration,
+        grokMode: pipeline.grokMode,
         cost: costPerRun,
       };
 
@@ -1056,7 +1069,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       window.dispatchEvent(new Event("fluxo-credits-update"));
 
       // Replicate sync models — resultados ja estao no cache, nao precisa polling
-      if (pipeline.model === "custom-model" || pipeline.model === "wan-i2v") {
+      if (pipeline.model === "custom-model") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
@@ -1645,7 +1658,8 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-kling-o3-i2v", label: "Kling O3" },
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
       { type: "model-kling-o1-ref", label: "Kling O3 Reference" },
-      { type: "model-wan-i2v", label: "Wan 2.1 I2V" },
+      { type: "model-wan-i2v", label: "Wan 2.7 I2V" },
+      { type: "model-grok-i2v", label: "Grok Imagine" },
       { type: "klingElement", label: "Kling Element" },
     ],
   },

@@ -493,6 +493,101 @@ export async function createTTSTask(
   return safeJson(response);
 }
 
+// === Wan 2.7 Image-to-Video ===
+
+interface CreateWan27Input {
+  prompt: string;
+  negativePrompt?: string;
+  firstFrameUrl?: string;
+  lastFrameUrl?: string;
+  firstClipUrl?: string;
+  drivingAudioUrl?: string;
+  resolution?: "720p" | "1080p";
+  duration?: number;
+  promptExtend?: boolean;
+  seed?: number | null;
+  nsfwChecker?: boolean;
+}
+
+export async function createWan27Task(
+  apiKey: string,
+  input: CreateWan27Input
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    prompt: input.prompt,
+    resolution: input.resolution || "720p",
+    duration: input.duration || 5,
+    prompt_extend: input.promptExtend ?? true,
+    watermark: false,
+    nsfw_checker: input.nsfwChecker ?? false,
+  };
+
+  if (input.negativePrompt) inputBody.negative_prompt = input.negativePrompt;
+  if (input.firstFrameUrl) inputBody.first_frame_url = input.firstFrameUrl;
+  if (input.lastFrameUrl) inputBody.last_frame_url = input.lastFrameUrl;
+  if (input.firstClipUrl) inputBody.first_clip_url = input.firstClipUrl;
+  if (input.drivingAudioUrl) inputBody.driving_audio_url = input.drivingAudioUrl;
+  if (input.seed != null) inputBody.seed = input.seed;
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "wan/2-7-image-to-video",
+      input: inputBody,
+    }),
+  });
+
+  return safeJson(response);
+}
+
+// === Grok Imagine (Image-to-Video) ===
+
+interface CreateGrokImagineInput {
+  imageUrls: string[];
+  prompt?: string;
+  mode?: "fun" | "normal" | "spicy";
+  duration?: number;
+  resolution?: "480p" | "720p";
+  aspectRatio?: string;
+  nsfwChecker?: boolean;
+}
+
+export async function createGrokImagineTask(
+  apiKey: string,
+  input: CreateGrokImagineInput
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    image_urls: input.imageUrls,
+    mode: input.mode || "normal",
+    duration: String(input.duration || 6),
+    resolution: input.resolution || "480p",
+    aspect_ratio: input.aspectRatio || "16:9",
+    nsfw_checker: input.nsfwChecker ?? false,
+  };
+
+  if (input.prompt) {
+    inputBody.prompt = input.prompt;
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "grok-imagine/image-to-video",
+      input: inputBody,
+    }),
+  });
+
+  return safeJson(response);
+}
+
 // Veo status endpoint (diferente do Nano Banana)
 interface VeoStatusResponse {
   code: number;

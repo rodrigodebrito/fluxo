@@ -201,8 +201,14 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
 
   // Wan 2.1 I2V
   const wanResolution = (node.data.wanResolution as string) || "720p";
-  const wanDuration = (node.data.wanDuration as number) || 81;
+  const wanDuration = (node.data.wanDuration as number) || 5;
+  const promptExtend = (node.data.promptExtend as boolean) ?? true;
   const isWan = model === "wan-i2v";
+
+  // Grok Imagine
+  const grokResolution = (node.data.grokResolution as string) || "480p";
+  const grokDuration = (node.data.grokDuration as number) || 6;
+  const grokMode = (node.data.grokMode as string) || "normal";
 
   // Kling Avatar TTS
   const isAvatar = model === "kling-avatar";
@@ -272,13 +278,18 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     costPerRun = hdSizes.includes(fluxImageSize) ? 9 : 6;
   }
   if (isWan) {
-    // 480p ~$0.04 → 5 cred, 720p ~$0.15 → 15 cred
-    costPerRun = wanResolution === "480p" ? 5 : 15;
+    // 720p: 16 cred/s, 1080p: 24 cred/s
+    const wanPerSec = wanResolution === "1080p" ? 24 : 16;
+    costPerRun = wanPerSec * wanDuration;
   }
   if (isAvatar) {
     // Standard: 8 cred/s (~$0.04/s), Pro: 16 cred/s (~$0.08/s)
     // Base cost for ~5s video + TTS
     costPerRun = avatarTier === "pro" ? 80 : 40;
+  }
+  if (model === "grok-i2v") {
+    const grokPerSec = grokResolution === "720p" ? 3 : 1.6;
+    costPerRun = Math.ceil(grokPerSec * grokDuration);
   }
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
@@ -974,40 +985,115 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Resolution</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="480p e mais rapido e barato, 720p tem melhor qualidade">i</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="720p: 16 cred/s, 1080p: 24 cred/s">i</span>
             </div>
             <select
               value={wanResolution}
               onChange={(e) => update({ wanResolution: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
             >
-              <option value="480p">480p (rapido ~$0.04)</option>
-              <option value="720p">720p (qualidade ~$0.15)</option>
+              <option value="720p">720p (16 cred/s)</option>
+              <option value="1080p">1080p (24 cred/s)</option>
             </select>
           </div>
         )}
 
-        {/* Wan Duration (frames) */}
+        {/* Wan Duration (seconds) */}
         {params.includes("wanDuration") && (
           <div>
             <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm text-zinc-300">Frames</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Numero de frames do video (mais frames = video mais longo). 81 frames ≈ 5s a 16fps">i</span>
+              <span className="text-sm text-zinc-300">Duracao</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (2-15s)">i</span>
             </div>
             <div className="flex items-center gap-3">
               <input
                 type="range"
-                min={33}
-                max={129}
-                step={8}
+                min={2}
+                max={15}
+                step={1}
                 value={wanDuration}
                 onChange={(e) => update({ wanDuration: parseInt(e.target.value) })}
                 className="flex-1 accent-purple-500"
               />
               <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[50px] text-center">
-                {wanDuration} ({(wanDuration / 16).toFixed(1)}s)
+                {wanDuration}s
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Wan Prompt Extend */}
+        {params.includes("promptExtend") && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={promptExtend}
+              onChange={(e) => update({ promptExtend: e.target.checked })}
+              className="accent-purple-500"
+            />
+            <span className="text-sm text-zinc-300">Prompt Extend</span>
+            <span className="text-zinc-500 text-xs cursor-help" title="Reescreve o prompt automaticamente para melhor qualidade">i</span>
+          </label>
+        )}
+
+        {/* Grok Resolution */}
+        {params.includes("grokResolution") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Resolution</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="480p: 1.6 cred/s, 720p: 3 cred/s">i</span>
+            </div>
+            <select
+              value={grokResolution}
+              onChange={(e) => update({ grokResolution: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="480p">480p (economico)</option>
+              <option value="720p">720p (melhor qualidade)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Grok Duration */}
+        {params.includes("grokDuration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duracao</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (6-30s)">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={6}
+                max={30}
+                step={1}
+                value={grokDuration}
+                onChange={(e) => update({ grokDuration: parseInt(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[50px] text-center">
+                {grokDuration}s
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Grok Mode */}
+        {params.includes("grokMode") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Mode</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Fun: mais expressivo, Normal: equilibrado, Spicy: artistico/ousado">i</span>
+            </div>
+            <select
+              value={grokMode}
+              onChange={(e) => update({ grokMode: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="fun">Fun</option>
+              <option value="normal">Normal</option>
+              <option value="spicy">Spicy</option>
+            </select>
           </div>
         )}
 

@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v";
 
 export interface ModelInfo {
   id: AIModel;
@@ -209,15 +209,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
   },
   {
     id: "wan-i2v",
-    name: "Wan 2.1 I2V",
+    name: "Wan 2.7 I2V",
     type: "video",
-    description: "Image to Video (Wan 2.1 via Replicate)",
-    costPerRun: 15,
+    description: "Image to Video (Wan 2.7 via Kie AI)",
+    costPerRun: 80,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
-      { id: "image-1", label: "Image*", required: true },
+      { id: "negative-prompt", label: "Neg. Prompt", required: false },
+      { id: "image-1", label: "First Frame", required: false },
+      { id: "image-2", label: "Last Frame", required: false },
+      { id: "video-1", label: "Extend Video", required: false },
+      { id: "audio-1", label: "Audio", required: false },
     ],
-    params: ["wanResolution", "wanDuration", "aspectRatio", "runs"],
+    params: ["wanResolution", "wanDuration", "promptExtend", "seed", "runs"],
   },
   {
     id: "kling-avatar",
@@ -231,6 +235,18 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "audio-1", label: "Audio", required: false },
     ],
     params: ["avatarTier", "avatarText", "avatarVoice", "avatarSpeed", "runs"],
+  },
+  {
+    id: "grok-i2v",
+    name: "Grok Imagine",
+    type: "video",
+    description: "Image to Video economico (Grok Imagine via Kie AI)",
+    costPerRun: 10,
+    handles: [
+      { id: "prompt", label: "Prompt", required: false },
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["grokResolution", "grokDuration", "grokMode", "aspectRatio", "runs"],
   },
 ];
 
