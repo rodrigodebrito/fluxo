@@ -202,44 +202,20 @@ export async function POST(request: NextRequest) {
         piPrompt = `${refs} ${prompt}`;
       }
 
-      // Try non-preview first (better quality, cheaper), fallback to preview if face detected
+      // Use preview versions (accept real faces without blocking)
       const isFast = sdModel.includes("fast");
-      const taskTypes = [
-        isFast ? "seedance-2-fast" : "seedance-2",           // non-preview (melhor qualidade)
-        isFast ? "seedance-2-fast-preview" : "seedance-2-preview", // preview (aceita faces)
-      ];
+      const taskType = isFast ? "seedance-2-fast-preview" : "seedance-2-preview";
 
-      let taskId: string | null = null;
-      for (const taskType of taskTypes) {
-        try {
-          console.log("[seedance-piapi] trying task_type:", taskType);
-          taskId = await createPiAPITask({
-            prompt: piPrompt,
-            mode,
-            duration: duration || 5,
-            aspectRatio: aspectRatio || "16:9",
-            taskType,
-            imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
-            videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
-            audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
-          });
-          console.log("[seedance-piapi] success with task_type:", taskType, "taskId:", taskId);
-          break; // success, no need to try next
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "";
-          console.warn("[seedance-piapi] failed with", taskType, ":", msg);
-          // If face detection error or content filter, try preview version
-          if (msg.toLowerCase().includes("face") || msg.toLowerCase().includes("content") || msg.toLowerCase().includes("risk")) {
-            console.log("[seedance-piapi] face/content filter detected, falling back to preview...");
-            continue;
-          }
-          throw err; // other errors, don't retry
-        }
-      }
-
-      if (!taskId) {
-        throw new Error("Todas as tentativas falharam. Verifique o conteudo da imagem.");
-      }
+      const taskId = await createPiAPITask({
+        prompt: piPrompt,
+        mode,
+        duration: duration || 5,
+        aspectRatio: aspectRatio || "16:9",
+        taskType,
+        imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
+        videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
+        audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
+      });
 
       await chargeCredits(user.id, costModel, cost);
 
