@@ -43,7 +43,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":
-      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", klingO3Duration: 5, generateAudio: false, cfgScale: 0.5, falTier: "pro", elementCount: 0, multiShotEnabled: false, multiShots: [] };
+      return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 2, klingO3Duration: 5, generateAudio: false, falTier: "pro", multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-edit":
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":

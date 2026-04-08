@@ -259,15 +259,12 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
 
   if (model === "kling-o3-i2v") {
     // Kling O3 Image-to-Video
+    // API only accepts: image_url, end_image_url, prompt/multi_prompt, duration, generate_audio, shot_type
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body: Record<string, any> = {};
-    if (input.negativePrompt) body.negative_prompt = input.negativePrompt;
     if (input.imageUrls && input.imageUrls[0]) body.image_url = input.imageUrls[0];
     if (input.endImageUrl) body.end_image_url = input.endImageUrl;
-    body.aspect_ratio = input.aspectRatio || "16:9";
     body.generate_audio = input.generateAudio ?? false;
-    if (input.cfgScale != null) body.cfg_scale = input.cfgScale;
-    if (input.elements && input.elements.length > 0) body.elements = input.elements;
 
     // Multi-Shot: use multi_prompt instead of prompt + duration
     if (input.multiShotEnabled && input.multiShots && input.multiShots.length > 0) {
