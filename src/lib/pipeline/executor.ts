@@ -823,6 +823,26 @@ export async function startGeneration(
       refPublicUrls = await uploadImages(options.referenceImageUrls);
     }
 
+    // Upload video/audio references if connected
+    let videoRefUrl: string | undefined;
+    if (options.videoUrl) {
+      if (options.videoUrl.startsWith("blob:")) {
+        const uploaded = await uploadImages([options.videoUrl]);
+        videoRefUrl = uploaded[0] || undefined;
+      } else {
+        videoRefUrl = options.videoUrl;
+      }
+    }
+    let audioRefUrl: string | undefined;
+    if (options.audioUrl) {
+      if (options.audioUrl.startsWith("blob:")) {
+        const uploaded = await uploadImages([options.audioUrl]);
+        audioRefUrl = uploaded[0] || undefined;
+      } else {
+        audioRefUrl = options.audioUrl;
+      }
+    }
+
     const response = await fetch("/api/generate-seedance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -832,6 +852,8 @@ export async function startGeneration(
         firstFrameUrl: publicUrls[0] || undefined,
         lastFrameUrl: publicUrls[1] || undefined,
         referenceImageUrls: refPublicUrls && refPublicUrls.length > 0 ? refPublicUrls : undefined,
+        referenceVideoUrl: videoRefUrl || undefined,
+        referenceAudioUrl: audioRefUrl || undefined,
         resolution: options?.sdResolution || "720p",
         aspectRatio: options?.aspectRatio || "16:9",
         duration: options?.sdDuration || 8,

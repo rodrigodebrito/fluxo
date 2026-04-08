@@ -53,6 +53,8 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "negative-prompt", label: "Neg. Prompt", required: false },
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
+      { id: "video-1", label: "Video Ref", required: false },
+      { id: "audio-1", label: "Audio", required: false },
     ],
     params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "seed", "runs"],
     dynamicReferences: true, // suporta reference_image_urls (até 9)
