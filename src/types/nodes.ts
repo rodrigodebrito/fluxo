@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "flux-nsfw" | "wan-i2v" | "kling-avatar";
 
 export interface ModelInfo {
   id: AIModel;
@@ -204,6 +204,17 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "prompt", label: "Prompt*", required: true },
     ],
     params: ["trainedModel", "customAspectRatio", "customNumOutputs", "runs"],
+  },
+  {
+    id: "flux-nsfw",
+    name: "Flux NSFW V3",
+    type: "image",
+    description: "Geracao de imagens sem censura (Flux Dev Uncensored via Replicate)",
+    costPerRun: 8,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+    ],
+    params: ["fluxNsfwSize", "fluxNsfwCfg", "fluxNsfwSteps", "fluxNsfwNumOutputs", "seed", "runs"],
   },
   {
     id: "wan-i2v",
