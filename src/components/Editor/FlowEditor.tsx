@@ -1331,10 +1331,11 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           // 2 clique direito: permitir menu nativo do Windows
           setContextMenu(null);
           contextMenuShown.current = false;
-          e.stopPropagation(); // impedir ReactFlow de tratar o evento
+          e.stopPropagation(); // impedir ReactFlow de abrir Fluxo menu
           return; // NÃO chama preventDefault → menu nativo aparece
         }
-        // 1 clique direito: deixar passar pro ReactFlow (ele mostra Fluxo menu)
+        // 1 clique direito: bloquear menu nativo, deixar ReactFlow mostrar Fluxo menu
+        e.preventDefault();
       }}
     >
       <ReactFlow
