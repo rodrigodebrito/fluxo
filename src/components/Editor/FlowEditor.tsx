@@ -290,8 +290,15 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
   }, [onNodeSelect, setNodes]);
 
   // Context menu: right-click no canvas
+  // Primeiro clique direito = context menu do Fluxo AI
+  // Se context menu ja esta aberto, segundo clique direito = menu nativo do Windows
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onPaneContextMenu = useCallback((event: any) => {
+    if (contextMenu) {
+      // Já tem context menu aberto → fechar e deixar menu nativo aparecer
+      setContextMenu(null);
+      return;
+    }
     event.preventDefault();
     if (!reactFlowInstance.current || !reactFlowWrapper.current) return;
     const bounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -301,7 +308,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     });
     setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top, flowX: flowPos.x, flowY: flowPos.y });
     setContextSearch("");
-  }, []);
+  }, [contextMenu]);
 
   // Adicionar nó na posição do context menu
   const addNodeFromContext = useCallback((type: string) => {
@@ -1322,7 +1329,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     <div
       ref={reactFlowWrapper}
       className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => { if (!contextMenu) e.preventDefault(); }}
     >
       <ReactFlow
         nodes={nodes}
@@ -1556,8 +1563,9 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Tools",
     children: [
       { type: "prompt", label: "Prompt" },
-      { type: "imageInput", label: "File Input" },
+      { type: "imageInput", label: "Image Input" },
       { type: "videoInput", label: "Video Input" },
+      { type: "audioInput", label: "Audio Input" },
       { type: "anyLLM", label: "Any LLM" },
       { type: "router", label: "Router" },
       { type: "promptConcat", label: "Prompt Concatenator" },
@@ -1576,7 +1584,6 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-flux-2-edit", label: "Flux 2 Edit" },
       { type: "model-bg-removal", label: "BG Removal" },
       { type: "model-upscale", label: "Upscale" },
-      { type: "model-custom", label: "Modelo Treinado" },
     ],
   },
   {
@@ -1596,6 +1603,18 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Video Motion",
     children: [
       { type: "model-kling-motion", label: "Kling Motion Control" },
+    ],
+  },
+  {
+    label: "Lip Sync",
+    children: [
+      { type: "model-kling-avatar", label: "Kling Avatar TTS" },
+    ],
+  },
+  {
+    label: "LoRA",
+    children: [
+      { type: "model-custom", label: "Modelo Treinado" },
     ],
   },
 ];
