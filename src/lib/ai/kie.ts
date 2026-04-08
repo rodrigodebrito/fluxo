@@ -473,14 +473,13 @@ export async function createTTSTask(
 ): Promise<CreateTaskResponse> {
   const inputBody: Record<string, unknown> = {
     text: input.text,
-    voice_id: input.voiceId || "Lily",
-    model_id: "eleven_turbo_v2_5",
+    voice: input.voiceId || "Lily",
+    stability: 0.5,
+    similarity_boost: 0.75,
+    style: 0,
     speed: input.speed ?? 1.0,
+    language_code: input.languageCode || "",
   };
-
-  if (input.languageCode) {
-    inputBody.language_code = input.languageCode;
-  }
 
   const response = await fetchWithRetry(`${API_BASE}/createTask`, {
     method: "POST",
@@ -488,7 +487,7 @@ export async function createTTSTask(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: "elevenlabs/tts-turbo-v2.5", input: inputBody }),
+    body: JSON.stringify({ model: "elevenlabs/text-to-speech-multilingual-v2", input: inputBody }),
   });
 
   return safeJson(response);
