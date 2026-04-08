@@ -1334,8 +1334,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           e.stopPropagation(); // impedir ReactFlow de tratar o evento
           return; // NÃO chama preventDefault → menu nativo aparece
         }
-        // 1 clique direito: bloquear nativo, ReactFlow vai mostrar Fluxo menu
-        e.preventDefault();
+        // 1 clique direito: deixar passar pro ReactFlow (ele mostra Fluxo menu)
       }}
     >
       <ReactFlow
