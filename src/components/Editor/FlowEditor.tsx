@@ -291,17 +291,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     contextMenuShown.current = false;
   }, [onNodeSelect, setNodes]);
 
-  // Context menu: right-click no canvas
-  // 1 clique direito = context menu do Fluxo AI
-  // 2 clique direito = menu nativo do Windows (copiar/colar)
+  // Context menu: right-click no canvas (só abre Fluxo menu, preventDefault feito no capture)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onPaneContextMenu = useCallback((event: any) => {
-    if (contextMenuShown.current) {
-      // Menu Fluxo foi mostrado → fechar e deixar nativo aparecer
-      setContextMenu(null);
-      contextMenuShown.current = false;
-      return; // NÃO chama preventDefault → menu nativo aparece
-    }
     event.preventDefault();
     if (!reactFlowInstance.current || !reactFlowWrapper.current) return;
     const bounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -1334,6 +1326,17 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     <div
       ref={reactFlowWrapper}
       className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
+      onContextMenuCapture={(e) => {
+        if (contextMenuShown.current) {
+          // 2 clique direito: permitir menu nativo do Windows
+          setContextMenu(null);
+          contextMenuShown.current = false;
+          e.stopPropagation(); // impedir ReactFlow de tratar o evento
+          return; // NÃO chama preventDefault → menu nativo aparece
+        }
+        // 1 clique direito: bloquear nativo, ReactFlow vai mostrar Fluxo menu
+        e.preventDefault();
+      }}
     >
       <ReactFlow
         nodes={nodes}
