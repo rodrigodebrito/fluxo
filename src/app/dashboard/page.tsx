@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -48,6 +50,23 @@ export default function Dashboard() {
     if (!confirm("Deletar este workflow?")) return;
     await fetch(`/api/workflows/${id}`, { method: "DELETE" });
     setWorkflows((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleRenameStart = (wf: Workflow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(wf.id);
+    setEditName(wf.name);
+  };
+
+  const handleRenameSubmit = async (id: string) => {
+    const newName = editName.trim() || "untitled";
+    setEditingId(null);
+    setWorkflows((prev) => prev.map((w) => w.id === id ? { ...w, name: newName } : w));
+    await fetch(`/api/workflows/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
   };
 
   const formatDate = (date: string) => {
@@ -216,7 +235,29 @@ export default function Dashboard() {
 
                 {/* Info */}
                 <div className="p-3">
-                  <p className="text-sm font-medium text-zinc-200 truncate">{wf.name}</p>
+                  {editingId === wf.id ? (
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onBlur={() => handleRenameSubmit(wf.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRenameSubmit(wf.id);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                      className="w-full text-sm font-medium text-zinc-200 bg-zinc-800 border border-purple-500 rounded px-1.5 py-0.5 focus:outline-none"
+                    />
+                  ) : (
+                    <p
+                      className="text-sm font-medium text-zinc-200 truncate cursor-text hover:text-purple-300 transition-colors"
+                      onDoubleClick={(e) => handleRenameStart(wf, e)}
+                      title="Duplo clique para renomear"
+                    >
+                      {wf.name}
+                    </p>
+                  )}
                   <p className="text-xs text-zinc-500 mt-1">{formatDate(wf.updatedAt)}</p>
                 </div>
 

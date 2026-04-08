@@ -129,6 +129,17 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       />
       {/* Main area */}
       <div className="flex-1 flex flex-col relative">
+        {/* Workflow name (top-left) */}
+        <div className="absolute top-3 left-3 z-10">
+          <input
+            type="text"
+            value={workflowName}
+            onChange={(e) => setWorkflowName(e.target.value)}
+            className="bg-zinc-900/80 border border-zinc-800 hover:border-zinc-600 focus:border-purple-500 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-200 focus:outline-none backdrop-blur-sm transition-colors w-48 placeholder-zinc-600"
+            placeholder="untitled"
+          />
+        </div>
+
         {/* Tab switcher + credits */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center bg-zinc-900/90 border border-zinc-800 rounded-lg p-0.5 backdrop-blur-sm">
           <button
