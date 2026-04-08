@@ -11,7 +11,7 @@ const BLOCKED_KEYWORDS = [
   "boy", "girl", "schoolgirl", "schoolboy", "school girl", "school boy",
   "loli", "lolita", "shota", "shotacon", "lolicon",
   "pedophile", "pedophilia", "pedo",
-  "year old", "years old", "yr old", "yrs old", "yo ",
+  "yr old", "yrs old",
   // Portuguese
   "crianca", "criança", "crianças", "criancas",
   "menor", "menores", "menor de idade", "menores de idade",
@@ -54,6 +54,19 @@ export function checkPromptSafety(prompt: string): { safe: boolean; reason?: str
   for (const keyword of BLOCKED_KEYWORDS) {
     const normalizedKeyword = keyword.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (lower.includes(normalizedKeyword) || lowerOriginal.includes(keyword)) {
+      return {
+        safe: false,
+        reason: `Conteudo bloqueado por seguranca. Termos relacionados a menores de idade nao sao permitidos.`,
+      };
+    }
+  }
+
+  // Check age references — block if age < 18
+  const agePattern = /(\d{1,2})\s*(?:year|years|yr|yrs|anos)\s*(?:old|de\s*idade)?/gi;
+  let ageMatch;
+  while ((ageMatch = agePattern.exec(lowerOriginal)) !== null) {
+    const age = parseInt(ageMatch[1]);
+    if (age < 18) {
       return {
         safe: false,
         reason: `Conteudo bloqueado por seguranca. Termos relacionados a menores de idade nao sao permitidos.`,
