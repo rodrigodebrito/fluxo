@@ -156,37 +156,49 @@ export async function POST(request: NextRequest) {
       if (!piApiKey) throw new Error("PIAPI_API_KEY nao configurada");
 
       // Collect all reference inputs
-      const rawImageUrls: string[] = [];
+      const imageUrls: string[] = [];
       const videoUrls: string[] = [];
       const audioUrls: string[] = [];
 
-      if (firstFrameUrl) rawImageUrls.push(firstFrameUrl);
-      if (lastFrameUrl) rawImageUrls.push(lastFrameUrl);
-      if (referenceImageUrls && referenceImageUrls.length > 0) rawImageUrls.push(...referenceImageUrls);
+      if (firstFrameUrl) imageUrls.push(firstFrameUrl);
+      if (lastFrameUrl) imageUrls.push(lastFrameUrl);
+      if (referenceImageUrls && referenceImageUrls.length > 0) imageUrls.push(...referenceImageUrls);
       if (referenceVideoUrl) videoUrls.push(referenceVideoUrl);
       if (referenceAudioUrl) audioUrls.push(referenceAudioUrl);
 
-      // Upload images to PiAPI ephemeral storage (like Kie AI assets)
-      const imageUrls: string[] = [];
-      if (rawImageUrls.length > 0) {
-        console.log("[seedance-piapi] uploading", rawImageUrls.length, "images to PiAPI...");
-        for (const url of rawImageUrls) {
-          const piUrl = await uploadToPiAPI(piApiKey, url);
-          imageUrls.push(piUrl);
+      // Try uploading images to PiAPI ephemeral storage (may improve quality)
+      // Falls back to original URLs if upload not available on current plan
+      const processedImageUrls: string[] = [];
+      if (imageUrls.length > 0) {
+        for (const url of imageUrls) {
+          try {
+            const piUrl = await uploadToPiAPI(piApiKey, url);
+            processedImageUrls.push(piUrl);
+          } catch (uploadErr) {
+            console.warn("[seedance-piapi] upload failed, using original URL:", (uploadErr as Error).message);
+            processedImageUrls.push(url);
+            break; // if one fails (plan issue), skip uploading the rest
+          }
         }
-        console.log("[seedance-piapi] all images uploaded:", imageUrls);
+        // If we broke early, fill remaining with original URLs
+        if (processedImageUrls.length < imageUrls.length) {
+          for (let i = processedImageUrls.length; i < imageUrls.length; i++) {
+            processedImageUrls.push(imageUrls[i]);
+          }
+        }
       }
 
       // Determine mode based on inputs
+      const finalImageUrls = processedImageUrls.length > 0 ? processedImageUrls : [];
       let mode = "text_to_video";
-      if (imageUrls.length > 0 || videoUrls.length > 0 || audioUrls.length > 0) {
+      if (finalImageUrls.length > 0 || videoUrls.length > 0 || audioUrls.length > 0) {
         mode = "omni_reference";
       }
 
       // Auto-inject @image references in prompt (like PiAPI playground does)
       let piPrompt = prompt;
-      if (imageUrls.length > 0 && !prompt.includes("@image")) {
-        const refs = imageUrls.map((_, i) => `@image${i + 1}`).join(" ");
+      if (finalImageUrls.length > 0 && !prompt.includes("@image")) {
+        const refs = finalImageUrls.map((_, i) => `@image${i + 1}`).join(" ");
         piPrompt = `${refs} ${prompt}`;
       }
 
@@ -207,7 +219,7 @@ export async function POST(request: NextRequest) {
             duration: duration || 5,
             aspectRatio: aspectRatio || "16:9",
             taskType,
-            imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+            imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
             videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
             audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
           });
