@@ -8,8 +8,11 @@ Plataforma visual node-based para geracao de imagens e videos com IA. Inspirada 
 - **ReactFlow** (@xyflow/react v12) - canvas de nos
 - **Supabase** (PostgreSQL + Auth + RLS) - banco de dados e autenticacao
 - **Tailwind CSS 4** - estilizacao
-- **Kie.ai API** - backend de IA (imagens e videos)
+- **Kie.ai API** - backend de IA (imagens, videos, avatar, TTS)
+- **PiAPI** - Seedance 2.0 (video)
+- **Replicate** - Fine-tune LoRA (modelos personalizados)
 - **OpenAI API** - LLM (GPT-4o, GPT-4.1, GPT-5)
+- **ElevenLabs** (via Kie.ai) - Text-to-Speech
 - **Render** - deploy de producao
 
 ## Setup
@@ -20,6 +23,8 @@ Plataforma visual node-based para geracao de imagens e videos com IA. Inspirada 
 - Conta na [Kie.ai](https://kie.ai) para API key
 - Projeto no [Supabase](https://supabase.com) (PostgreSQL + Auth)
 - API key da [OpenAI](https://platform.openai.com) para funcionalidades LLM
+- API key da [PiAPI](https://piapi.ai) para Seedance 2.0
+- API token do [Replicate](https://replicate.com) para modelos personalizados (LoRA)
 
 ### Instalacao
 
@@ -33,6 +38,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 KIE_API_KEY="sua-api-key-aqui"
 OPENAI_API_KEY="sk-..."
+PIAPI_API_KEY="sua-piapi-key"
+REPLICATE_API_TOKEN="r8_..."
+REPLICATE_USERNAME="seu-username"
 
 # Rodar em desenvolvimento
 npm run dev
@@ -58,9 +66,15 @@ src/
       generate/              # Nano Banana Pro (image)
       generate-gpt-image/    # GPT Image 1.5 (text-to-image e image-to-image)
       generate-kling/        # Kling 3.0 (video)
-      generate-seedance/     # Seedance 2.0 (video - desabilitado)
+      generate-seedance/     # Seedance 2.0 via PiAPI (video)
       generate-video/        # Veo 3.1 (video)
+      generate-wan/          # Wan 2.1 (video)
+      generate-fal/          # Fal.ai models (video/image)
+      generate-avatar/       # Kling Avatar TTS (talking head)
+      generate-replicate/    # Modelos personalizados LoRA (image)
       generate-llm/          # OpenAI GPT (text generation)
+      training/              # Treino de modelos LoRA (create/status/list)
+      webhooks/replicate/    # Webhook do Replicate (treino completo)
       status/                # Polling de status de tasks
       upload/                # Upload de arquivos (catbox.moe)
       workflows/             # CRUD de workflows
@@ -70,6 +84,9 @@ src/
       health/                # Health check
     editor/[id]/             # Pagina do editor (Canvas + App tabs)
     dashboard/               # Dashboard com workflows do usuario
+    models/                  # Pagina "Meus Modelos" (treino LoRA)
+    history/                 # Historico de geracoes
+    terms/                   # Termos de uso
     login/                   # Pagina de login
     register/                # Pagina de registro
   components/
@@ -84,6 +101,7 @@ src/
     nodes/
       PromptNode.tsx         # No de texto/prompt
       ImageInputNode.tsx     # No de upload de arquivos (imagens/videos)
+      AudioInputNode.tsx     # No de upload de audio (MP3/WAV/AAC/OGG/M4A)
       ModelNode.tsx          # No de modelo de IA (generico para todos os modelos)
       AnyLLMNode.tsx         # No de LLM (GPT-4o, GPT-4.1, GPT-5)
       RouterNode.tsx         # No roteador (split conexoes para multiplos destinos)
@@ -93,9 +111,11 @@ src/
       LastFrameNode.tsx      # No de last frame
       OutputNode.tsx         # No de saida
   lib/
-    ai/kie.ts                # Funcoes de API para todos os modelos (Kie.ai)
+    ai/kie.ts                # Funcoes de API para todos os modelos (Kie.ai, Avatar, TTS)
+    ai/replicate.ts          # Replicate API (treino LoRA + inferencia)
     pipeline/executor.ts     # Orquestrador: extrai dados, faz upload, inicia geracao, polling
     auth-guard.ts            # Verificacao de auth e creditos nas API routes
+    content-filter.ts        # Filtro de seguranca (blocklist CSAM)
     credits.ts               # Calculo de custos por modelo
     supabase/                # Clients Supabase (browser e server)
   types/nodes.ts             # Definicoes de modelos, handles, parametros
@@ -124,14 +144,22 @@ src/
 | **Nano Banana Pro** | Text/Image to Image | Geracao de imagens de alta qualidade (1K/2K/4K) |
 | **GPT Image 1.5** | Text to Image | OpenAI GPT Image, suporta fundo transparente |
 | **GPT Image 1.5 Edit** | Image to Image | Edicao de imagens com GPT, aceita ate 16 imagens |
+| **Modelo Treinado (LoRA)** | Text to Image | Modelos personalizados via Replicate fine-tune |
 
 ### Videos
 
 | Modelo | Tipo | Descricao |
 |--------|------|-----------|
 | **Veo 3.1** | Text/Image to Video | Google Veo 3, modos Lite/Fast/Quality |
-| **Seedance 2.0** | Text/Image to Video | ByteDance (temporariamente desabilitado) |
+| **Seedance 2.0** | Text/Image to Video | ByteDance via PiAPI, modos Normal/Fast (preview) |
 | **Kling 3** | Text/Image to Video | Kling 3.0, suporta elements (@element1-3) |
+| **Kling Avatar TTS** | Image+Audio to Video | Talking head — foto + texto/audio vira video falando |
+
+### Audio
+
+| Modelo | Tipo | Descricao |
+|--------|------|-----------|
+| **ElevenLabs TTS** | Text to Speech | 21 vozes, multilingual v2 via Kie AI (integrado no Avatar) |
 
 ### LLM (Text Generation)
 
@@ -149,6 +177,7 @@ src/
 |------------|-----------|
 | **Prompt** | Campo de texto para escrever prompts |
 | **File Input** | Upload de imagens e videos com preview |
+| **Audio Input** | Upload de audio (MP3/WAV/AAC/OGG/M4A) com player inline |
 | **Any LLM** | No de LLM com suporte a vision (imagens), gera texto para usar como prompt |
 | **Router** | Divide conexoes para multiplos destinos (auto-expande ao conectar) |
 | **Prompt Concat** | Combina multiplos prompts em um so |
@@ -200,6 +229,27 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 | Pro sem audio | R$ 2,41 | R$ 3,85 | R$ 4,82 | R$ 7,22 |
 | Pro com audio | R$ 3,61 | R$ 5,78 | R$ 7,22 | R$ 10,83 |
 
+### Seedance 2.0 (via PiAPI)
+
+| Modo | Creditos | Valor (R$) |
+|------|----------|------------|
+| Normal (preview) | 50 | R$ 1,34 |
+| Fast (preview) | 30 | R$ 0,80 |
+
+### Kling Avatar TTS
+
+| Modo | Creditos | Valor (R$) |
+|------|----------|------------|
+| Standard (720p) | 40 | R$ 1,07 |
+| Pro (1080p) | 80 | R$ 2,14 |
+
+### Modelo Treinado (LoRA)
+
+| Acao | Creditos | Valor (R$) |
+|------|----------|------------|
+| Treinar modelo | 50 | R$ 1,34 |
+| Gerar 1 imagem | 10 | R$ 0,27 |
+
 ### LLM
 
 | Modelo | Creditos | Valor (R$) |
@@ -245,11 +295,31 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - Verificacao de saldo antes de gerar
 - Exibicao de creditos no header
 - Admin panel para gerenciar creditos
+- Rate limiting por usuario
+
+### Seguranca
+- Filtro de conteudo (blocklist CSAM) em todas as rotas de geracao
+- Termos de uso com politica NSFW e tolerancia zero para CSAM
+- Content filter com deteccao contextual (combinacao de keywords)
+
+### Modelos personalizados (LoRA)
+- Upload de 5-30 fotos para treinar modelo personalizado
+- Treino via Replicate (~2 min)
+- Inferencia via flux-dev-lora com disable_safety_checker
+- Pagina "Meus Modelos" para gerenciar modelos treinados
+- Suporte a Extra LoRA (combinar 2 modelos)
+
+### Avatar TTS
+- Kling Avatar (standard 720p / pro 1080p) via Kie AI
+- ElevenLabs TTS multilingual v2 integrado (21 vozes)
+- Fluxo: texto → TTS → audio → Avatar (automatico)
+- Ou: audio externo → Avatar (via Audio Input node)
 
 ### Persistencia
 - Workflows salvos em PostgreSQL via Supabase
 - System prompt templates salvos por usuario
 - Auto-save de workflows
+- Historico de geracoes com galeria
 
 ### App
 - Aba App no editor com grade de aplicativos
@@ -267,6 +337,26 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 
 ### GPT Image 1.5 - Background transparente
 Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Background.
+
+### Seedance 2.0 - Referencia de imagem
+1. Conecte imagens de referencia (File Input) ao Seedance 2.0
+2. O sistema auto-injeta `@image1`, `@image2` no prompt
+3. Usa modo `omni_reference` automaticamente quando ha imagens/video/audio
+4. Sempre usa versao preview (aceita rostos reais sem bloqueio)
+
+### Kling Avatar TTS - Talking Head
+1. Adicione um no "Kling Avatar TTS" e conecte uma foto (File Input)
+2. **Opcao A:** Escreva texto no painel → TTS gera audio → Avatar gera video
+3. **Opcao B:** Conecte um no "Audio Input" com audio externo → Avatar gera video
+4. Escolha entre 21 vozes do ElevenLabs, ajuste velocidade (0.5x - 2.0x)
+5. Qualidade: Standard (720p, 40 cred) ou Pro (1080p, 80 cred)
+
+### Modelo Treinado (LoRA) - Fine-tune personalizado
+1. Va em "Meus Modelos" e clique "Treinar Novo Modelo"
+2. Suba 5-30 fotos da mesma pessoa, escolha nome e trigger word
+3. Aguarde ~2 min o treino no Replicate (50 creditos)
+4. No editor, arraste "Modelo Treinado" e selecione seu modelo
+5. Use a trigger word no prompt para gerar imagens com o rosto/corpo treinado
 
 ### Any LLM - Chain com modelos de imagem/video
 1. Adicione um no Any LLM e conecte um Prompt ao input
@@ -288,6 +378,9 @@ O projeto esta em producao no **Render** com deploy automatico a partir do branc
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase | Sim |
 | `KIE_API_KEY` | Kie.ai | Sim |
 | `OPENAI_API_KEY` | OpenAI | Sim |
+| `PIAPI_API_KEY` | PiAPI | Sim (Seedance 2.0) |
+| `REPLICATE_API_TOKEN` | Replicate | Sim (modelos LoRA) |
+| `REPLICATE_USERNAME` | Replicate | Sim (modelos LoRA) |
 
 ---
 
@@ -371,17 +464,15 @@ Live montando workflow ao vivo     →    "Assina o Creator por R$ 79,90"
 
 ### Alta prioridade
 - **Pagamento** — Stripe com PIX, cartao e boleto
-- **Landing page** — Hero com demo do editor + tabela de precos
 - **Storage proprio** — Cloudflare R2 (substituir catbox.moe)
-- **Rate limiting** — Evitar abuso no free tier
 
 ### Media prioridade
 - **Templates de workflow** — workflows pre-montados para clonar
-- **Historico de geracoes** — timeline com todos os resultados
 - **Batch processing** — rodar workflow com diferentes inputs
 - **Variaveis no prompt** — {{nome}}, {{produto}} para reusar workflows
 
 ### Futuro
+- **Wan 2.1 I2V** — video NSFW a partir de imagem (apos estabilizar gerador)
 - **Workflow marketplace** — publicar e vender templates
 - **API publica** — expor workflows como endpoints REST
 - **Integracao redes sociais** — publicar direto no Instagram/TikTok
