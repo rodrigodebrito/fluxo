@@ -175,7 +175,7 @@ export async function generateWithTrainedModel(
 
 // --- Flux NSFW V3 (aisha-ai-official/flux.1dev-uncensored-fluxedup-nsfw-v3) ---
 
-const FLUX_NSFW_MODEL = "aisha-ai-official/flux.1dev-uncensored-fluxedup-nsfw-v3";
+const FLUX_NSFW_MODEL = "aisha-ai-official/flux.1dev-uncensored-fluxedup-nsfw-v3:bf6cd867abc086d4cccab10101cff526ea9d89e3b08aa4faa33c8ba46025c80c";
 
 export interface FluxNsfwInput {
   prompt: string;
