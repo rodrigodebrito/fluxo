@@ -95,7 +95,7 @@ export default function ModelNode({ id, data }: NodeProps) {
               className={`!w-2.5 !h-2.5 ${h.id === "negative-prompt" ? "!bg-pink-500 !border-pink-300" : h.id.startsWith("audio") ? "!bg-orange-500 !border-orange-300" : h.required ? "!bg-cyan-500 !border-cyan-300" : "!bg-emerald-500 !border-emerald-300"} !border-2`}
             />
           ))
-        : Array.from({ length: imageInputCount }, (_, i) => (
+        : hasDynamicImages && Array.from({ length: imageInputCount }, (_, i) => (
             <Handle
               key={`image-${i + 1}`}
               type="target"
@@ -154,7 +154,7 @@ export default function ModelNode({ id, data }: NodeProps) {
               {h.label}
             </div>
           ))
-        : Array.from({ length: imageInputCount }, (_, i) => (
+        : hasDynamicImages && Array.from({ length: imageInputCount }, (_, i) => (
             <div
               key={`label-${i}`}
               className="absolute text-[10px] text-cyan-400 font-medium"
@@ -309,7 +309,7 @@ export default function ModelNode({ id, data }: NodeProps) {
 
       {/* Footer */}
       <div className="flex items-center justify-between px-2 pb-2 gap-1">
-        {!useFixedHandles && !hasDynamicElements && hasDynamicImages && (
+        {hasDynamicImages && !useFixedHandles && !hasDynamicElements && (
           <button
             onClick={addImageInput}
             className="text-[10px] text-cyan-400 cursor-pointer hover:text-cyan-300 nodrag shrink-0"
