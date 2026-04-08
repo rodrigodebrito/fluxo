@@ -417,7 +417,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Kling O1 Duration (3-10s) */}
+        {/* Kling O3 Ref Duration (3-10s) */}
         {params.includes("klingO1Duration") && (
           <div>
             <div className="flex items-center gap-1 mb-2">

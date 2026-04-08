@@ -297,7 +297,7 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
   }
 
   if (model === "kling-o1-ref") {
-    // Kling O1 Reference Video to Video
+    // Kling O3 Reference to Video
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body: Record<string, any> = {
       prompt: input.prompt,

@@ -656,7 +656,7 @@ export async function startGeneration(
     return taskId;
   }
 
-  // fal.ai models (Kling O3 i2v, O3 edit, O1 ref, Flux 2, utilities)
+  // fal.ai models (Kling O3 i2v, O3 edit, O3 ref, Flux 2, utilities)
   const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai

@@ -106,7 +106,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     id: "kling-o1-ref",
     name: "Kling O3 Reference",
     type: "video",
-    description: "Video de referencia (Kling O1 via fal.ai)",
+    description: "Video de referencia (Kling O3 via fal.ai)",
     costPerRun: 180,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
