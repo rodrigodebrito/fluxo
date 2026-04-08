@@ -1334,7 +1334,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     <div
       ref={reactFlowWrapper}
       className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
-      onContextMenu={(e) => { if (!contextMenuShown.current) e.preventDefault(); }}
     >
       <ReactFlow
         nodes={nodes}
