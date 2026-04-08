@@ -9,13 +9,14 @@ interface SidebarProps {
   onBack?: () => void;
 }
 
-type Category = "image-models" | "video-models" | "tools" | null;
+type Category = "image-models" | "video-models" | "lora-models" | "tools" | null;
 
 interface ModelCard {
   type: string; // drag type for ReactFlow
   label: string;
+  desc?: string;
   icon: React.ReactNode;
-  category: "image" | "video" | "tool";
+  category: "image" | "video" | "lora" | "tool";
 }
 
 const MODEL_CARDS: ModelCard[] = [
@@ -86,16 +87,6 @@ const MODEL_CARDS: ModelCard[] = [
     icon: (
       <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-      </svg>
-    ),
-    category: "image",
-  },
-  {
-    type: "model-custom",
-    label: "Modelo Treinado",
-    icon: (
-      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
       </svg>
     ),
     category: "image",
@@ -243,6 +234,18 @@ const MODEL_CARDS: ModelCard[] = [
     ),
     category: "tool",
   },
+  // LoRA models
+  {
+    type: "model-custom",
+    label: "Modelo Treinado",
+    desc: "NSFW off",
+    icon: (
+      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+      </svg>
+    ),
+    category: "lora",
+  },
 ];
 
 // Icon bar categories
@@ -262,6 +265,15 @@ const CATEGORIES: { id: Category; icon: React.ReactNode; label: string }[] = [
     icon: (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125-.504-1.125-1.125v-1.5c0-.621.504-1.125 1.125-1.125m1.5 3.75c0-.621-.504-1.125-1.125-1.125" />
+      </svg>
+    ),
+  },
+  {
+    id: "lora-models",
+    label: "LoRA",
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.59.659H9.06a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V5.846a2.25 2.25 0 00-.659-1.591L15.409 1.5A2.25 2.25 0 0013.818 1h-3.636a2.25 2.25 0 00-1.591.659L5.659 4.255A2.25 2.25 0 005 5.846V14.5" />
       </svg>
     ),
   },
@@ -299,6 +311,8 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
       cards = cards.filter((c) => c.category === "image");
     } else if (activeCategory === "video-models") {
       cards = cards.filter((c) => c.category === "video");
+    } else if (activeCategory === "lora-models") {
+      cards = cards.filter((c) => c.category === "lora");
     } else if (activeCategory === "tools") {
       cards = cards.filter((c) => c.category === "tool");
     }
@@ -317,18 +331,22 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
       ? "Image Models"
       : activeCategory === "video-models"
         ? "Video Models"
-        : activeCategory === "tools"
-          ? "Tools"
-          : "";
+        : activeCategory === "lora-models"
+          ? "LoRA Models"
+          : activeCategory === "tools"
+            ? "Tools"
+            : "";
 
   const categorySubtitle =
     activeCategory === "image-models"
       ? "Generate from text"
       : activeCategory === "video-models"
         ? "Generate from text or image"
-        : activeCategory === "tools"
-          ? "Inputs & utilities"
-          : "";
+        : activeCategory === "lora-models"
+          ? "Modelos personalizados treinados"
+          : activeCategory === "tools"
+            ? "Inputs & utilities"
+            : "";
 
   return (
     <div className="flex h-full">
@@ -456,6 +474,11 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
                   <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200 text-center leading-tight font-medium transition-colors">
                     {card.label}
                   </span>
+                  {card.desc && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium -mt-1">
+                      {card.desc}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
