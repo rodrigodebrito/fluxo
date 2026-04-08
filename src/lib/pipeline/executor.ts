@@ -92,6 +92,8 @@ interface PipelineData {
   negativePrompt?: string;
   // Prompt extend
   promptExtend?: boolean;
+  // Extract Audio
+  audioFormat?: string;
   // Kling Avatar
   avatarTier?: string;
   avatarText?: string;
@@ -168,6 +170,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.grokDuration = (modelNode.data.grokDuration as number) || 6;
   result.grokMode = (modelNode.data.grokMode as string) || "normal";
   result.promptExtend = (modelNode.data.promptExtend as boolean) ?? true;
+  result.audioFormat = (modelNode.data.audioFormat as string) || "mp3";
   result.avatarTier = (modelNode.data.avatarTier as string) || "standard";
   result.avatarText = (modelNode.data.avatarText as string) || "";
   result.avatarVoice = (modelNode.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
@@ -357,6 +360,9 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
           // Se conectado ao handle video-1, usar como videoUrl
           if (handleId === "video-1") {
             result.videoUrl = coverUrl;
+          } else if (handleId === "audio-1") {
+            // Audio output (e.g. extract-audio) → audio input
+            result.audioUrl = coverUrl;
           } else {
             imagesByHandle[handleId] = [...(imagesByHandle[handleId] || []), coverUrl];
           }
@@ -569,10 +575,37 @@ export async function startGeneration(
     grokMode?: string;
     negativePrompt?: string;
     promptExtend?: boolean;
+    audioFormat?: string;
     cost?: number;
   }
 ): Promise<string> {
   const publicUrls = await uploadImages(localImageUrls);
+
+  // Extract Audio — synchronous, returns audioUrl directly (stored in cache like Replicate sync)
+  if (options?.model === "extract-audio") {
+    let videoUrl = options.videoUrl;
+    if (videoUrl && videoUrl.startsWith("blob:")) {
+      const uploaded = await uploadImages([videoUrl]);
+      videoUrl = uploaded[0] || videoUrl;
+    }
+    if (!videoUrl) throw new Error("Nenhum video conectado ao Extract Audio");
+
+    const response = await fetch("/api/extract-audio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoUrl, format: options.audioFormat || "mp3", cost: options.cost || 1 }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao extrair audio");
+
+    // Store in Replicate cache so FlowEditor picks it up without polling
+    const cache = getReplicateCache();
+    const fakeId = `extract-audio-${Date.now()}`;
+    cache.set(fakeId, [data.audioUrl]);
+    return fakeId;
+  }
 
   // GPT Image 1.5 (text-to-image e image-to-image)
   if (options?.model === "gpt-image-txt" || options?.model === "gpt-image-img") {

@@ -11,6 +11,7 @@ import PromptConcatNode from "./PromptConcatNode";
 import TextIteratorNode from "./TextIteratorNode";
 import VideoInputNode from "./VideoInputNode";
 import AudioInputNode from "./AudioInputNode";
+import GroupNode from "./GroupNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -26,4 +27,5 @@ export const nodeTypes = {
   textIterator: TextIteratorNode,
   videoInput: VideoInputNode,
   audioInput: AudioInputNode,
+  group: GroupNode,
 };

@@ -725,6 +725,24 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
+        {/* Audio Format */}
+        {params.includes("audioFormat") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Formato</span>
+            </div>
+            <select
+              value={(node.data.audioFormat as string) || "mp3"}
+              onChange={(e) => update({ audioFormat: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="mp3">MP3</option>
+              <option value="wav">WAV</option>
+            </select>
+            <p className="text-[10px] text-zinc-500 mt-1">Custo: 1 credito</p>
+          </div>
+        )}
+
         {/* Trained Model Selection */}
         {params.includes("trainedModel") && (
           <>

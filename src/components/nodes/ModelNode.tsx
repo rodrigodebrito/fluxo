@@ -14,6 +14,7 @@ export default function ModelNode({ id, data }: NodeProps) {
   const imageInputCount = (data.imageInputCount as number) || 1;
   const selectedModel = AVAILABLE_MODELS.find((m) => m.id === model);
   const isVideo = selectedModel?.type === "video";
+  const isAudio = selectedModel?.type === "audio";
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -222,7 +223,7 @@ export default function ModelNode({ id, data }: NodeProps) {
         {isRunning ? (
           <div className="flex flex-col items-center justify-center h-[150px] rounded-md bg-zinc-800">
             <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-[10px] text-zinc-400 mt-2">Gerando{isVideo ? " video" : ""}...</span>
+            <span className="text-[10px] text-zinc-400 mt-2">Gerando{isVideo ? " video" : isAudio ? " audio" : ""}...</span>
             <button
               onClick={handleCancel}
               className="mt-2 px-3 py-1 rounded-md text-[10px] font-medium bg-zinc-700 border border-zinc-600 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/50 transition-colors nodrag"
@@ -236,7 +237,41 @@ export default function ModelNode({ id, data }: NodeProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            {isVideo ? (
+            {isAudio ? (
+              <div className="relative bg-zinc-800 rounded-md p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+                    </svg>
+                    <span className="text-[10px] text-zinc-400">Audio {safeIndex + 1}/{results.length}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <a href={results[safeIndex]} download target="_blank" rel="noopener noreferrer" className="flex items-center px-1.5 py-0.5 bg-zinc-700/80 hover:bg-zinc-600 text-white/90 rounded nodrag transition-colors" title="Download">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </a>
+                    <button
+                      onClick={() => { updateNodeData(id, { results: [], coverResultUrl: null }); setCurrentIndex(0); }}
+                      className="flex items-center px-1.5 py-0.5 bg-zinc-700/80 hover:bg-red-600/80 text-white/90 rounded nodrag transition-colors"
+                      title="Limpar"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <audio src={results[safeIndex]} controls className="w-full nodrag" style={{ height: 32 }} />
+                {results.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <button onClick={prev} className="w-5 h-5 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-white rounded text-[10px] nodrag">&lt;</button>
+                    <button onClick={next} className="w-5 h-5 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 text-white rounded text-[10px] nodrag">&gt;</button>
+                  </div>
+                )}
+              </div>
+            ) : isVideo ? (
               <video
                 src={results[safeIndex]}
                 className="w-full rounded-md max-h-[180px] object-contain bg-black"

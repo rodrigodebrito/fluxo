@@ -2,12 +2,12 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio";
 
 export interface ModelInfo {
   id: AIModel;
   name: string;
-  type: "image" | "video";
+  type: "image" | "video" | "audio";
   description: string;
   costPerRun: number;
   handles: { id: string; label: string; required: boolean }[];
@@ -197,6 +197,17 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     params: ["upscaleScale", "runs"],
   },
   {
+    id: "extract-audio",
+    name: "Extract Audio",
+    type: "audio",
+    description: "Extrair audio de video (ffmpeg)",
+    costPerRun: 1,
+    handles: [
+      { id: "video-1", label: "Video*", required: true },
+    ],
+    params: ["audioFormat", "runs"],
+  },
+  {
     id: "custom-model",
     name: "Modelo Treinado",
     type: "image",
@@ -269,7 +280,7 @@ export interface ModelNodeData extends Record<string, unknown> {
 export interface OutputNodeData extends Record<string, unknown> {
   label: string;
   resultUrl: string;
-  resultType: "image" | "video" | "none";
+  resultType: "image" | "video" | "audio" | "none";
   isLoading: boolean;
 }
 

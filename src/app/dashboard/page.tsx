@@ -13,6 +13,17 @@ interface Workflow {
   updatedAt: string;
 }
 
+interface Template {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  thumbnail: string | null;
+  featured: boolean;
+  usage_count: number;
+  created_at: string;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -20,6 +31,9 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [usingTemplate, setUsingTemplate] = useState<string | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -31,9 +45,40 @@ export default function Dashboard() {
     }
   }, []);
 
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/public-templates");
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data);
+      }
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchWorkflows();
-  }, [fetchWorkflows]);
+    fetchTemplates();
+  }, [fetchWorkflows, fetchTemplates]);
+
+  const handleUseTemplate = async (templateId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUsingTemplate(templateId);
+    try {
+      const res = await fetch("/api/public-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+      });
+      const data = await res.json();
+      if (data.workflowId) {
+        router.push(`/editor/${data.workflowId}`);
+      }
+    } finally {
+      setUsingTemplate(null);
+    }
+  };
 
   const handleCreate = async () => {
     const res = await fetch("/api/workflows", {
@@ -274,6 +319,58 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Templates Gallery */}
+        {!templatesLoading && templates.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Templates</h2>
+                <p className="text-sm text-zinc-500 mt-1">Comece rapido com workflows prontos</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {templates.map((t) => (
+                <div
+                  key={t.id}
+                  className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-purple-500/50 transition-all"
+                >
+                  {t.featured && (
+                    <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-yellow-500/90 text-black text-[10px] font-bold rounded-full uppercase tracking-wide">
+                      Destaque
+                    </div>
+                  )}
+                  <div className="h-[140px] bg-zinc-800 flex items-center justify-center">
+                    {t.thumbnail ? (
+                      <img src={t.thumbnail} alt={t.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <svg className="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <p className="text-sm font-medium text-zinc-200 truncate">{t.name}</p>
+                    {t.description && (
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{t.description}</p>
+                    )}
+                    <div className="mt-auto pt-3 flex items-center justify-between">
+                      <span className="text-[10px] text-zinc-600 uppercase tracking-wide">{t.category} &middot; {t.usage_count} usos</span>
+                      <button
+                        onClick={(e) => handleUseTemplate(t.id, e)}
+                        disabled={usingTemplate === t.id}
+                        className="px-3 py-1 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        {usingTemplate === t.id ? "Criando..." : "Usar"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </main>
     </div>

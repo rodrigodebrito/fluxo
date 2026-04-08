@@ -62,6 +62,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "BG Removal", model: "bg-removal", isRunning: false, results: [], imageInputCount: 1 };
     case "model-upscale":
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
+    case "model-extract-audio":
+      return { label: "Extract Audio", model: "extract-audio", isRunning: false, results: [], imageInputCount: 0, audioFormat: "mp3" };
     case "model-custom":
       return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "model-wan-i2v":
@@ -90,6 +92,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Video Input", videoUrl: "", fileName: "" };
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
+    case "group":
+      return { label: "", colorIndex: 0 };
     default:
       return { label: "Node" };
   }
@@ -316,6 +320,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       type: nodeType,
       position: { x: contextMenu.flowX, y: contextMenu.flowY },
       data: getDefaultData(type),
+      ...(type === "group" ? {
+        style: { width: 400, height: 250 },
+        zIndex: -1,
+      } : {}),
     };
     setNodes((nds) => [...nds, newNode]);
     setContextMenu(null);
@@ -849,6 +857,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         type: nodeType,
         position,
         data: getDefaultData(type),
+        ...(type === "group" ? {
+          style: { width: 400, height: 250 },
+          zIndex: -1,
+        } : {}),
       };
 
       setNodes((nds) => [...nds, newNode]);
@@ -988,6 +1000,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "grok-i2v") {
         const grokPerSec = pipeline.grokResolution === "720p" ? 3 : 1.6;
         costPerRun = Math.ceil(grokPerSec * (pipeline.grokDuration || 6));
+      } else if (m === "extract-audio") {
+        costPerRun = 1;
       }
 
       const genOptions = {
@@ -1043,6 +1057,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         grokResolution: pipeline.grokResolution,
         grokDuration: pipeline.grokDuration,
         grokMode: pipeline.grokMode,
+        audioFormat: pipeline.audioFormat,
         cost: costPerRun,
       };
 
@@ -1069,7 +1084,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       window.dispatchEvent(new Event("fluxo-credits-update"));
 
       // Replicate sync models — resultados ja estao no cache, nao precisa polling
-      if (pipeline.model === "custom-model") {
+      if (pipeline.model === "custom-model" || pipeline.model === "extract-audio") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
@@ -1635,6 +1650,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "textIterator", label: "Text Iterator" },
       { type: "lastFrame", label: "Last Frame" },
       { type: "videoConcat", label: "Video Concat" },
+      { type: "group", label: "Group / Section" },
     ],
   },
   {
@@ -1647,6 +1663,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-flux-2-edit", label: "Flux 2 Edit" },
       { type: "model-bg-removal", label: "BG Removal" },
       { type: "model-upscale", label: "Upscale" },
+      { type: "model-extract-audio", label: "Extract Audio" },
     ],
   },
   {

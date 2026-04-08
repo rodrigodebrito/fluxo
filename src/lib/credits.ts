@@ -94,6 +94,7 @@ export function getModelCost(model: string): number {
     case "flux-2-edit": return 6;
     case "bg-removal": return 1;
     case "upscale": return 2;
+    case "extract-audio": return 1;
     case "custom-model": return 10;
     case "wan-i2v": return 80;
     case "kling-avatar": return 40;

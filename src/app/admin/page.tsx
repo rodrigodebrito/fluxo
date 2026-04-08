@@ -85,7 +85,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations" | "coupons" | "trained-models">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations" | "coupons" | "trained-models" | "templates">("overview");
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +111,18 @@ export default function AdminPage() {
   // Trained models
   const [trainedModels, setTrainedModels] = useState<{ id: string; user_id: string; name: string; trigger_word: string; status: string; created_at: string; user_email?: string }[]>([]);
   const [trainedModelsLoading, setTrainedModelsLoading] = useState(false);
+
+  // Templates
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [userWorkflows, setUserWorkflows] = useState<any[]>([]);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateDesc, setNewTemplateDesc] = useState("");
+  const [newTemplateCategory, setNewTemplateCategory] = useState("geral");
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -221,10 +233,31 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch("/api/admin/templates");
+      if (res.ok) setTemplates(await res.json());
+    } catch { /* ignore */ } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  const fetchUserWorkflows = useCallback(async () => {
+    try {
+      const res = await fetch("/api/workflows");
+      if (res.ok) {
+        const data = await res.json();
+        setUserWorkflows(data.workflows || []);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     if (tab === "coupons" && coupons.length === 0) fetchCoupons();
     if (tab === "trained-models" && trainedModels.length === 0) fetchTrainedModels();
-  }, [tab, coupons.length, fetchCoupons, trainedModels.length, fetchTrainedModels]);
+    if (tab === "templates" && templates.length === 0) { fetchTemplates(); fetchUserWorkflows(); }
+  }, [tab, coupons.length, fetchCoupons, trainedModels.length, fetchTrainedModels, templates.length, fetchTemplates, fetchUserWorkflows]);
 
   const handleAddCredits = async (userId: string) => {
     const amount = parseInt(creditAmounts[userId] || "0");
@@ -346,6 +379,7 @@ export default function AdminPage() {
             { id: "users" as const, label: "Usuarios" },
             { id: "coupons" as const, label: "Cupons" },
             { id: "trained-models" as const, label: "Modelos LoRA" },
+            { id: "templates" as const, label: "Templates" },
             { id: "waitlist" as const, label: "Waitlist" },
             { id: "generations" as const, label: "Geracoes" },
           ].map((t) => (
@@ -830,6 +864,201 @@ export default function AdminPage() {
         )}
 
         {/* Trained Models Tab */}
+        {tab === "templates" && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Workflow Templates</h2>
+                <p className="text-sm text-zinc-500 mt-1">{templates.length} templates no total</p>
+              </div>
+              <button
+                onClick={() => { setShowCreateTemplate(true); fetchUserWorkflows(); }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg"
+              >
+                + Criar Template
+              </button>
+            </div>
+
+            {/* Create template modal */}
+            {showCreateTemplate && (
+              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-6">
+                <h3 className="text-sm font-medium text-white mb-4">Criar Template a partir de Workflow</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Workflow de origem</label>
+                    <select
+                      value={selectedWorkflowId}
+                      onChange={(e) => setSelectedWorkflowId(e.target.value)}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    >
+                      <option value="">Selecionar workflow...</option>
+                      {userWorkflows.map((w) => (
+                        <option key={w.id} value={w.id}>{w.name || "untitled"}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Categoria</label>
+                    <select
+                      value={newTemplateCategory}
+                      onChange={(e) => setNewTemplateCategory(e.target.value)}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    >
+                      <option value="geral">Geral</option>
+                      <option value="imagem">Imagem</option>
+                      <option value="video">Video</option>
+                      <option value="avatar">Avatar</option>
+                      <option value="lora">LoRA</option>
+                      <option value="edicao">Edicao</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Nome do template</label>
+                    <input
+                      value={newTemplateName}
+                      onChange={(e) => setNewTemplateName(e.target.value)}
+                      placeholder="Ex: Animar Foto"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Descricao</label>
+                    <input
+                      value={newTemplateDesc}
+                      onChange={(e) => setNewTemplateDesc(e.target.value)}
+                      placeholder="Descricao curta..."
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!selectedWorkflowId || !newTemplateName) return;
+                      await fetch("/api/admin/templates", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          workflowId: selectedWorkflowId,
+                          name: newTemplateName,
+                          description: newTemplateDesc,
+                          category: newTemplateCategory,
+                        }),
+                      });
+                      setShowCreateTemplate(false);
+                      setNewTemplateName("");
+                      setNewTemplateDesc("");
+                      setSelectedWorkflowId("");
+                      fetchTemplates();
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg"
+                  >
+                    Criar
+                  </button>
+                  <button
+                    onClick={() => setShowCreateTemplate(false)}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {templatesLoading ? (
+              <div className="text-center py-10 text-zinc-500 text-sm">Carregando...</div>
+            ) : templates.length === 0 ? (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-10 text-center">
+                <p className="text-zinc-600 text-sm">Nenhum template criado ainda</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-left">
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Nome</th>
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Categoria</th>
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Status</th>
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Usos</th>
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Data</th>
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {templates.map((t: { id: string; name: string; description: string; category: string; is_published: boolean; featured: boolean; usage_count: number; created_at: string }) => (
+                      <tr key={t.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-zinc-300">{t.name}</div>
+                          {t.description && <div className="text-xs text-zinc-500">{t.description}</div>}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-zinc-400">{t.category}</td>
+                        <td className="py-3 px-4">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            t.is_published
+                              ? "bg-green-500/10 text-green-400 border-green-500/20"
+                              : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                          }`}>
+                            {t.is_published ? "publicado" : "rascunho"}
+                          </span>
+                          {t.featured && (
+                            <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full border bg-purple-500/10 text-purple-400 border-purple-500/20">
+                              destaque
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-zinc-500">{t.usage_count}</td>
+                        <td className="py-3 px-4 text-sm text-zinc-500">{new Date(t.created_at).toLocaleDateString("pt-BR")}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin/templates", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: t.id, is_published: !t.is_published }),
+                                });
+                                fetchTemplates();
+                              }}
+                              className={`text-xs ${t.is_published ? "text-yellow-400 hover:text-yellow-300" : "text-green-400 hover:text-green-300"}`}
+                            >
+                              {t.is_published ? "Despublicar" : "Publicar"}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin/templates", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: t.id, featured: !t.featured }),
+                                });
+                                fetchTemplates();
+                              }}
+                              className="text-xs text-purple-400 hover:text-purple-300"
+                            >
+                              {t.featured ? "Remover destaque" : "Destacar"}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm("Deletar este template?")) return;
+                                await fetch(`/api/admin/templates?id=${t.id}`, { method: "DELETE" });
+                                fetchTemplates();
+                              }}
+                              className="text-xs text-red-400 hover:text-red-300"
+                            >
+                              Deletar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "trained-models" && (
           <div>
             <div className="flex items-center justify-between mb-6">
