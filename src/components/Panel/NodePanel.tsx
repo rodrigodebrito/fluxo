@@ -254,10 +254,18 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const dur = multiShotEnabled && multiShots.length > 0 ? totalShotDuration : klingO3Duration;
     costPerRun = perSec * dur;
   }
-  if (model === "kling-o3-edit" || model === "kling-o1-ref") {
+  if (model === "kling-o3-edit") {
     const isPro = falTier === "pro";
-    const dur = model === "kling-o1-ref" ? klingO1Duration : 5;
-    costPerRun = (isPro ? 36 : 24) * dur;
+    costPerRun = (isPro ? 36 : 24) * 5;
+  }
+  if (model === "kling-o1-ref") {
+    const isPro = falTier === "pro";
+    const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
+    const msEnabled = (node.data.multiShotEnabled as boolean) ?? false;
+    const refDur = (msEnabled && multiShots.length > 0)
+      ? multiShots.reduce((s, shot) => s + shot.duration, 0)
+      : klingO1Duration;
+    costPerRun = (isPro ? 36 : 24) * refDur;
   }
   if (isFlux) {
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
@@ -417,18 +425,18 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Kling O3 Ref Duration (3-10s) */}
+        {/* Kling O3 Ref Duration (3-15s) */}
         {params.includes("klingO1Duration") && (
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Duration</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (3-10)">i</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (3-15)">i</span>
             </div>
             <div className="flex items-center gap-3">
               <input
                 type="range"
                 min={3}
-                max={10}
+                max={15}
                 step={1}
                 value={klingO1Duration}
                 onChange={(e) => update({ klingO1Duration: parseInt(e.target.value) })}

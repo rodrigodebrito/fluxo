@@ -299,15 +299,26 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
   if (model === "kling-o1-ref") {
     // Kling O3 Reference to Video
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const body: Record<string, any> = {
-      prompt: input.prompt,
-    };
+    const body: Record<string, any> = {};
     if (input.videoUrl) body.video_url = input.videoUrl;
-    if (input.imageUrls && input.imageUrls.length > 0) body.image_urls = input.imageUrls;
-    if (input.keepAudio != null) body.keep_audio = input.keepAudio;
+    // imageUrls[0] = start frame, imageUrls[1] = end frame
+    if (input.imageUrls && input.imageUrls[0]) body.start_image_url = input.imageUrls[0];
+    if (input.endImageUrl) body.end_image_url = input.endImageUrl;
     if (input.elements && input.elements.length > 0) body.elements = input.elements;
-    body.aspect_ratio = input.aspectRatio || "auto";
-    body.duration = String(input.duration || 5);
+    body.aspect_ratio = input.aspectRatio || "16:9";
+    body.generate_audio = input.generateAudio ?? false;
+
+    // Multi-Shot: use multi_prompt instead of prompt + duration
+    if (input.multiShotEnabled && input.multiShots && input.multiShots.length > 0) {
+      body.multi_prompt = input.multiShots.map((s) => ({
+        prompt: s.prompt,
+        duration: s.duration,
+      }));
+      body.shot_type = "customize";
+    } else {
+      if (input.prompt) body.prompt = input.prompt;
+      body.duration = String(input.duration || 5);
+    }
     return body;
   }
 

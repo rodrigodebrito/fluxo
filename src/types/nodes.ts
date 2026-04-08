@@ -111,9 +111,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "video-1", label: "Ref Video*", required: true },
-      { id: "image-1", label: "Image 1", required: false },
+      { id: "image-1", label: "Start Frame", required: false },
+      { id: "image-2", label: "End Frame", required: false },
     ],
-    params: ["falTier", "klingO1Duration", "aspectRatio", "keepAudio", "runs"],
+    params: ["falTier", "multiShots", "klingO1Duration", "aspectRatio", "generateAudio", "runs"],
     dynamicElements: true,
   },
   {

@@ -47,7 +47,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-kling-o3-edit":
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
-      return { label: "Kling O3 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, falTier: "pro", elementCount: 0 };
+      return { label: "Kling O3 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 2, aspectRatio: "16:9", klingO1Duration: 5, generateAudio: false, falTier: "pro", elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-motion":
       return { label: "Kling Motion", model: "kling-motion", isRunning: false, results: [], imageInputCount: 1, motionVersion: "2.6", motionMode: "720p", characterOrientation: "video" };
     case "model-gpt-image-txt":
@@ -953,10 +953,15 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
           : (pipeline.klingO3Duration || 5);
         costPerRun = perSec * o3Dur;
-      } else if (m === "kling-o3-edit" || m === "kling-o1-ref") {
+      } else if (m === "kling-o3-edit") {
         const isPro = pipeline.falTier === "pro";
-        const dur = m === "kling-o1-ref" ? (pipeline.klingO1Duration || 5) : 5;
-        costPerRun = (isPro ? 36 : 24) * dur;
+        costPerRun = (isPro ? 36 : 24) * 5;
+      } else if (m === "kling-o1-ref") {
+        const isPro = pipeline.falTier === "pro";
+        const refDur = (pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0)
+          ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
+          : (pipeline.klingO1Duration || 5);
+        costPerRun = (isPro ? 36 : 24) * refDur;
       } else if (m === "kling-motion") {
         // 2.6: 720p=$0.03/s, 1080p=$0.045/s → 5/s, 8/s credits (50% margin)
         // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 17/s, 23/s credits (50% margin)
