@@ -473,7 +473,7 @@ export async function createTTSTask(
 ): Promise<CreateTaskResponse> {
   const inputBody: Record<string, unknown> = {
     text: input.text,
-    voice_id: input.voiceId || "pFZP5JQG7iQjIQuC4Bku", // Lily (female, natural)
+    voice_id: input.voiceId || "Lily",
     model_id: "eleven_turbo_v2_5",
     speed: input.speed ?? 1.0,
   };

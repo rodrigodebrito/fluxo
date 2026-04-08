@@ -208,7 +208,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const isAvatar = model === "kling-avatar";
   const avatarTier = (node.data.avatarTier as string) || "standard";
   const avatarText = (node.data.avatarText as string) || "";
-  const avatarVoice = (node.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
+  const avatarVoice = (node.data.avatarVoice as string) || "Lily";
   const avatarSpeed = (node.data.avatarSpeed as number) ?? 1.0;
 
   // Multi-Shot
@@ -1119,14 +1119,27 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ avatarVoice: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
             >
-              <option value="pFZP5JQG7iQjIQuC4Bku">Lily (feminina, natural)</option>
-              <option value="EXAVITQu4vr4xnSDxMaL">Sarah (feminina, suave)</option>
-              <option value="FGY2WhTYpPnrIDTdsKH5">Laura (feminina, forte)</option>
-              <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (masculino)</option>
-              <option value="pqHfZKP75CvOlQylNhV4">Bill (masculino, grave)</option>
-              <option value="nPczCjzI2devNBz1zQrb">Brian (masculino, natural)</option>
-              <option value="XB0fDUnXU5powFXDhCwa">Charlotte (feminina, elegante)</option>
-              <option value="onwK4e9ZLuTAKqWW03F9">Daniel (masculino, britânico)</option>
+              <option value="Rachel">Rachel (feminina, calma)</option>
+              <option value="Aria">Aria (feminina, expressiva)</option>
+              <option value="Sarah">Sarah (feminina, suave)</option>
+              <option value="Laura">Laura (feminina, forte)</option>
+              <option value="Lily">Lily (feminina, natural)</option>
+              <option value="Charlotte">Charlotte (feminina, elegante)</option>
+              <option value="Alice">Alice (feminina, confiante)</option>
+              <option value="Matilda">Matilda (feminina, calorosa)</option>
+              <option value="Jessica">Jessica (feminina, animada)</option>
+              <option value="Roger">Roger (masculino, autoritário)</option>
+              <option value="Liam">Liam (masculino, jovem)</option>
+              <option value="Brian">Brian (masculino, natural)</option>
+              <option value="Daniel">Daniel (masculino, britânico)</option>
+              <option value="Charlie">Charlie (masculino, casual)</option>
+              <option value="George">George (masculino, maduro)</option>
+              <option value="Callum">Callum (masculino, intenso)</option>
+              <option value="Will">Will (masculino, amigável)</option>
+              <option value="Eric">Eric (masculino, claro)</option>
+              <option value="Chris">Chris (masculino, enérgico)</option>
+              <option value="Bill">Bill (masculino, grave)</option>
+              <option value="River">River (não-binário, suave)</option>
             </select>
           </div>
         )}
