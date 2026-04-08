@@ -163,7 +163,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
   // Context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
-  const contextMenuShown = useRef(false); // tracks if Fluxo menu was shown (only reset in onPaneContextMenu/addNode/paneClick)
   const [contextSearch, setContextSearch] = useState("");
   const [showNoCredits, setShowNoCredits] = useState(false);
   // Track right-mouse-button drag for panning cursor
@@ -288,10 +287,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     selectedNodeId.current = null;
     onNodeSelect?.(null);
     setContextMenu(null);
-    contextMenuShown.current = false;
   }, [onNodeSelect, setNodes]);
 
-  // Context menu: right-click no canvas (só abre Fluxo menu, preventDefault feito no capture)
+  // Context menu: right-click no canvas abre/fecha menu Fluxo
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onPaneContextMenu = useCallback((event: any) => {
     event.preventDefault();
@@ -302,7 +300,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       y: event.clientY - bounds.top,
     });
     setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top, flowX: flowPos.x, flowY: flowPos.y });
-    contextMenuShown.current = true;
     setContextSearch("");
   }, []);
 
@@ -318,7 +315,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     };
     setNodes((nds) => [...nds, newNode]);
     setContextMenu(null);
-    contextMenuShown.current = false;
   }, [contextMenu, setNodes]);
 
   // Helper: criar edge entre source e target com lógica de auto-routing
@@ -1326,17 +1322,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     <div
       ref={reactFlowWrapper}
       className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
-      onContextMenuCapture={(e) => {
-        if (contextMenuShown.current) {
-          // 2 clique direito: permitir menu nativo do Windows
-          setContextMenu(null);
-          contextMenuShown.current = false;
-          e.stopPropagation(); // impedir ReactFlow de abrir Fluxo menu
-          return; // NÃO chama preventDefault → menu nativo aparece
-        }
-        // 1 clique direito: bloquear menu nativo, deixar ReactFlow mostrar Fluxo menu
-        e.preventDefault();
-      }}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <ReactFlow
         nodes={nodes}
@@ -1401,7 +1387,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           search={contextSearch}
           onSearchChange={setContextSearch}
           onSelect={addNodeFromContext}
-          onClose={() => setContextMenu(null)}
+          onClose={() => { setContextMenu(null); }}
         />
       )}
 
