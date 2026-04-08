@@ -163,6 +163,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
   // Context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
+  const contextMenuRef = useRef(false); // sync ref to track if menu is open
   const [contextSearch, setContextSearch] = useState("");
   const [showNoCredits, setShowNoCredits] = useState(false);
   // Track right-mouse-button drag for panning cursor
@@ -287,6 +288,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     selectedNodeId.current = null;
     onNodeSelect?.(null);
     setContextMenu(null);
+    contextMenuRef.current = false;
   }, [onNodeSelect, setNodes]);
 
   // Context menu: right-click no canvas
@@ -294,9 +296,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
   // Se context menu ja esta aberto, segundo clique direito = menu nativo do Windows
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onPaneContextMenu = useCallback((event: any) => {
-    if (contextMenu) {
+    if (contextMenuRef.current) {
       // Já tem context menu aberto → fechar e deixar menu nativo aparecer
       setContextMenu(null);
+      contextMenuRef.current = false;
       return;
     }
     event.preventDefault();
@@ -307,8 +310,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       y: event.clientY - bounds.top,
     });
     setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top, flowX: flowPos.x, flowY: flowPos.y });
+    contextMenuRef.current = true;
     setContextSearch("");
-  }, [contextMenu]);
+  }, []);
 
   // Adicionar nó na posição do context menu
   const addNodeFromContext = useCallback((type: string) => {
@@ -322,6 +326,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     };
     setNodes((nds) => [...nds, newNode]);
     setContextMenu(null);
+    contextMenuRef.current = false;
   }, [contextMenu, setNodes]);
 
   // Helper: criar edge entre source e target com lógica de auto-routing
@@ -1329,7 +1334,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     <div
       ref={reactFlowWrapper}
       className={`flex-1 h-full relative ${toolMode === "hand" ? "hand-mode" : ""}`}
-      onContextMenu={(e) => { if (!contextMenu) e.preventDefault(); }}
+      onContextMenu={(e) => { if (!contextMenuRef.current) e.preventDefault(); }}
     >
       <ReactFlow
         nodes={nodes}
@@ -1394,7 +1399,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           search={contextSearch}
           onSearchChange={setContextSearch}
           onSelect={addNodeFromContext}
-          onClose={() => setContextMenu(null)}
+          onClose={() => { setContextMenu(null); contextMenuRef.current = false; }}
         />
       )}
 
