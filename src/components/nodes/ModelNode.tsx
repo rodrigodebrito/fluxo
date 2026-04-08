@@ -92,7 +92,7 @@ export default function ModelNode({ id, data }: NodeProps) {
               position={Position.Left}
               id={h.id}
               style={{ top: `${startY + i * spacing}px` }}
-              className={`!w-2.5 !h-2.5 ${h.id === "negative-prompt" ? "!bg-pink-500 !border-pink-300" : h.required ? "!bg-cyan-500 !border-cyan-300" : "!bg-emerald-500 !border-emerald-300"} !border-2`}
+              className={`!w-2.5 !h-2.5 ${h.id === "negative-prompt" ? "!bg-pink-500 !border-pink-300" : h.id.startsWith("audio") ? "!bg-orange-500 !border-orange-300" : h.required ? "!bg-cyan-500 !border-cyan-300" : "!bg-emerald-500 !border-emerald-300"} !border-2`}
             />
           ))
         : Array.from({ length: imageInputCount }, (_, i) => (

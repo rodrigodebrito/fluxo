@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar";
 
 export interface ModelInfo {
   id: AIModel;
@@ -216,6 +216,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["wanResolution", "wanDuration", "aspectRatio", "runs"],
+  },
+  {
+    id: "kling-avatar",
+    name: "Kling Avatar TTS",
+    type: "video",
+    description: "Avatar falante (foto + audio/texto via Kie AI)",
+    costPerRun: 40,
+    handles: [
+      { id: "prompt", label: "Prompt", required: false },
+      { id: "image-1", label: "Photo*", required: true },
+      { id: "audio-1", label: "Audio", required: false },
+    ],
+    params: ["avatarTier", "avatarText", "avatarVoice", "avatarSpeed", "runs"],
   },
 ];
 

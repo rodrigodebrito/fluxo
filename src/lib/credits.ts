@@ -96,6 +96,7 @@ export function getModelCost(model: string): number {
     case "upscale": return 2;
     case "custom-model": return 10;
     case "wan-i2v": return 15;
+    case "kling-avatar": return 40;
     case "llm": return 1;
     default: return 18;
   }

@@ -66,6 +66,10 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "model-wan-i2v":
       return { label: "Wan 2.1 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", wanResolution: "720p", wanDuration: 81 };
+    case "model-kling-avatar":
+      return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
+    case "audioInput":
+      return { label: "Audio", audioUrl: "", fileName: "", audioDuration: 0 };
     case "klingElement":
       return { label: "Kling Element", elementName: "", elementDescription: "" };
     case "lastFrame":
@@ -969,6 +973,11 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         mainLoraScale: pipeline.mainLoraScale,
         customAspectRatio: pipeline.customAspectRatio,
         customNumOutputs: pipeline.customNumOutputs,
+        avatarTier: pipeline.avatarTier,
+        avatarText: pipeline.avatarText,
+        avatarVoice: pipeline.avatarVoice,
+        avatarSpeed: pipeline.avatarSpeed,
+        audioUrl: pipeline.audioUrl,
         cost: costPerRun,
       };
 

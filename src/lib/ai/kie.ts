@@ -425,6 +425,75 @@ export async function createVeoTask(
   return safeJson(response);
 }
 
+// === Kling Avatar (TTS + Talking Head) ===
+
+interface CreateAvatarInput {
+  imageUrl: string;
+  audioUrl: string;
+  prompt?: string;
+  tier?: "standard" | "pro";
+}
+
+export async function createAvatarTask(
+  apiKey: string,
+  input: CreateAvatarInput
+): Promise<CreateTaskResponse> {
+  const model = input.tier === "pro" ? "kling/ai-avatar-pro" : "kling/ai-avatar-standard";
+
+  const inputBody: Record<string, unknown> = {
+    image_url: input.imageUrl,
+    audio_url: input.audioUrl,
+    prompt: input.prompt || ".",
+  };
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model, input: inputBody }),
+  });
+
+  return safeJson(response);
+}
+
+// === ElevenLabs TTS via Kie AI ===
+
+interface CreateTTSInput {
+  text: string;
+  voiceId?: string;
+  speed?: number;
+  languageCode?: string;
+}
+
+export async function createTTSTask(
+  apiKey: string,
+  input: CreateTTSInput
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    text: input.text,
+    voice_id: input.voiceId || "pFZP5JQG7iQjIQuC4Bku", // Lily (female, natural)
+    model_id: "eleven_turbo_v2_5",
+    speed: input.speed ?? 1.0,
+  };
+
+  if (input.languageCode) {
+    inputBody.language_code = input.languageCode;
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "elevenlabs/tts-turbo-v2.5", input: inputBody }),
+  });
+
+  return safeJson(response);
+}
+
 // Veo status endpoint (diferente do Nano Banana)
 interface VeoStatusResponse {
   code: number;

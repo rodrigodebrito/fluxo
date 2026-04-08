@@ -10,6 +10,7 @@ import RouterNode from "./RouterNode";
 import PromptConcatNode from "./PromptConcatNode";
 import TextIteratorNode from "./TextIteratorNode";
 import VideoInputNode from "./VideoInputNode";
+import AudioInputNode from "./AudioInputNode";
 
 export const nodeTypes = {
   prompt: PromptNode,
@@ -24,4 +25,5 @@ export const nodeTypes = {
   promptConcat: PromptConcatNode,
   textIterator: TextIteratorNode,
   videoInput: VideoInputNode,
+  audioInput: AudioInputNode,
 };

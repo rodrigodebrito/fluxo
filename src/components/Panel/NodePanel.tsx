@@ -204,6 +204,13 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const wanDuration = (node.data.wanDuration as number) || 81;
   const isWan = model === "wan-i2v";
 
+  // Kling Avatar TTS
+  const isAvatar = model === "kling-avatar";
+  const avatarTier = (node.data.avatarTier as string) || "standard";
+  const avatarText = (node.data.avatarText as string) || "";
+  const avatarVoice = (node.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
+  const avatarSpeed = (node.data.avatarSpeed as number) ?? 1.0;
+
   // Multi-Shot
   const multiShotEnabled = (node.data.multiShotEnabled as boolean) ?? false;
   const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
@@ -259,6 +266,11 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (isWan) {
     // 480p ~$0.04 → 5 cred, 720p ~$0.15 → 15 cred
     costPerRun = wanResolution === "480p" ? 5 : 15;
+  }
+  if (isAvatar) {
+    // Standard: 8 cred/s (~$0.04/s), Pro: 16 cred/s (~$0.08/s)
+    // Base cost for ~5s video + TTS
+    costPerRun = avatarTier === "pro" ? 80 : 40;
   }
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
@@ -1057,6 +1069,86 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               />
               <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[50px] text-center">
                 {wanDuration} ({(wanDuration / 16).toFixed(1)}s)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Avatar Tier */}
+        {params.includes("avatarTier") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Qualidade</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Standard: 720p ($0.04/s), Pro: 1080p ($0.08/s)">i</span>
+            </div>
+            <select
+              value={avatarTier}
+              onChange={(e) => update({ avatarTier: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="standard">Standard (720p)</option>
+              <option value="pro">Pro (1080p)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Avatar Text (TTS) */}
+        {params.includes("avatarText") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Texto para fala (TTS)</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Se nao conectar um Audio Input, digite o texto aqui e o sistema gera a voz automaticamente via ElevenLabs">i</span>
+            </div>
+            <textarea
+              value={avatarText}
+              onChange={(e) => update({ avatarText: e.target.value })}
+              placeholder="Digite o texto que o avatar vai falar... (ou conecte um Audio Input)"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 min-h-[80px] resize-y"
+            />
+          </div>
+        )}
+
+        {/* Avatar Voice */}
+        {params.includes("avatarVoice") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Voz</span>
+            </div>
+            <select
+              value={avatarVoice}
+              onChange={(e) => update({ avatarVoice: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value="pFZP5JQG7iQjIQuC4Bku">Lily (feminina, natural)</option>
+              <option value="EXAVITQu4vr4xnSDxMaL">Sarah (feminina, suave)</option>
+              <option value="FGY2WhTYpPnrIDTdsKH5">Laura (feminina, forte)</option>
+              <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (masculino)</option>
+              <option value="pqHfZKP75CvOlQylNhV4">Bill (masculino, grave)</option>
+              <option value="nPczCjzI2devNBz1zQrb">Brian (masculino, natural)</option>
+              <option value="XB0fDUnXU5powFXDhCwa">Charlotte (feminina, elegante)</option>
+              <option value="onwK4e9ZLuTAKqWW03F9">Daniel (masculino, britânico)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Avatar Speed */}
+        {params.includes("avatarSpeed") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Velocidade da fala</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0.7}
+                max={1.2}
+                step={0.05}
+                value={avatarSpeed}
+                onChange={(e) => update({ avatarSpeed: parseFloat(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[45px] text-center">
+                {avatarSpeed.toFixed(2)}x
               </span>
             </div>
           </div>

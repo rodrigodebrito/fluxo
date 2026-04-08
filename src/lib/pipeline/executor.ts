@@ -84,6 +84,12 @@ interface PipelineData {
   mainLoraScale?: number;
   customAspectRatio?: string;
   customNumOutputs?: number;
+  // Kling Avatar
+  avatarTier?: string;
+  avatarText?: string;
+  avatarVoice?: string;
+  avatarSpeed?: number;
+  audioUrl?: string;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -150,6 +156,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.mainLoraScale = (modelNode.data.mainLoraScale as number) ?? 1;
   result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
   result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
+  result.avatarTier = (modelNode.data.avatarTier as string) || "standard";
+  result.avatarText = (modelNode.data.avatarText as string) || "";
+  result.avatarVoice = (modelNode.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
+  result.avatarSpeed = (modelNode.data.avatarSpeed as number) ?? 1.0;
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -320,6 +330,12 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
           result.videoUrl = vUrl;
           const vDur = sourceNode.data.videoDuration as number;
           if (vDur > 0) result.videoDuration = vDur;
+        }
+      } else if (sourceNode.type === "audioInput") {
+        // AudioInput → Model: audio URL para avatar
+        const aUrl = (sourceNode.data.audioUrl as string) || "";
+        if (aUrl) {
+          result.audioUrl = aUrl;
         }
       } else if (sourceNode.type === "model") {
         // Model → Model: usar resultado como referência
@@ -526,6 +542,11 @@ export async function startGeneration(
     mainLoraScale?: number;
     customAspectRatio?: string;
     customNumOutputs?: number;
+    avatarTier?: string;
+    avatarText?: string;
+    avatarVoice?: string;
+    avatarSpeed?: number;
+    audioUrl?: string;
     cost?: number;
   }
 ): Promise<string> {
@@ -549,6 +570,37 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
+    return data.taskId;
+  }
+
+  // Kling Avatar TTS (Kie AI) — async task com polling
+  if (options?.model === "kling-avatar") {
+    // Upload audio if it's a blob
+    let audioUrl = options.audioUrl;
+    if (audioUrl && audioUrl.startsWith("blob:")) {
+      const uploaded = await uploadImages([audioUrl]);
+      audioUrl = uploaded[0] || audioUrl;
+    }
+
+    const response = await fetch("/api/generate-avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl: publicUrls[0] || "",
+        audioUrl: audioUrl || undefined,
+        text: !audioUrl ? (options.avatarText || prompt || undefined) : undefined,
+        prompt: prompt || undefined,
+        voiceId: options.avatarVoice || "pFZP5JQG7iQjIQuC4Bku",
+        speed: options.avatarSpeed ?? 1.0,
+        languageCode: "pt",
+        avatarTier: options.avatarTier || "standard",
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao gerar avatar");
     return data.taskId;
   }
 
