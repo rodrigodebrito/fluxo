@@ -12,8 +12,8 @@ const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
     pro: "fal-ai/kling-video/o3/pro/video-to-video/edit",
   },
   "kling-o1-ref": {
-    std: "fal-ai/kling-video/o1/standard/video-to-video/reference",
-    pro: "fal-ai/kling-video/o1/video-to-video/reference",
+    std: "fal-ai/kling-video/o3/standard/reference-to-video",
+    pro: "fal-ai/kling-video/o3/pro/reference-to-video",
   },
 };
 

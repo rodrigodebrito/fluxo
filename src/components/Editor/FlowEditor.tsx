@@ -47,7 +47,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-kling-o3-edit":
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
-      return { label: "Kling O1 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, falTier: "pro", elementCount: 0 };
+      return { label: "Kling O3 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "auto", klingO1Duration: 5, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-motion":
       return { label: "Kling Motion", model: "kling-motion", isRunning: false, results: [], imageInputCount: 1, motionVersion: "2.6", motionMode: "720p", characterOrientation: "video" };
     case "model-gpt-image-txt":
@@ -1639,7 +1639,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-kling", label: "Kling 3" },
       { type: "model-kling-o3-i2v", label: "Kling O3" },
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
-      { type: "model-kling-o1-ref", label: "Kling O1 Reference" },
+      { type: "model-kling-o1-ref", label: "Kling O3 Reference" },
       { type: "model-wan-i2v", label: "Wan 2.1 I2V" },
       { type: "klingElement", label: "Kling Element" },
     ],
