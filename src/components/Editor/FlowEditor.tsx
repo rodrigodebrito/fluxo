@@ -64,8 +64,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
     case "model-custom":
       return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
-    case "model-flux-nsfw":
-      return { label: "Flux NSFW V3", model: "flux-nsfw", isRunning: false, results: [], imageInputCount: 0, fluxNsfwSize: "1:1", fluxNsfwCfg: 5, fluxNsfwSteps: 20, fluxNsfwNumOutputs: 1 };
     case "model-wan-i2v":
       return { label: "Wan 2.1 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", wanResolution: "720p", wanDuration: 81 };
     case "model-kling-avatar":
@@ -977,8 +975,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         costPerRun = 2;
       } else if (m === "custom-model") {
         costPerRun = 10 * (pipeline.customNumOutputs || 1);
-      } else if (m === "flux-nsfw") {
-        costPerRun = 8 * (pipeline.fluxNsfwNumOutputs || 1);
       }
 
       const genOptions = {
@@ -1024,10 +1020,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         mainLoraScale: pipeline.mainLoraScale,
         customAspectRatio: pipeline.customAspectRatio,
         customNumOutputs: pipeline.customNumOutputs,
-        fluxNsfwSize: pipeline.fluxNsfwSize,
-        fluxNsfwCfg: pipeline.fluxNsfwCfg,
-        fluxNsfwSteps: pipeline.fluxNsfwSteps,
-        fluxNsfwNumOutputs: pipeline.fluxNsfwNumOutputs,
         avatarTier: pipeline.avatarTier,
         avatarText: pipeline.avatarText,
         avatarVoice: pipeline.avatarVoice,
@@ -1059,7 +1051,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       window.dispatchEvent(new Event("fluxo-credits-update"));
 
       // Replicate sync models — resultados ja estao no cache, nao precisa polling
-      if (pipeline.model === "custom-model" || pipeline.model === "flux-nsfw" || pipeline.model === "wan-i2v") {
+      if (pipeline.model === "custom-model" || pipeline.model === "wan-i2v") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
@@ -1668,7 +1660,6 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "LoRA",
     children: [
       { type: "model-custom", label: "Modelo Treinado" },
-      { type: "model-flux-nsfw", label: "Flux NSFW V3" },
     ],
   },
 ];

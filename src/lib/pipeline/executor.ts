@@ -74,11 +74,6 @@ interface PipelineData {
   // Wan 2.1 I2V
   wanResolution?: string;
   wanDuration?: number;
-  // Flux NSFW V3 (Replicate)
-  fluxNsfwSize?: string;
-  fluxNsfwCfg?: number;
-  fluxNsfwSteps?: number;
-  fluxNsfwNumOutputs?: number;
   // Custom Model (Replicate LoRA)
   trainedModelId?: string;
   extraLoraIds?: string[];
@@ -151,10 +146,6 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
   result.wanResolution = (modelNode.data.wanResolution as string) || "720p";
   result.wanDuration = (modelNode.data.wanDuration as number) || 81;
-  result.fluxNsfwSize = (modelNode.data.fluxNsfwSize as string) || "1:1";
-  result.fluxNsfwCfg = (modelNode.data.fluxNsfwCfg as number) ?? 5;
-  result.fluxNsfwSteps = (modelNode.data.fluxNsfwSteps as number) ?? 20;
-  result.fluxNsfwNumOutputs = (modelNode.data.fluxNsfwNumOutputs as number) || 1;
   result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
   const extraLoras = (modelNode.data.extraLoras as { id: string; trigger: string }[]) || [];
   result.extraLoraIds = extraLoras.map((l) => l.id).filter((id) => id !== "");
@@ -542,10 +533,6 @@ export async function startGeneration(
     upscaleScale?: number;
     wanResolution?: string;
     wanDuration?: number;
-    fluxNsfwSize?: string;
-    fluxNsfwCfg?: number;
-    fluxNsfwSteps?: number;
-    fluxNsfwNumOutputs?: number;
     trainedModelId?: string;
     extraLoraIds?: string[];
     nsfwEnabled?: boolean;
@@ -635,30 +622,6 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao gerar video com Wan 2.1");
-    const taskId = `replicate_${Date.now()}`;
-    getReplicateCache().set(taskId, data.urls || []);
-    return taskId;
-  }
-
-  // Flux NSFW V3 (Replicate) — retorno sincrono
-  if (options?.model === "flux-nsfw") {
-    const response = await fetch("/api/generate-flux-nsfw", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        aspectRatio: options.fluxNsfwSize || "1:1",
-        cfgScale: options.fluxNsfwCfg ?? 5,
-        steps: options.fluxNsfwSteps ?? 20,
-        seed: options.seed ?? -1,
-        numOutputs: options.fluxNsfwNumOutputs || 1,
-        cost: options.cost,
-      }),
-    });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao gerar com Flux NSFW");
     const taskId = `replicate_${Date.now()}`;
     getReplicateCache().set(taskId, data.urls || []);
     return taskId;

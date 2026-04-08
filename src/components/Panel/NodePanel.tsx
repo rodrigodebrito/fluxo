@@ -275,9 +275,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
   }
-  if (model === "flux-nsfw") {
-    costPerRun = 8 * ((node.data.fluxNsfwNumOutputs as number) || 1);
-  }
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
     const is3 = motionVersion === "3.0";
@@ -812,86 +809,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
             <select
               value={(node.data.customNumOutputs as number) || 1}
               onChange={(e) => update({ customNumOutputs: parseInt(e.target.value) })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-            >
-              <option value={1}>1 imagem</option>
-              <option value={2}>2 imagens</option>
-              <option value={3}>3 imagens</option>
-              <option value={4}>4 imagens</option>
-            </select>
-          </div>
-        )}
-
-        {/* Flux NSFW Aspect Ratio */}
-        {params.includes("fluxNsfwSize") && (
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm text-zinc-300">Aspecto</span>
-            </div>
-            <select
-              value={(node.data.fluxNsfwSize as string) || "1:1"}
-              onChange={(e) => update({ fluxNsfwSize: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-            >
-              <option value="1:1">1:1 (Quadrado)</option>
-              <option value="16:9">16:9 (Paisagem)</option>
-              <option value="9:16">9:16 (Retrato)</option>
-              <option value="4:3">4:3</option>
-              <option value="3:4">3:4</option>
-              <option value="3:2">3:2</option>
-              <option value="2:3">2:3</option>
-            </select>
-          </div>
-        )}
-
-        {/* Flux NSFW CFG Scale */}
-        {params.includes("fluxNsfwCfg") && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-zinc-300">CFG Scale</span>
-              <span className="text-xs text-purple-400 font-mono">{(node.data.fluxNsfwCfg as number) ?? 5}</span>
-            </div>
-            <input
-              type="range" min="1" max="20" step="0.5"
-              value={(node.data.fluxNsfwCfg as number) ?? 5}
-              onChange={(e) => update({ fluxNsfwCfg: parseFloat(e.target.value) })}
-              className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
-            />
-            <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
-              <span>Criativo</span><span>Fiel ao prompt</span>
-            </div>
-          </div>
-        )}
-
-        {/* Flux NSFW Steps */}
-        {params.includes("fluxNsfwSteps") && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-zinc-300">Steps</span>
-              <span className="text-xs text-purple-400 font-mono">{(node.data.fluxNsfwSteps as number) ?? 20}</span>
-            </div>
-            <input
-              type="range" min="4" max="50" step="1"
-              value={(node.data.fluxNsfwSteps as number) ?? 20}
-              onChange={(e) => update({ fluxNsfwSteps: parseInt(e.target.value) })}
-              className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
-            />
-            <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
-              <span>Rapido</span><span>Detalhado</span>
-            </div>
-          </div>
-        )}
-
-        {/* Flux NSFW Num Outputs */}
-        {params.includes("fluxNsfwNumOutputs") && (
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm text-zinc-300">Quantidade</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Cada imagem custa 8 creditos">i</span>
-            </div>
-            <select
-              value={(node.data.fluxNsfwNumOutputs as number) || 1}
-              onChange={(e) => update({ fluxNsfwNumOutputs: parseInt(e.target.value) })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
               <option value={1}>1 imagem</option>

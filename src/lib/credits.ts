@@ -95,7 +95,6 @@ export function getModelCost(model: string): number {
     case "bg-removal": return 1;
     case "upscale": return 2;
     case "custom-model": return 10;
-    case "flux-nsfw": return 8;
     case "wan-i2v": return 15;
     case "kling-avatar": return 40;
     case "llm": return 1;
