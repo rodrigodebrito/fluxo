@@ -33,6 +33,45 @@ async function registerAndWaitAsset(apiKey: string, url: string): Promise<string
   throw new Error("Timeout: asset demorou muito para processar");
 }
 
+// Upload imagem para PiAPI (converte URL externa → base64 → URL temporaria PiAPI)
+async function uploadToPiAPI(apiKey: string, imageUrl: string): Promise<string> {
+  console.log("[seedance-piapi] uploading image to PiAPI:", imageUrl.substring(0, 80));
+
+  // Baixar imagem e converter para base64
+  const imgRes = await fetch(imageUrl);
+  if (!imgRes.ok) throw new Error(`Falha ao baixar imagem: ${imgRes.status}`);
+  const buffer = await imgRes.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+
+  // Detectar extensao
+  const contentType = imgRes.headers.get("content-type") || "image/png";
+  const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg"
+    : contentType.includes("webp") ? "webp"
+    : contentType.includes("bmp") ? "bmp"
+    : "png";
+
+  const res = await fetch("https://upload.theapi.app/api/ephemeral_resource", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_name: `ref_${Date.now()}.${ext}`,
+      file_data: `data:${contentType};base64,${base64}`,
+    }),
+  });
+
+  const data = await res.json();
+  console.log("[seedance-piapi] upload response:", JSON.stringify(data));
+
+  if (data.code !== 200 || !data.data?.url) {
+    throw new Error(data.message || "Falha ao fazer upload para PiAPI");
+  }
+
+  return data.data.url;
+}
+
 // --- PiAPI Seedance 2.0 ---
 async function createPiAPITask(input: {
   prompt: string;
@@ -113,27 +152,36 @@ export async function POST(request: NextRequest) {
   // --- Seedance 2.0 via PiAPI ---
   if (sdModel.includes("seedance-2")) {
     try {
+      const piApiKey = process.env.PIAPI_API_KEY;
+      if (!piApiKey) throw new Error("PIAPI_API_KEY nao configurada");
+
       // Collect all reference inputs
-      const imageUrls: string[] = [];
+      const rawImageUrls: string[] = [];
       const videoUrls: string[] = [];
       const audioUrls: string[] = [];
 
-      if (firstFrameUrl) imageUrls.push(firstFrameUrl);
-      if (lastFrameUrl) imageUrls.push(lastFrameUrl);
-      if (referenceImageUrls && referenceImageUrls.length > 0) imageUrls.push(...referenceImageUrls);
+      if (firstFrameUrl) rawImageUrls.push(firstFrameUrl);
+      if (lastFrameUrl) rawImageUrls.push(lastFrameUrl);
+      if (referenceImageUrls && referenceImageUrls.length > 0) rawImageUrls.push(...referenceImageUrls);
       if (referenceVideoUrl) videoUrls.push(referenceVideoUrl);
       if (referenceAudioUrl) audioUrls.push(referenceAudioUrl);
 
+      // Upload images to PiAPI ephemeral storage (like Kie AI assets)
+      const imageUrls: string[] = [];
+      if (rawImageUrls.length > 0) {
+        console.log("[seedance-piapi] uploading", rawImageUrls.length, "images to PiAPI...");
+        for (const url of rawImageUrls) {
+          const piUrl = await uploadToPiAPI(piApiKey, url);
+          imageUrls.push(piUrl);
+        }
+        console.log("[seedance-piapi] all images uploaded:", imageUrls);
+      }
+
       // Determine mode based on inputs
-      // Always use omni_reference when images are present (works better with real faces)
-      // first_last_frames blocks real faces, omni_reference does not
       let mode = "text_to_video";
       if (imageUrls.length > 0 || videoUrls.length > 0 || audioUrls.length > 0) {
         mode = "omni_reference";
       }
-
-      // Map sdModel to PiAPI task_type (preview versions accept real faces)
-      const taskType = sdModel.includes("fast") ? "seedance-2-fast-preview" : "seedance-2-preview";
 
       // Auto-inject @image references in prompt (like PiAPI playground does)
       let piPrompt = prompt;
@@ -142,16 +190,44 @@ export async function POST(request: NextRequest) {
         piPrompt = `${refs} ${prompt}`;
       }
 
-      const taskId = await createPiAPITask({
-        prompt: piPrompt,
-        mode,
-        duration: duration || 5,
-        aspectRatio: aspectRatio || "16:9",
-        taskType,
-        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-        videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
-        audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
-      });
+      // Try non-preview first (better quality, cheaper), fallback to preview if face detected
+      const isFast = sdModel.includes("fast");
+      const taskTypes = [
+        isFast ? "seedance-2-fast" : "seedance-2",           // non-preview (melhor qualidade)
+        isFast ? "seedance-2-fast-preview" : "seedance-2-preview", // preview (aceita faces)
+      ];
+
+      let taskId: string | null = null;
+      for (const taskType of taskTypes) {
+        try {
+          console.log("[seedance-piapi] trying task_type:", taskType);
+          taskId = await createPiAPITask({
+            prompt: piPrompt,
+            mode,
+            duration: duration || 5,
+            aspectRatio: aspectRatio || "16:9",
+            taskType,
+            imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+            videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
+            audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
+          });
+          console.log("[seedance-piapi] success with task_type:", taskType, "taskId:", taskId);
+          break; // success, no need to try next
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "";
+          console.warn("[seedance-piapi] failed with", taskType, ":", msg);
+          // If face detection error or content filter, try preview version
+          if (msg.toLowerCase().includes("face") || msg.toLowerCase().includes("content") || msg.toLowerCase().includes("risk")) {
+            console.log("[seedance-piapi] face/content filter detected, falling back to preview...");
+            continue;
+          }
+          throw err; // other errors, don't retry
+        }
+      }
+
+      if (!taskId) {
+        throw new Error("Todas as tentativas falharam. Verifique o conteudo da imagem.");
+      }
 
       await chargeCredits(user.id, costModel, cost);
 
