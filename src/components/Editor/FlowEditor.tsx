@@ -72,10 +72,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
     case "model-grok-i2v":
       return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "16:9" };
-    case "model-sora-2":
-      return { label: "Sora 2", model: "sora-2", isRunning: false, results: [], imageInputCount: 1, soraDuration: 4, aspectRatio: "16:9", randomSeed: true, seed: null };
-    case "model-sora-2-char":
-      return { label: "Sora 2 Characters", model: "sora-2-char", isRunning: false, results: [], imageInputCount: 1, soraDuration: 4, aspectRatio: "16:9", charName1: "character1", charName2: "", randomSeed: true, seed: null };
     case "audioInput":
       return { label: "Audio", audioUrl: "", fileName: "", audioDuration: 0 };
     case "klingElement":
@@ -1009,8 +1005,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "grok-i2v") {
         const grokPerSec = pipeline.grokResolution === "720p" ? 3 : 1.6;
         costPerRun = Math.ceil(grokPerSec * (pipeline.grokDuration || 6));
-      } else if (m === "sora-2" || m === "sora-2-char") {
-        costPerRun = 20 * (pipeline.soraDuration || 4);
       } else if (m === "kling-avatar") {
         const perSec = pipeline.avatarTier === "pro" ? 16 : 8;
         if (pipeline.audioDuration && pipeline.audioDuration > 0) {
@@ -1082,10 +1076,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         grokResolution: pipeline.grokResolution,
         grokDuration: pipeline.grokDuration,
         grokMode: pipeline.grokMode,
-        soraDuration: pipeline.soraDuration,
-        charName1: pipeline.charName1,
-        charName2: pipeline.charName2,
-        videoUrls: pipeline.videoUrls,
         audioFormat: pipeline.audioFormat,
         cost: costPerRun,
       };

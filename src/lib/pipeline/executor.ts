@@ -88,11 +88,6 @@ interface PipelineData {
   grokResolution?: string;
   grokDuration?: number;
   grokMode?: string;
-  // Sora 2
-  soraDuration?: number;
-  charName1?: string;
-  charName2?: string;
-  videoUrls?: string[];
   // Negative prompt (separate for models that need it)
   negativePrompt?: string;
   // Prompt extend
@@ -175,9 +170,6 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.grokResolution = (modelNode.data.grokResolution as string) || "480p";
   result.grokDuration = (modelNode.data.grokDuration as number) || 6;
   result.grokMode = (modelNode.data.grokMode as string) || "normal";
-  result.soraDuration = (modelNode.data.soraDuration as number) || 4;
-  result.charName1 = (modelNode.data.charName1 as string) || "character1";
-  result.charName2 = (modelNode.data.charName2 as string) || "";
   result.promptExtend = (modelNode.data.promptExtend as boolean) ?? true;
   result.audioFormat = (modelNode.data.audioFormat as string) || "mp3";
   result.avatarTier = (modelNode.data.avatarTier as string) || "standard";
@@ -368,12 +360,9 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
         const coverUrl = sourceNode.data.coverResultUrl as string | null;
         if (coverUrl) {
           const handleId = edge.targetHandle || "image-1";
-          // Se conectado ao handle video-1 ou video-2, usar como videoUrl
+          // Se conectado ao handle video-1, usar como videoUrl
           if (handleId === "video-1") {
             result.videoUrl = coverUrl;
-          } else if (handleId === "video-2") {
-            if (!result.videoUrls) result.videoUrls = [];
-            result.videoUrls.push(coverUrl);
           } else if (handleId === "audio-1") {
             // Audio output (e.g. extract-audio) → audio input
             result.audioUrl = coverUrl;
@@ -389,7 +378,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   if (negativePrompt.trim()) {
     result.negativePrompt = negativePrompt.trim();
     // For models without native negative prompt support, append to main prompt
-    const modelsWithNativeNeg = ["wan-i2v", "seedance", "veo3", "kling", "sora-2", "sora-2-char"];
+    const modelsWithNativeNeg = ["wan-i2v", "seedance", "veo3", "kling"];
     if (!modelsWithNativeNeg.includes(result.model)) {
       result.prompt = `${result.prompt}\n${negativePrompt.trim()}`;
     }
@@ -588,10 +577,6 @@ export async function startGeneration(
     grokResolution?: string;
     grokDuration?: number;
     grokMode?: string;
-    soraDuration?: number;
-    charName1?: string;
-    charName2?: string;
-    videoUrls?: string[];
     negativePrompt?: string;
     promptExtend?: boolean;
     audioFormat?: string;
@@ -698,50 +683,6 @@ export async function startGeneration(
     try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao criar task Grok Imagine");
     return data.taskId;
-  }
-
-  // Sora 2 / Sora 2 Characters (fal.ai) — polling via fal
-  if (options?.model === "sora-2" || options?.model === "sora-2-char") {
-    // Upload video refs for characters (blob → public URL)
-    let videoUrl1 = options.videoUrl;
-    if (videoUrl1 && videoUrl1.startsWith("blob:")) {
-      const uploaded = await uploadImages([videoUrl1]);
-      videoUrl1 = uploaded[0] || videoUrl1;
-    }
-    let videoUrl2: string | undefined;
-    if (options.videoUrls && options.videoUrls.length > 0) {
-      let v2 = options.videoUrls[0];
-      if (v2 && v2.startsWith("blob:")) {
-        const uploaded = await uploadImages([v2]);
-        v2 = uploaded[0] || v2;
-      }
-      videoUrl2 = v2;
-    }
-
-    const response = await fetch("/api/generate-sora", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: options.model,
-        prompt,
-        imageUrl: publicUrls[0] || undefined,
-        duration: options.soraDuration || 4,
-        aspectRatio: options.aspectRatio || "16:9",
-        seed: options.seed ?? undefined,
-        charVideoUrl1: videoUrl1 || undefined,
-        charVideoUrl2: videoUrl2 || undefined,
-        charName1: options.charName1 || "character1",
-        charName2: options.charName2 || "",
-        cost: options.cost,
-      }),
-    });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao criar task Sora 2");
-    // Return taskId with fal endpoint info (same format as other fal models)
-    const parts = [data.taskId, data.falEndpoint, data.statusUrl || "", data.responseUrl || ""];
-    return parts.join("|");
   }
 
   // Wan 2.7 I2V (Kie.ai) — polling padrao
