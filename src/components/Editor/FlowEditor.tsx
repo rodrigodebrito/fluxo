@@ -81,7 +81,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "videoConcat":
       return { label: "Video Concat", inputCount: 2, resultUrl: "" };
     case "anyLLM":
-      return { label: "Any LLM", llmModel: "gpt-4o-mini", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
+      return { label: "Any LLM", llmModel: "gpt-4.1", temperature: 0.7, isRunning: false, generatedText: "", imageInputCount: 1 };
     case "router":
       return { label: "Router", outputCount: 2 };
     case "promptConcat":
@@ -1325,10 +1325,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           body: JSON.stringify({
             prompt,
             systemPrompt: systemPrompt || undefined,
-            model: (llmNode.data.llmModel as string) || "gpt-4o-mini",
+            model: (llmNode.data.llmModel as string) || "gpt-4.1",
             temperature: (llmNode.data.temperature as number) ?? 0.7,
             imageUrls: publicImageUrls.length > 0 ? publicImageUrls : undefined,
-            cost: 1,
+            cost: (llmNode.data.llmModel as string) === "gpt-5.4-pro" ? 2 : 1,
           }),
         });
 

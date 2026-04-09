@@ -10,7 +10,7 @@ export default function AnyLLMNode({ id, data }: NodeProps) {
   const imageInputCount = (data.imageInputCount as number) || 1;
   const generatedText = (data.generatedText as string) || "";
   const isRunning = (data.isRunning as boolean) || false;
-  const llmModel = (data.llmModel as string) || "gpt-4o-mini";
+  const llmModel = (data.llmModel as string) || "gpt-4.1";
   const temperature = (data.temperature as number) ?? 0.7;
 
   useEffect(() => {
@@ -130,9 +130,11 @@ export default function AnyLLMNode({ id, data }: NodeProps) {
             onChange={(e) => updateNodeData(id, { llmModel: e.target.value })}
             className="bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300 px-1.5 py-1 nodrag focus:outline-none focus:border-purple-500"
           >
-            <option value="gpt-4o-mini">GPT-4o Mini</option>
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="openai/gpt-5-chat">GPT-5</option>
+            <option value="gpt-4.1">GPT-4.1</option>
+            <option value="gpt-5.4-nano">GPT-5.4 Nano</option>
+            <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
+            <option value="gpt-5.4">GPT-5.4</option>
+            <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
           </select>
           <div className="flex items-center gap-1">
             <span className="text-[9px] text-zinc-500">Temp:</span>

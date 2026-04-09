@@ -316,7 +316,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
               prompt: llmPrompt,
               systemPrompt: llmSystemPrompt || undefined,
               imageUrls: llmImageUrls.length > 0 ? llmImageUrls : undefined,
-              model: (sourceNode.data.llmModel as string) || "gpt-4o-mini",
+              model: (sourceNode.data.llmModel as string) || "gpt-4.1",
               temperature: (sourceNode.data.temperature as number) ?? 0.7,
               llmNodeId: sourceNode.id,
             };
@@ -461,7 +461,7 @@ export async function runLLMChain(chain: LLMChain): Promise<string> {
       model: chain.model,
       temperature: chain.temperature,
       imageUrls: publicImageUrls && publicImageUrls.length > 0 ? publicImageUrls : undefined,
-      cost: 1,
+      cost: chain.model === "gpt-5.4-pro" ? 2 : 1,
     }),
   });
 

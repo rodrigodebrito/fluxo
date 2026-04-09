@@ -154,7 +154,7 @@ export default function SystemPromptGenerator({ onBack }: Props) {
         body: JSON.stringify({
           prompt: buildUserPrompt(),
           systemPrompt: META_SYSTEM_PROMPT,
-          model: "gpt-4o",
+          model: "gpt-4.1",
           temperature: 0.7,
           cost: 1,
         }),
@@ -327,7 +327,7 @@ export default function SystemPromptGenerator({ onBack }: Props) {
               {isGenerating ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Gerando com GPT-4o...
+                  Gerando com GPT-4.1...
                 </span>
               ) : (
                 "Gerar System Prompt (1 credito)"
