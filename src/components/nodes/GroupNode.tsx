@@ -112,7 +112,7 @@ export default function GroupNode({ id, data, selected }: NodeProps) {
             title="Mudar cor"
           />
           {showColorPicker && (
-            <div className="absolute top-6 left-0 z-50 bg-zinc-900 border border-zinc-700 rounded-lg p-2 shadow-xl nodrag">
+            <div className="absolute top-6 left-0 bg-zinc-900 border border-zinc-700 rounded-lg p-2 shadow-xl nodrag" style={{ zIndex: 9999 }}>
               <div className="grid grid-cols-4 gap-1.5">
                 {GROUP_COLORS.map((c, idx) => (
                   <button
@@ -151,7 +151,7 @@ export default function GroupNode({ id, data, selected }: NodeProps) {
             </svg>
           </button>
           {showSettings && (
-            <div className="absolute top-6 right-0 z-50 bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl nodrag min-w-[160px]">
+            <div className="absolute top-6 right-0 bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-xl nodrag min-w-[160px]" style={{ zIndex: 9999 }}>
               <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Tamanho do texto</span>
               <div className="flex items-center gap-1 mt-1.5">
                 {FONT_SIZES.map((size) => (
