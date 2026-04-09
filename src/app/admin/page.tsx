@@ -248,7 +248,7 @@ export default function AdminPage() {
       const res = await fetch("/api/workflows");
       if (res.ok) {
         const data = await res.json();
-        setUserWorkflows(data.workflows || []);
+        setUserWorkflows(Array.isArray(data) ? data : []);
       }
     } catch { /* ignore */ }
   }, []);
