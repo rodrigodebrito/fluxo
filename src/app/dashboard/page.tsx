@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UserCredits from "@/components/Header/UserCredits";
@@ -34,6 +34,8 @@ export default function Dashboard() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [usingTemplate, setUsingTemplate] = useState<string | null>(null);
+  const [templateTab, setTemplateTab] = useState<"library" | "tutorials">("library");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -121,15 +123,21 @@ export default function Dashboard() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffHours < 1) return "Editado agora";
-    if (diffHours < 24) return `Editado ${diffHours}h atras`;
-    if (diffDays < 7) return `Editado ${diffDays}d atras`;
-    return `Editado em ${d.toLocaleDateString("pt-BR")}`;
+    if (diffHours < 1) return "Agora";
+    if (diffHours < 24) return `${diffHours}h atras`;
+    if (diffDays < 7) return `${diffDays}d atras`;
+    return d.toLocaleDateString("pt-BR");
   };
 
   const filtered = search
     ? workflows.filter((w) => w.name.toLowerCase().includes(search.toLowerCase()))
     : workflows;
+
+  const scrollCarousel = (dir: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const amount = 300;
+    scrollRef.current.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -146,7 +154,6 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold text-white">Fluxo AI</h1>
             </Link>
 
-            {/* Nav links */}
             <nav className="hidden md:flex items-center gap-1">
               <Link href="/dashboard" className="px-3 py-1.5 text-sm text-white bg-zinc-800 rounded-lg">
                 Workflows
@@ -176,21 +183,102 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Title + search */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white">Meus Workflows</h2>
 
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar workflows..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-purple-500 w-64"
-            />
+        {/* ===== TEMPLATE LIBRARY (top, like Weavy) ===== */}
+        {!templatesLoading && templates.length > 0 && (
+          <section className="mb-10 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            {/* Tabs */}
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => setTemplateTab("library")}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${templateTab === "library" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+              >
+                Workflow library
+              </button>
+              <button
+                onClick={() => setTemplateTab("tutorials")}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${templateTab === "tutorials" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+              >
+                Tutorials
+              </button>
+            </div>
+
+            {templateTab === "library" && (
+              <div className="relative group/carousel">
+                {/* Scroll buttons */}
+                <button
+                  onClick={() => scrollCarousel("left")}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button
+                  onClick={() => scrollCarousel("right")}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+
+                <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                  {templates.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={(e) => handleUseTemplate(t.id, e)}
+                      className="flex-shrink-0 w-[180px] cursor-pointer group/card"
+                    >
+                      <div className="relative h-[120px] bg-zinc-800 rounded-xl overflow-hidden mb-2">
+                        {t.thumbnail ? (
+                          <img src={t.thumbnail} alt={t.name} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
+                            </svg>
+                          </div>
+                        )}
+                        {t.featured && (
+                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-yellow-500/90 text-black text-[9px] font-bold rounded-full uppercase">
+                            Destaque
+                          </div>
+                        )}
+                        {usingTemplate === t.id && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-300 font-medium truncate px-1">{t.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {templateTab === "tutorials" && (
+              <div className="text-center py-10 text-zinc-500 text-sm">
+                Tutoriais em breve...
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ===== MY FILES ===== */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-lg font-semibold text-white">My files</h2>
+
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 pr-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-purple-500 w-56"
+              />
+            </div>
           </div>
         </div>
 
@@ -203,17 +291,6 @@ export default function Dashboard() {
             Historico
           </Link>
         </div>
-
-        {/* Mobile create button */}
-        <button
-          onClick={handleCreate}
-          className="sm:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors mb-6"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Novo Workflow
-        </button>
 
         {/* Grid */}
         {loading ? (
@@ -246,18 +323,18 @@ export default function Dashboard() {
             <p className="text-zinc-500 text-sm">Nenhum workflow encontrado para &quot;{search}&quot;</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {/* Create New Card */}
             <button
               onClick={handleCreate}
-              className="group flex flex-col items-center justify-center h-[240px] bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-xl hover:border-purple-500 transition-colors"
+              className="group flex flex-col items-center justify-center aspect-square bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-xl hover:border-purple-500 transition-colors"
             >
-              <div className="w-12 h-12 bg-zinc-800 group-hover:bg-purple-600/20 rounded-xl flex items-center justify-center mb-2 transition-colors">
-                <svg className="w-6 h-6 text-zinc-500 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 bg-zinc-800 group-hover:bg-purple-600/20 rounded-xl flex items-center justify-center mb-2 transition-colors">
+                <svg className="w-5 h-5 text-zinc-500 group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <span className="text-sm text-zinc-500 group-hover:text-purple-400 transition-colors">Novo workflow</span>
+              <span className="text-xs text-zinc-500 group-hover:text-purple-400 transition-colors">Novo workflow</span>
             </button>
 
             {/* Workflow Cards */}
@@ -268,18 +345,18 @@ export default function Dashboard() {
                 className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden cursor-pointer hover:border-zinc-600 transition-all hover:-translate-y-0.5"
               >
                 {/* Thumbnail */}
-                <div className="h-[160px] bg-zinc-800 flex items-center justify-center">
+                <div className="aspect-square bg-zinc-800 flex items-center justify-center">
                   {wf.thumbnail ? (
                     <img src={wf.thumbnail} alt={wf.name} className="w-full h-full object-cover" />
                   ) : (
-                    <svg className="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-8 h-8 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
                     </svg>
                   )}
                 </div>
 
                 {/* Info */}
-                <div className="p-3">
+                <div className="p-2.5">
                   {editingId === wf.id ? (
                     <input
                       type="text"
@@ -292,85 +369,33 @@ export default function Dashboard() {
                       }}
                       onClick={(e) => e.stopPropagation()}
                       autoFocus
-                      className="w-full text-sm font-medium text-zinc-200 bg-zinc-800 border border-purple-500 rounded px-1.5 py-0.5 focus:outline-none"
+                      className="w-full text-xs font-medium text-zinc-200 bg-zinc-800 border border-purple-500 rounded px-1.5 py-0.5 focus:outline-none"
                     />
                   ) : (
                     <p
-                      className="text-sm font-medium text-zinc-200 truncate cursor-text hover:text-purple-300 transition-colors"
+                      className="text-xs font-medium text-zinc-200 truncate cursor-text hover:text-purple-300 transition-colors"
                       onDoubleClick={(e) => handleRenameStart(wf, e)}
                       title="Duplo clique para renomear"
                     >
                       {wf.name}
                     </p>
                   )}
-                  <p className="text-xs text-zinc-500 mt-1">{formatDate(wf.updatedAt)}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">Last edited {formatDate(wf.updatedAt)}</p>
                 </div>
 
                 {/* Delete button */}
                 <button
                   onClick={(e) => handleDelete(wf.id, e)}
-                  className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                   title="Deletar"
                 >
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             ))}
           </div>
-        )}
-
-        {/* Templates Gallery */}
-        {!templatesLoading && templates.length > 0 && (
-          <section className="mt-12">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Templates</h2>
-                <p className="text-sm text-zinc-500 mt-1">Comece rapido com workflows prontos</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {templates.map((t) => (
-                <div
-                  key={t.id}
-                  className="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-purple-500/50 transition-all"
-                >
-                  {t.featured && (
-                    <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-yellow-500/90 text-black text-[10px] font-bold rounded-full uppercase tracking-wide">
-                      Destaque
-                    </div>
-                  )}
-                  <div className="h-[140px] bg-zinc-800 flex items-center justify-center">
-                    {t.thumbnail ? (
-                      <img src={t.thumbnail} alt={t.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <svg className="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="p-3 flex-1 flex flex-col">
-                    <p className="text-sm font-medium text-zinc-200 truncate">{t.name}</p>
-                    {t.description && (
-                      <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{t.description}</p>
-                    )}
-                    <div className="mt-auto pt-3 flex items-center justify-between">
-                      <span className="text-[10px] text-zinc-600 uppercase tracking-wide">{t.category} &middot; {t.usage_count} usos</span>
-                      <button
-                        onClick={(e) => handleUseTemplate(t.id, e)}
-                        disabled={usingTemplate === t.id}
-                        className="px-3 py-1 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
-                      >
-                        {usingTemplate === t.id ? "Criando..." : "Usar"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         )}
       </main>
     </div>

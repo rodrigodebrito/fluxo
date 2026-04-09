@@ -123,6 +123,11 @@ export default function AdminPage() {
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateCategory, setNewTemplateCategory] = useState("geral");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
+  const [newTemplateThumbnail, setNewTemplateThumbnail] = useState("");
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [editThumbnailUploading, setEditThumbnailUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -242,6 +247,15 @@ export default function AdminPage() {
       setTemplatesLoading(false);
     }
   }, []);
+
+  const uploadThumbnail = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("files", file);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    if (data.urls && data.urls.length > 0) return data.urls[0];
+    throw new Error("Upload falhou");
+  };
 
   const fetchUserWorkflows = useCallback(async () => {
     try {
@@ -933,6 +947,37 @@ export default function AdminPage() {
                     />
                   </div>
                 </div>
+                <div className="mb-4">
+                  <label className="text-xs text-zinc-500 mb-1 block">Foto de capa</label>
+                  <div className="flex items-center gap-3">
+                    {newTemplateThumbnail && (
+                      <img src={newTemplateThumbnail} alt="Capa" className="w-20 h-14 object-cover rounded-lg border border-zinc-700" />
+                    )}
+                    <label className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${uploadingThumbnail ? "bg-zinc-700 text-zinc-500" : "bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700"}`}>
+                      {uploadingThumbnail ? "Enviando..." : newTemplateThumbnail ? "Trocar imagem" : "Upload imagem"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingThumbnail}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setUploadingThumbnail(true);
+                          try {
+                            const url = await uploadThumbnail(file);
+                            setNewTemplateThumbnail(url);
+                          } catch { alert("Erro ao enviar imagem"); }
+                          setUploadingThumbnail(false);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {newTemplateThumbnail && (
+                      <button onClick={() => setNewTemplateThumbnail("")} className="text-xs text-red-400 hover:text-red-300">Remover</button>
+                    )}
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={async () => {
@@ -945,12 +990,14 @@ export default function AdminPage() {
                           name: newTemplateName,
                           description: newTemplateDesc,
                           category: newTemplateCategory,
+                          thumbnail: newTemplateThumbnail || null,
                         }),
                       });
                       setShowCreateTemplate(false);
                       setNewTemplateName("");
                       setNewTemplateDesc("");
                       setSelectedWorkflowId("");
+                      setNewTemplateThumbnail("");
                       fetchTemplates();
                     }}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg"
@@ -978,6 +1025,7 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-zinc-800 text-left">
+                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Capa</th>
                       <th className="py-3 px-4 text-xs font-medium text-zinc-500">Nome</th>
                       <th className="py-3 px-4 text-xs font-medium text-zinc-500">Categoria</th>
                       <th className="py-3 px-4 text-xs font-medium text-zinc-500">Status</th>
@@ -987,8 +1035,15 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {templates.map((t: { id: string; name: string; description: string; category: string; is_published: boolean; featured: boolean; usage_count: number; created_at: string }) => (
+                    {templates.map((t: { id: string; name: string; description: string; category: string; thumbnail: string | null; is_published: boolean; featured: boolean; usage_count: number; created_at: string }) => (
                       <tr key={t.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                        <td className="py-3 px-4">
+                          {t.thumbnail ? (
+                            <img src={t.thumbnail} alt="" className="w-14 h-10 object-cover rounded" />
+                          ) : (
+                            <div className="w-14 h-10 bg-zinc-800 rounded flex items-center justify-center text-zinc-600 text-[10px]">Sem capa</div>
+                          )}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="text-sm text-zinc-300">{t.name}</div>
                           {t.description && <div className="text-xs text-zinc-500">{t.description}</div>}
@@ -1039,6 +1094,12 @@ export default function AdminPage() {
                               {t.featured ? "Remover destaque" : "Destacar"}
                             </button>
                             <button
+                              onClick={() => setEditingTemplate({ ...t })}
+                              className="text-xs text-blue-400 hover:text-blue-300"
+                            >
+                              Editar
+                            </button>
+                            <button
                               onClick={async () => {
                                 if (!confirm("Deletar este template?")) return;
                                 await fetch(`/api/admin/templates?id=${t.id}`, { method: "DELETE" });
@@ -1054,6 +1115,107 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Edit template modal */}
+            {editingTemplate && (
+              <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setEditingTemplate(null)}>
+                <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-sm font-medium text-white mb-4">Editar Template</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-zinc-500 mb-1 block">Nome</label>
+                      <input
+                        value={editingTemplate.name}
+                        onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 mb-1 block">Descricao</label>
+                      <input
+                        value={editingTemplate.description}
+                        onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 mb-1 block">Categoria</label>
+                      <select
+                        value={editingTemplate.category}
+                        onChange={(e) => setEditingTemplate({ ...editingTemplate, category: e.target.value })}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                      >
+                        <option value="geral">Geral</option>
+                        <option value="imagem">Imagem</option>
+                        <option value="video">Video</option>
+                        <option value="avatar">Avatar</option>
+                        <option value="lora">LoRA</option>
+                        <option value="edicao">Edicao</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 mb-1 block">Foto de capa</label>
+                      <div className="flex items-center gap-3">
+                        {editingTemplate.thumbnail && (
+                          <img src={editingTemplate.thumbnail} alt="Capa" className="w-24 h-16 object-cover rounded-lg border border-zinc-700" />
+                        )}
+                        <label className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${editThumbnailUploading ? "bg-zinc-700 text-zinc-500" : "bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700"}`}>
+                          {editThumbnailUploading ? "Enviando..." : editingTemplate.thumbnail ? "Trocar" : "Upload"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={editThumbnailUploading}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setEditThumbnailUploading(true);
+                              try {
+                                const url = await uploadThumbnail(file);
+                                setEditingTemplate({ ...editingTemplate, thumbnail: url });
+                              } catch { alert("Erro ao enviar imagem"); }
+                              setEditThumbnailUploading(false);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {editingTemplate.thumbnail && (
+                          <button onClick={() => setEditingTemplate({ ...editingTemplate, thumbnail: null })} className="text-xs text-red-400 hover:text-red-300">Remover</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-6">
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/admin/templates", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            id: editingTemplate.id,
+                            name: editingTemplate.name,
+                            description: editingTemplate.description,
+                            category: editingTemplate.category,
+                            thumbnail: editingTemplate.thumbnail,
+                          }),
+                        });
+                        setEditingTemplate(null);
+                        fetchTemplates();
+                      }}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={() => setEditingTemplate(null)}
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
