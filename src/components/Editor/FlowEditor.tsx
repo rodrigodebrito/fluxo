@@ -93,7 +93,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "output":
       return { label: "Output", resultUrl: "", resultType: "none", isLoading: false };
     case "group":
-      return { label: "", colorIndex: 0 };
+      return { label: "", colorIndex: 0, notes: "", fontSize: 14 };
     default:
       return { label: "Node" };
   }
