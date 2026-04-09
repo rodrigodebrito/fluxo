@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "sora-2" | "sora-2-char";
 
 export interface ModelInfo {
   id: AIModel;
@@ -258,6 +258,32 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["grokResolution", "grokDuration", "grokMode", "aspectRatio", "runs"],
+  },
+  {
+    id: "sora-2",
+    name: "Sora 2",
+    type: "video",
+    description: "Text/Image to Video (OpenAI Sora 2 via fal.ai)",
+    costPerRun: 80,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
+    ],
+    params: ["soraDuration", "aspectRatio", "seed", "runs"],
+  },
+  {
+    id: "sora-2-char",
+    name: "Sora 2 Characters",
+    type: "video",
+    description: "Video com personagens persistentes (Sora 2 Characters via fal.ai)",
+    costPerRun: 80,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
+      { id: "video-1", label: "Character 1*", required: true },
+      { id: "video-2", label: "Character 2", required: false },
+    ],
+    params: ["soraDuration", "aspectRatio", "charName1", "charName2", "seed", "runs"],
   },
 ];
 

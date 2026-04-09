@@ -17,6 +17,15 @@ const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
   },
 };
 
+// Sora 2 endpoints
+const SORA_ENDPOINTS: Record<string, { t2v: string; i2v: string; characters: string }> = {
+  "sora-2": {
+    t2v: "fal-ai/sora-2/text-to-video",
+    i2v: "fal-ai/sora-2/image-to-video",
+    characters: "fal-ai/sora-2/characters",
+  },
+};
+
 // Flux 2 + utility endpoints (no tier distinction)
 const FLUX_ENDPOINTS: Record<string, string> = {
   "flux-2-pro": "fal-ai/flux-2-pro",
@@ -31,6 +40,15 @@ export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro"): stri
   const template = FAL_ENDPOINT_TEMPLATES[model];
   if (!template) return null;
   return template[tier];
+}
+
+// Sora 2: resolve endpoint based on whether image is provided
+export function getSoraEndpoint(hasImage: boolean): string {
+  return hasImage ? SORA_ENDPOINTS["sora-2"].i2v : SORA_ENDPOINTS["sora-2"].t2v;
+}
+
+export function getSoraCharactersEndpoint(): string {
+  return SORA_ENDPOINTS["sora-2"].characters;
 }
 
 // Keep a flat lookup for validation
@@ -364,4 +382,57 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
   }
 
   throw new Error(`Modelo fal.ai desconhecido: ${model}`);
+}
+
+// === Sora 2 specific functions ===
+
+interface SoraCharacterResult {
+  id: string;
+  name: string;
+}
+
+export async function createSoraCharacter(
+  falKey: string,
+  videoUrl: string,
+  name: string
+): Promise<SoraCharacterResult> {
+  const endpoint = getSoraCharactersEndpoint();
+  const response = await fetchWithRetry(`${QUEUE_BASE}/${endpoint}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ video_url: videoUrl, name }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Sora Characters failed (${response.status}): ${text.slice(0, 300)}`);
+  }
+
+  return safeJson(response);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function buildSoraInput(input: {
+  prompt: string;
+  imageUrl?: string;
+  duration?: number;
+  aspectRatio?: string;
+  characterIds?: string[];
+  seed?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}): Record<string, any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
+    prompt: input.prompt,
+    duration: input.duration || 4,
+    aspect_ratio: input.aspectRatio || "16:9",
+    delete_video: false,
+  };
+  if (input.imageUrl) body.image_url = input.imageUrl;
+  if (input.characterIds && input.characterIds.length > 0) body.character_ids = input.characterIds;
+  if (input.seed != null) body.seed = input.seed;
+  return body;
 }

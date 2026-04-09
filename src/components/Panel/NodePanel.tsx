@@ -210,6 +210,13 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const grokDuration = (node.data.grokDuration as number) || 6;
   const grokMode = (node.data.grokMode as string) || "normal";
 
+  // Sora 2
+  const soraDuration = (node.data.soraDuration as number) || 4;
+  const isSora = model === "sora-2" || model === "sora-2-char";
+  const isSoraChar = model === "sora-2-char";
+  const charName1 = (node.data.charName1 as string) || "character1";
+  const charName2 = (node.data.charName2 as string) || "";
+
   // Kling Avatar TTS
   const isAvatar = model === "kling-avatar";
   const avatarTier = (node.data.avatarTier as string) || "standard";
@@ -283,6 +290,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "grok-i2v") {
     const grokPerSec = grokResolution === "720p" ? 3 : 1.6;
     costPerRun = Math.ceil(grokPerSec * grokDuration);
+  }
+  if (isSora) {
+    costPerRun = 20 * soraDuration;
   }
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
@@ -1105,6 +1115,57 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               <option value="normal">Normal</option>
               <option value="spicy">Spicy</option>
             </select>
+          </div>
+        )}
+
+        {/* Sora Duration */}
+        {params.includes("soraDuration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duracao</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="20 cred/s — ex: 4s = 80 cred, 20s = 400 cred">i</span>
+            </div>
+            <select
+              value={soraDuration}
+              onChange={(e) => update({ soraDuration: parseInt(e.target.value) })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200"
+            >
+              <option value={4}>4s ({20 * 4} cred)</option>
+              <option value={8}>8s ({20 * 8} cred)</option>
+              <option value={12}>12s ({20 * 12} cred)</option>
+              <option value={16}>16s ({20 * 16} cred)</option>
+              <option value={20}>20s ({20 * 20} cred)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Sora Character Names */}
+        {params.includes("charName1") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Character 1 Name</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Nome do personagem — use esse nome no prompt para referencia-lo">i</span>
+            </div>
+            <input
+              value={charName1}
+              onChange={(e) => update({ charName1: e.target.value })}
+              placeholder="ex: joao, hero, modelo..."
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
+            />
+          </div>
+        )}
+        {params.includes("charName2") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Character 2 Name</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Opcional — conecte um segundo video de personagem">i</span>
+            </div>
+            <input
+              value={charName2}
+              onChange={(e) => update({ charName2: e.target.value })}
+              placeholder="(opcional)"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
+            />
           </div>
         )}
 
