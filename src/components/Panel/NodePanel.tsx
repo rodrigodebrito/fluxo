@@ -283,9 +283,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     costPerRun = wanPerSec * wanDuration;
   }
   if (isAvatar) {
-    // Standard: 8 cred/s (~$0.04/s), Pro: 16 cred/s (~$0.08/s)
-    // Base cost for ~5s video + TTS
-    costPerRun = avatarTier === "pro" ? 80 : 40;
+    // Standard: 8 cred/s, Pro: 16 cred/s (1:1 com Kie.ai)
+    const avatarPerSec = avatarTier === "pro" ? 16 : 8;
+    costPerRun = avatarPerSec * 5; // estimativa 5s, real calculado na execucao
   }
   if (model === "grok-i2v") {
     const grokPerSec = grokResolution === "720p" ? 3 : 1.6;

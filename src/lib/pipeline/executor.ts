@@ -100,6 +100,7 @@ interface PipelineData {
   avatarVoice?: string;
   avatarSpeed?: number;
   audioUrl?: string;
+  audioDuration?: number;
   // LLM Chain
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
@@ -351,6 +352,8 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
         const aUrl = (sourceNode.data.audioUrl as string) || "";
         if (aUrl) {
           result.audioUrl = aUrl;
+          const aDur = sourceNode.data.audioDuration as number;
+          if (aDur > 0) result.audioDuration = aDur;
         }
       } else if (sourceNode.type === "model") {
         // Model → Model: usar resultado como referência
@@ -570,6 +573,7 @@ export async function startGeneration(
     avatarVoice?: string;
     avatarSpeed?: number;
     audioUrl?: string;
+    audioDuration?: number;
     grokResolution?: string;
     grokDuration?: number;
     grokMode?: string;

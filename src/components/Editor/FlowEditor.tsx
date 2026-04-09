@@ -1002,6 +1002,19 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "grok-i2v") {
         const grokPerSec = pipeline.grokResolution === "720p" ? 3 : 1.6;
         costPerRun = Math.ceil(grokPerSec * (pipeline.grokDuration || 6));
+      } else if (m === "kling-avatar") {
+        const perSec = pipeline.avatarTier === "pro" ? 16 : 8;
+        if (pipeline.audioDuration && pipeline.audioDuration > 0) {
+          // Audio input: charge by actual duration
+          costPerRun = perSec * Math.ceil(pipeline.audioDuration);
+        } else if (pipeline.avatarText) {
+          // TTS: estimate ~2.5 words/sec at normal speed
+          const words = pipeline.avatarText.trim().split(/\s+/).length;
+          const estSeconds = Math.max(3, Math.ceil(words / 2.5 / (pipeline.avatarSpeed || 1)));
+          costPerRun = perSec * Math.min(estSeconds, 15);
+        } else {
+          costPerRun = perSec * 5; // fallback 5s
+        }
       } else if (m === "extract-audio") {
         costPerRun = 1;
       }
@@ -1056,6 +1069,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         avatarVoice: pipeline.avatarVoice,
         avatarSpeed: pipeline.avatarSpeed,
         audioUrl: pipeline.audioUrl,
+        audioDuration: pipeline.audioDuration,
         grokResolution: pipeline.grokResolution,
         grokDuration: pipeline.grokDuration,
         grokMode: pipeline.grokMode,
