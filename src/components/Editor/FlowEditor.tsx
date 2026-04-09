@@ -948,10 +948,9 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
         else costPerRun = 60;
       } else if (m === "seedance") {
-        const is720 = pipeline.sdResolution === "720p";
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
-        const perSec = isFast ? (is720 ? 33 : 15.5) : (is720 ? 41 : 19);
-        costPerRun = Math.round(perSec * (pipeline.sdDuration || 8));
+        const perSec = isFast ? 20 : 26;
+        costPerRun = perSec * (pipeline.sdDuration || 8);
       } else if (m === "kling") {
         const perSec = pipeline.klingMode === "pro"
           ? (pipeline.generateAudio ? 27 : 18)
@@ -963,21 +962,25 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "kling-o3-i2v") {
         const isPro = pipeline.falTier === "pro";
         const perSec = isPro
-          ? (pipeline.generateAudio ? 29 : 24)
-          : (pipeline.generateAudio ? 20 : 16);
+          ? (pipeline.generateAudio ? 28 : 23)
+          : (pipeline.generateAudio ? 23 : 17);
         const o3Dur = pipeline.multiShotEnabled && pipeline.multiShots?.length
           ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
           : (pipeline.klingO3Duration || 5);
         costPerRun = perSec * o3Dur;
       } else if (m === "kling-o3-edit") {
         const isPro = pipeline.falTier === "pro";
-        costPerRun = (isPro ? 36 : 24) * 5;
+        const editDur = pipeline.videoDuration || 5;
+        costPerRun = (isPro ? 34 : 26) * editDur;
       } else if (m === "kling-o1-ref") {
         const isPro = pipeline.falTier === "pro";
+        const perSec = isPro
+          ? (pipeline.generateAudio ? 28 : 23)
+          : (pipeline.generateAudio ? 23 : 17);
         const refDur = (pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0)
           ? pipeline.multiShots.reduce((s, shot) => s + shot.duration, 0)
           : (pipeline.klingO1Duration || 5);
-        costPerRun = (isPro ? 36 : 24) * refDur;
+        costPerRun = perSec * refDur;
       } else if (m === "kling-motion") {
         // 2.6: 720p=$0.03/s, 1080p=$0.045/s → 5/s, 8/s credits (50% margin)
         // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 17/s, 23/s credits (50% margin)

@@ -232,20 +232,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if ((model === "gpt-image-txt" || model === "gpt-image-img") && gptQuality === "high") costPerRun = 22;
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
-    if (sdModel.includes("seedance-2")) {
-      // PiAPI pricing (preview): $0.10/seg (fast) / $0.15/seg (normal) + ~35% margem
-      const isFast = sdModel === "bytedance/seedance-2-fast";
-      const perSec = isFast ? 15 : 22; // creditos por segundo
-      costPerRun = Math.round(perSec * sdDuration);
-    } else {
-      // Kie AI (Seedance 1.5 Pro) pricing
-      const is720 = sdResolution === "720p";
-      const isFast = sdModel === "bytedance/seedance-2-fast";
-      let perSec: number;
-      if (isFast) { perSec = is720 ? 33 : 15.5; }
-      else { perSec = is720 ? 41 : 19; }
-      costPerRun = Math.round(perSec * sdDuration);
-    }
+    const isFast = sdModel === "bytedance/seedance-2-fast";
+    const perSec = isFast ? 20 : 26;
+    costPerRun = perSec * sdDuration;
   }
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);
@@ -255,23 +244,27 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "kling-o3-i2v") {
     const isPro = falTier === "pro";
     const perSec = isPro
-      ? (generateAudio ? 29 : 24)
-      : (generateAudio ? 20 : 16);
+      ? (generateAudio ? 28 : 23)
+      : (generateAudio ? 23 : 17);
     const dur = multiShotEnabled && multiShots.length > 0 ? totalShotDuration : klingO3Duration;
     costPerRun = perSec * dur;
   }
   if (model === "kling-o3-edit") {
     const isPro = falTier === "pro";
-    costPerRun = (isPro ? 36 : 24) * 5;
+    const editDur = (node.data.videoDuration as number) || 5;
+    costPerRun = (isPro ? 34 : 26) * editDur;
   }
   if (model === "kling-o1-ref") {
     const isPro = falTier === "pro";
+    const perSec = isPro
+      ? (generateAudio ? 28 : 23)
+      : (generateAudio ? 23 : 17);
     const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
     const msEnabled = (node.data.multiShotEnabled as boolean) ?? false;
     const refDur = (msEnabled && multiShots.length > 0)
       ? multiShots.reduce((s, shot) => s + shot.duration, 0)
       : klingO1Duration;
-    costPerRun = (isPro ? 36 : 24) * refDur;
+    costPerRun = perSec * refDur;
   }
   if (isFlux) {
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
