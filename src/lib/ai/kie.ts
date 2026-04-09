@@ -399,9 +399,15 @@ export async function createVeoTask(
     body.imageUrls = input.imageUrls;
     // Auto-detect generation type
     if (!input.generationType) {
-      body.generationType = input.imageUrls.length >= 2
-        ? "FIRST_AND_LAST_FRAMES_2_VIDEO"
-        : "REFERENCE_2_VIDEO";
+      if (input.imageUrls.length >= 2) {
+        body.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
+      } else if (input.model === "veo3_fast") {
+        // REFERENCE_2_VIDEO only works with Fast model
+        body.generationType = "REFERENCE_2_VIDEO";
+      } else {
+        // Quality/Lite: use FIRST_AND_LAST_FRAMES with single image
+        body.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
+      }
     } else {
       body.generationType = input.generationType;
     }

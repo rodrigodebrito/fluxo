@@ -922,11 +922,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       return;
     }
 
-    // Veo3: imagem de referência só funciona com Fast — forçar se necessário
-    if (pipeline.model === "veo3" && pipeline.localImageUrls.length > 0 && pipeline.veoModel !== "veo3_fast") {
-      pipeline.veoModel = "veo3_fast";
-      setNodes((nds) => nds.map((n) => n.id === pipeline.modelNodeId ? { ...n, data: { ...n.data, veoModel: "veo3_fast" } } : n));
-    }
+
 
     // Criar AbortController para este node
     const ac = new AbortController();
