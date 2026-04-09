@@ -2,6 +2,8 @@
 
 Plataforma visual node-based para geracao de imagens e videos com IA. Inspirada no [Weavy.ai](https://app.weavy.ai), permite criar workflows conectando nos de prompt, imagens e modelos de IA em um canvas interativo.
 
+O diferencial nao e o modelo — e o fluxo. Nenhuma ferramenta gratis conecta imagem → LLM → video → extract audio → avatar num pipeline automatizado. O usuario monta o fluxo uma vez e depois so troca o input.
+
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript)
@@ -9,9 +11,10 @@ Plataforma visual node-based para geracao de imagens e videos com IA. Inspirada 
 - **Supabase** (PostgreSQL + Auth + RLS) - banco de dados e autenticacao
 - **Tailwind CSS 4** - estilizacao
 - **Kie.ai API** - backend de IA (imagens, videos, avatar, TTS)
+- **fal.ai** - Kling O3, Flux 2 Pro, BG Removal, Upscale
 - **PiAPI** - Seedance 2.0 (video)
 - **Replicate** - Fine-tune LoRA (modelos personalizados)
-- **OpenAI API** - LLM (GPT-4o, GPT-4.1, GPT-5)
+- **OpenAI API** - LLM (GPT-4.1, GPT-5.4 family)
 - **ElevenLabs** (via Kie.ai) - Text-to-Speech
 - **Render** - deploy de producao
 
@@ -24,6 +27,7 @@ Plataforma visual node-based para geracao de imagens e videos com IA. Inspirada 
 - Projeto no [Supabase](https://supabase.com) (PostgreSQL + Auth)
 - API key da [OpenAI](https://platform.openai.com) para funcionalidades LLM
 - API key da [PiAPI](https://piapi.ai) para Seedance 2.0
+- API key da [fal.ai](https://fal.ai) para Kling O3, Flux, BG Removal, Upscale
 - API token do [Replicate](https://replicate.com) para modelos personalizados (LoRA)
 
 ### Instalacao
@@ -39,6 +43,7 @@ SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 KIE_API_KEY="sua-api-key-aqui"
 OPENAI_API_KEY="sk-..."
 PIAPI_API_KEY="sua-piapi-key"
+FAL_KEY="sua-fal-key"
 REPLICATE_API_TOKEN="r8_..."
 REPLICATE_USERNAME="seu-username"
 
@@ -65,14 +70,15 @@ src/
     api/
       generate/              # Nano Banana Pro (image)
       generate-gpt-image/    # GPT Image 1.5 (text-to-image e image-to-image)
-      generate-kling/        # Kling 3.0 (video)
+      generate-kling/        # Kling 3.0 + Kling Motion (video)
       generate-seedance/     # Seedance 2.0 via PiAPI (video)
       generate-video/        # Veo 3.1 (video)
-      generate-wan/          # Wan 2.1 (video)
-      generate-fal/          # Fal.ai models (video/image)
+      generate-wan/          # Wan 2.7 (video)
+      generate-fal/          # fal.ai models (Kling O3, Flux, BG Removal, Upscale)
       generate-avatar/       # Kling Avatar TTS (talking head)
       generate-replicate/    # Modelos personalizados LoRA (image)
       generate-llm/          # OpenAI GPT (text generation)
+      extract-audio/         # Extrair audio de video (ffmpeg)
       training/              # Treino de modelos LoRA (create/status/list)
       webhooks/replicate/    # Webhook do Replicate (treino completo)
       status/                # Polling de status de tasks
@@ -80,10 +86,10 @@ src/
       workflows/             # CRUD de workflows
       templates/             # CRUD de system prompt templates
       credits/               # Saldo e historico de creditos
-      admin/                 # Painel admin
+      admin/                 # Painel admin (usuarios, creditos, templates)
       health/                # Health check
     editor/[id]/             # Pagina do editor (Canvas + App tabs)
-    dashboard/               # Dashboard com workflows do usuario
+    dashboard/               # Dashboard estilo Weavy (templates + meus arquivos)
     models/                  # Pagina "Meus Modelos" (treino LoRA)
     history/                 # Historico de geracoes
     terms/                   # Termos de uso
@@ -92,7 +98,7 @@ src/
   components/
     App/
       AppView.tsx            # Grade de apps (aba App do editor)
-      SystemPromptGenerator.tsx  # Gerador de system prompt com IA
+      SystemPromptGenerator.tsx  # Gerador de system prompt com IA (GPT-4.1)
     Editor/FlowEditor.tsx    # Canvas principal (ReactFlow, toolbar, context menu, undo/redo)
     Gallery/Gallery.tsx      # Galeria fullscreen de resultados
     Header/                  # Header com creditos e usuario
@@ -103,15 +109,17 @@ src/
       ImageInputNode.tsx     # No de upload de arquivos (imagens/videos)
       AudioInputNode.tsx     # No de upload de audio (MP3/WAV/AAC/OGG/M4A)
       ModelNode.tsx          # No de modelo de IA (generico para todos os modelos)
-      AnyLLMNode.tsx         # No de LLM (GPT-4o, GPT-4.1, GPT-5)
+      AnyLLMNode.tsx         # No de LLM (GPT-4.1, GPT-5.4 family)
       RouterNode.tsx         # No roteador (split conexoes para multiplos destinos)
       PromptConcatNode.tsx   # No concatenador de prompts
       KlingElementNode.tsx   # No auxiliar para Kling Elements
       VideoConcatNode.tsx    # No de concatenacao de videos
       LastFrameNode.tsx      # No de last frame
+      GroupNode.tsx           # No de grupo/secao (cores, notas, font size)
       OutputNode.tsx         # No de saida
   lib/
     ai/kie.ts                # Funcoes de API para todos os modelos (Kie.ai, Avatar, TTS)
+    ai/fal.ts                # fal.ai models (Kling O3, Flux, BG Removal, Upscale)
     ai/replicate.ts          # Replicate API (treino LoRA + inferencia)
     pipeline/executor.ts     # Orquestrador: extrai dados, faz upload, inicia geracao, polling
     auth-guard.ts            # Verificacao de auth e creditos nas API routes
@@ -129,7 +137,7 @@ src/
 4. Se houver LLM chain (AnyLLM conectado ao modelo), roda o LLM primeiro
 5. Faz upload de imagens locais para catbox.moe (URLs permanentes)
 6. Chama a API route correspondente ao modelo
-7. API route verifica creditos, cobra, e chama a Kie.ai API
+7. API route verifica creditos, cobra, e chama a API do provider
 8. Polling a cada 3s ate task completar (com refund em caso de falha)
 9. Resultado (URLs de imagens/videos) exibido no no do modelo
 
@@ -139,35 +147,118 @@ src/
 
 ### Imagens
 
-| Modelo | Tipo | Descricao |
-|--------|------|-----------|
-| **Nano Banana Pro** | Text/Image to Image | Geracao de imagens de alta qualidade (1K/2K/4K) |
-| **GPT Image 1.5** | Text to Image | OpenAI GPT Image, suporta fundo transparente |
-| **GPT Image 1.5 Edit** | Image to Image | Edicao de imagens com GPT, aceita ate 16 imagens |
-| **Modelo Treinado (LoRA)** | Text to Image | Modelos personalizados via Replicate fine-tune |
+| Modelo | Provider | Tipo | Descricao |
+|--------|----------|------|-----------|
+| **Nano Banana Pro** | Kie | Text/Image to Image | Geracao de imagens de alta qualidade (1K/2K/4K) |
+| **GPT Image 1.5** | Kie | Text to Image | OpenAI GPT Image, suporta fundo transparente |
+| **GPT Image 1.5 Edit** | Kie | Image to Image | Edicao de imagens com GPT, aceita ate 16 imagens |
+| **Flux 2 Pro** | fal.ai | Text to Image | Imagens HD via fal.ai |
+| **Flux 2 Edit** | fal.ai | Image to Image | Edicao de imagens com Flux |
+| **Modelo Treinado (LoRA)** | Replicate | Text to Image | Modelos personalizados via fine-tune |
 
 ### Videos
 
-| Modelo | Tipo | Descricao |
-|--------|------|-----------|
-| **Veo 3.1** | Text/Image to Video | Google Veo 3, modos Lite/Fast/Quality |
-| **Seedance 2.0** | Text/Image to Video | ByteDance via PiAPI, modos Normal/Fast (preview) |
-| **Kling 3** | Text/Image to Video | Kling 3.0, suporta elements (@element1-3) |
-| **Kling Avatar TTS** | Image+Audio to Video | Talking head — foto + texto/audio vira video falando |
+| Modelo | Provider | Tipo | Descricao |
+|--------|----------|------|-----------|
+| **Veo 3.1** | Kie | Text/Image to Video | Google Veo 3, modos Lite/Fast/Quality |
+| **Kling 3** | Kie | Text/Image to Video | Kling 3.0, suporta elements e multi-shot |
+| **Kling Motion** | Kie | Motion Control | Kling 2.6/3.0, character + video de referencia |
+| **Kling O3** | fal.ai | Image to Video | Kling O3 Pro, standard/pro com audio |
+| **Kling O3 Edit** | fal.ai | Video to Video | Editar video existente com IA |
+| **Kling O3 Ref** | fal.ai | Reference to Video | Video de referencia + imagens |
+| **Seedance 2.0** | PiAPI | Text/Image to Video | ByteDance, modos Normal/Fast |
+| **Wan 2.7** | Kie | Image to Video | Wan 2.7, 720p/1080p |
+| **Grok Imagine** | Kie | Image to Video | I2V economico, 480p/720p |
+| **Kling Avatar TTS** | Kie | Image+Audio to Video | Talking head — foto + texto/audio vira video falando |
 
-### Audio
+### Audio/Ferramentas
 
-| Modelo | Tipo | Descricao |
-|--------|------|-----------|
-| **ElevenLabs TTS** | Text to Speech | 21 vozes, multilingual v2 via Kie AI (integrado no Avatar) |
+| Ferramenta | Tipo | Descricao |
+|------------|------|-----------|
+| **Extract Audio** | Audio | Extrair audio de video (ffmpeg) |
+| **BG Removal** | Imagem | Remover fundo (BiRefNet via fal.ai) |
+| **Upscale** | Imagem | Aumentar resolucao (ESRGAN via fal.ai) |
 
 ### LLM (Text Generation)
 
 | Modelo | Descricao |
 |--------|-----------|
-| **GPT-4o** | Modelo rapido e eficiente da OpenAI |
-| **GPT-4.1** | Modelo de ultima geracao da OpenAI |
-| **GPT-5** | Modelo mais avancado da OpenAI |
+| **GPT-4.1** | Default, bom custo-beneficio, suporta vision |
+| **GPT-5.4 Nano** | Mais barato da familia nova |
+| **GPT-5.4 Mini** | Equilibrio custo/qualidade |
+| **GPT-5.4** | Completo |
+| **GPT-5.4 Pro** | Mais capaz (2 creditos) |
+
+---
+
+## Tabela de custos
+
+> Consultar [models.md](models.md) para tabela completa com precos por provider.
+
+### Custo base
+
+| Creditos | USD | BRL |
+|----------|-----|-----|
+| 1 | $0.005 | R$0,03 |
+| 10 | $0.05 | R$0,27 |
+| 100 | $0.50 | R$2,67 |
+| 1.000 | $5.00 | R$26,71 |
+
+### Preco de venda (para o cliente)
+
+| Pacote | Preco | Por credito | Margem |
+|--------|-------|-------------|--------|
+| 500 creditos | R$24,90 | R$0,050 | ~86% |
+| 1.000 creditos | R$44,90 | R$0,045 | ~68% |
+| 2.500 creditos | R$99,90 | R$0,040 | ~50% |
+
+### Resumo de creditos por modelo
+
+#### Imagens (fixo por geracao)
+
+| Modelo | Creditos |
+|--------|----------|
+| Nano Banana Pro | 18 (24 em 4K) |
+| GPT Image 1.5 | 4 low / 22 high |
+| Flux 2 Pro | 6 (9 HD) |
+| BG Removal | 1 |
+| Upscale | 2 |
+| Custom LoRA | 10 |
+
+#### Videos (por segundo)
+
+| Modelo | Creditos/s |
+|--------|-----------|
+| Grok Imagine | 1.6/s (480p) / 3/s (720p) |
+| Kling 3 Std | 14/s sem audio / 20/s com audio |
+| Kling 3 Pro | 18/s sem audio / 27/s com audio |
+| Kling O3 Std | 17/s sem audio / 23/s com audio |
+| Kling O3 Pro | 23/s sem audio / 28/s com audio |
+| Kling O3 Edit Std | 26/s |
+| Kling O3 Edit Pro | 34/s |
+| Kling Motion 2.6 | 6/s (720p) / 9/s (1080p) |
+| Kling Motion 3.0 | 20/s (720p) / 27/s (1080p) |
+| Kling Avatar Std | 8/s |
+| Kling Avatar Pro | 16/s |
+| Wan 2.7 | 16/s (720p) / 24/s (1080p) |
+| Seedance 2 | 26/s |
+| Seedance 2 Fast | 20/s |
+
+#### Videos (fixo por geracao)
+
+| Modelo | Creditos |
+|--------|----------|
+| Veo 3 Lite | 30 |
+| Veo 3 Fast | 60 |
+| Veo 3 Quality | 250 |
+
+#### Outros
+
+| Modelo | Creditos |
+|--------|----------|
+| LLM (todos exceto Pro) | 1 |
+| LLM GPT-5.4 Pro | 2 |
+| Extract Audio | 1 |
 
 ---
 
@@ -183,7 +274,10 @@ src/
 | **Prompt Concat** | Combina multiplos prompts em um so |
 | **Video Concat** | Concatenacao de videos |
 | **Last Frame** | Extrai ultimo frame de video |
+| **Extract Audio** | Extrai audio de video (MP3/WAV) |
 | **Kling Element** | No auxiliar para Kling Elements (ate 3 elements com 2-4 imagens cada) |
+| **Group / Section** | Grupo visual com cores, notas multi-linha e tamanho de fonte ajustavel |
+| **Output** | No de saida (imagem, video ou audio) |
 
 ---
 
@@ -193,68 +287,7 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 
 ### Apps disponiveis
 
-- **Gerador de System Prompt**: Preencha 7 campos e gere um system prompt profissional usando GPT-4o (1 credito). Suporta salvar e carregar templates.
-
----
-
-## Tabela de custos
-
-> Base: R$ 26,76 por 1.000 creditos (1 credito = R$ 0,02676)
-
-### Imagens
-
-| Modelo | Config | Creditos | Valor (R$) |
-|--------|--------|----------|------------|
-| Nano Banana Pro | 1K/2K | 18 | R$ 0,48 |
-| Nano Banana Pro | 4K | 24 | R$ 0,64 |
-| GPT Image 1.5 | Medium | 4 | R$ 0,11 |
-| GPT Image 1.5 | High | 22 | R$ 0,59 |
-| GPT Image 1.5 Edit | Medium | 4 | R$ 0,11 |
-| GPT Image 1.5 Edit | High | 22 | R$ 0,59 |
-
-### Veo 3.1
-
-| Modo | Creditos | Valor (R$) |
-|------|----------|------------|
-| Lite | 30 | R$ 0,80 |
-| Fast | 60 | R$ 1,61 |
-| Quality | 250 | R$ 6,69 |
-
-### Kling 3 (custo por segundo x duracao)
-
-| Modo | 5s | 8s | 10s | 15s |
-|------|----|----|-----|-----|
-| Std sem audio | R$ 1,87 | R$ 3,00 | R$ 3,74 | R$ 5,62 |
-| Std com audio | R$ 2,68 | R$ 4,28 | R$ 5,35 | R$ 8,03 |
-| Pro sem audio | R$ 2,41 | R$ 3,85 | R$ 4,82 | R$ 7,22 |
-| Pro com audio | R$ 3,61 | R$ 5,78 | R$ 7,22 | R$ 10,83 |
-
-### Seedance 2.0 (via PiAPI)
-
-| Modo | Creditos | Valor (R$) |
-|------|----------|------------|
-| Normal (preview) | 50 | R$ 1,34 |
-| Fast (preview) | 30 | R$ 0,80 |
-
-### Kling Avatar TTS
-
-| Modo | Creditos | Valor (R$) |
-|------|----------|------------|
-| Standard (720p) | 40 | R$ 1,07 |
-| Pro (1080p) | 80 | R$ 2,14 |
-
-### Modelo Treinado (LoRA)
-
-| Acao | Creditos | Valor (R$) |
-|------|----------|------------|
-| Treinar modelo | 50 | R$ 1,34 |
-| Gerar 1 imagem | 10 | R$ 0,27 |
-
-### LLM
-
-| Modelo | Creditos | Valor (R$) |
-|--------|----------|------------|
-| Any LLM (qualquer) | 1 | R$ 0,03 |
+- **Gerador de System Prompt**: Preencha 7 campos e gere um system prompt profissional usando GPT-4.1 (1 credito). Suporta salvar e carregar templates.
 
 ---
 
@@ -274,10 +307,11 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - **Prompt**: campo de texto com suporte a variaveis
 - **File Input**: upload de imagens e videos, preview inline, multiplos arquivos
 - **Model**: no generico que se adapta ao modelo, exibe resultado com carousel
-- **Any LLM**: no de LLM com suporte a vision, dropdown de modelos, temperatura
+- **Any LLM**: no de LLM com suporte a vision, dropdown de modelos (GPT-4.1, GPT-5.4 family), temperatura
 - **Router**: auto-expande outputs ao conectar (sem botoes)
 - **Prompt Concat**: combina multiplos prompts com textarea adicional
 - **Kling Element**: name/description, imagens conectadas, auto-detecta element number
+- **Group**: cores customizaveis (8 opcoes), notas multi-linha, tamanho de fonte ajustavel
 - **Gallery**: fullscreen com navegacao, download e copia de link
 
 ### Pipeline
@@ -287,14 +321,19 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - Polling automatico com progresso
 - Cancelar geracao em andamento (AbortController)
 - Suporte a multiplas runs por execucao
-- Custo dinamico calculado em tempo real
+- Custo dinamico calculado em tempo real (por segundo para videos)
+
+### Dashboard
+- Layout estilo Weavy com carousel de templates no topo
+- Secao "Meus arquivos" em grid compacto
+- Templates com foto de capa (upload via admin)
 
 ### Autenticacao e creditos
 - Supabase Auth (email/senha) com RLS
 - Sistema de creditos com charge-then-refund
 - Verificacao de saldo antes de gerar
 - Exibicao de creditos no header
-- Admin panel para gerenciar creditos
+- Admin panel para gerenciar creditos, usuarios e templates
 - Rate limiting por usuario
 
 ### Seguranca
@@ -314,6 +353,7 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - ElevenLabs TTS multilingual v2 integrado (21 vozes)
 - Fluxo: texto → TTS → audio → Avatar (automatico)
 - Ou: audio externo → Avatar (via Audio Input node)
+- Cobranca por segundo (8 cred/s standard, 16 cred/s pro)
 
 ### Persistencia
 - Workflows salvos em PostgreSQL via Supabase
@@ -323,17 +363,18 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 
 ### App
 - Aba App no editor com grade de aplicativos
-- Gerador de System Prompt (7 campos, GPT-4o, salvar/carregar templates)
+- Gerador de System Prompt (7 campos, GPT-4.1, salvar/carregar templates)
 
 ---
 
 ## Features especificas por modelo
 
-### Kling 3 - Elements
+### Kling 3 - Elements + Multi-Shot
 1. Adicione um no "Kling Element" ao canvas
 2. Conecte 2-4 imagens de referencia (File Input) ao Kling Element
 3. Conecte o Kling Element ao handle "Element 1/2/3" do Kling 3
 4. No prompt, use `@element1`, `@element2`, etc.
+5. Multi-shot: ate 3 shots de 5s cada = 15s de video em uma geracao
 
 ### GPT Image 1.5 - Background transparente
 Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Background.
@@ -342,14 +383,18 @@ Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Ba
 1. Conecte imagens de referencia (File Input) ao Seedance 2.0
 2. O sistema auto-injeta `@image1`, `@image2` no prompt
 3. Usa modo `omni_reference` automaticamente quando ha imagens/video/audio
-4. Sempre usa versao preview (aceita rostos reais sem bloqueio)
+
+### Veo 3.1 - Image to Video
+- Suporta First Frame + Last Frame (FIRST_AND_LAST_FRAMES_2_VIDEO)
+- Quality mode funciona com imagem de referencia
+- Audio gerado automaticamente
 
 ### Kling Avatar TTS - Talking Head
 1. Adicione um no "Kling Avatar TTS" e conecte uma foto (File Input)
 2. **Opcao A:** Escreva texto no painel → TTS gera audio → Avatar gera video
 3. **Opcao B:** Conecte um no "Audio Input" com audio externo → Avatar gera video
 4. Escolha entre 21 vozes do ElevenLabs, ajuste velocidade (0.5x - 2.0x)
-5. Qualidade: Standard (720p, 40 cred) ou Pro (1080p, 80 cred)
+5. Cobranca por segundo: Standard 8 cred/s, Pro 16 cred/s
 
 ### Modelo Treinado (LoRA) - Fine-tune personalizado
 1. Va em "Meus Modelos" e clique "Treinar Novo Modelo"
@@ -362,6 +407,12 @@ Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Ba
 1. Adicione um no Any LLM e conecte um Prompt ao input
 2. Conecte a saida do Any LLM ao input "prompt" de um modelo de imagem/video
 3. O LLM gera o texto primeiro, depois esse texto e usado como prompt para a geracao
+4. Suporta vision: conecte imagens ao LLM para gerar prompts baseados em referencia
+
+### Extract Audio
+1. Conecte um video (de um Model node ou File Input) ao Extract Audio
+2. Escolha formato MP3 ou WAV
+3. O audio extraido pode ser conectado a outros nos (Kling Avatar, etc.)
 
 ---
 
@@ -379,6 +430,7 @@ O projeto esta em producao no **Render** com deploy automatico a partir do branc
 | `KIE_API_KEY` | Kie.ai | Sim |
 | `OPENAI_API_KEY` | OpenAI | Sim |
 | `PIAPI_API_KEY` | PiAPI | Sim (Seedance 2.0) |
+| `FAL_KEY` | fal.ai | Sim (Kling O3, Flux, BG Removal, Upscale) |
 | `REPLICATE_API_TOKEN` | Replicate | Sim (modelos LoRA) |
 | `REPLICATE_USERNAME` | Replicate | Sim (modelos LoRA) |
 
@@ -386,77 +438,44 @@ O projeto esta em producao no **Render** com deploy automatico a partir do branc
 
 ## Plano de negocio
 
-### Modelo de monetizacao: Assinatura + Creditos avulsos
+### Modelo de monetizacao: Creditos avulsos
 
-#### Planos mensais
+| Pacote | Preco | Por credito | Margem |
+|--------|-------|-------------|--------|
+| **500** | R$24,90 | R$0,050 | ~86% |
+| **1.000** | R$44,90 | R$0,045 | ~68% |
+| **2.500** | R$99,90 | R$0,040 | ~50% |
 
-> Precos incluem custo de infraestrutura.
+Creditos nao expiram. Pagamento via PIX, cartao ou Mercado Pago.
 
-**Preco promocional (primeiros 100 usuarios) — 30% de desconto:**
+A margem esta na venda dos pacotes — o custo dos providers e repassado 1:1 em creditos para o usuario.
 
-| Plano | Promo (100 primeiros) | Preco regular | Creditos | Margem promo | Margem regular |
-|-------|----------------------|---------------|----------|-------------|----------------|
-| **Free** | R$ 0 | R$ 0 | 50 | Aquisicao | Aquisicao |
-| **Starter** | **R$ 34,90/mes** | R$ 49,90/mes | 700 | **31%** | **51%** |
-| **Creator** | **R$ 79,90/mes** | R$ 114,90/mes | 1.700 | **32%** | **53%** |
-| **Pro** | **R$ 179,90/mes** | R$ 249,90/mes | 4.000 | **34%** | **52%** |
+### Comparacao: Fluxo AI vs Weavy.ai
 
-> Creditos do plano expiram no final do mes. Os 100 primeiros usuarios mantem o preco promocional enquanto a assinatura estiver ativa.
-
-#### Creditos avulsos
-
-| Pacote | Preco | Creditos | Margem |
-|--------|-------|----------|--------|
-| **500** | R$ 24,90 | 500 | **33%** |
-| **1.000** | R$ 44,90 | 1.000 | **30%** |
-| **2.500** | R$ 99,90 | 2.500 | **33%** |
-
-Creditos avulsos nao expiram.
-
----
-
-## Comparacao: Fluxo AI vs Weavy.ai
-
-| | Weavy Starter | Fluxo Creator (promo) | Weavy Pro | Fluxo Pro (promo) |
+| | Weavy Starter | Fluxo 1.000 cred | Weavy Pro | Fluxo 2.500 cred |
 |---|---|---|---|---|
-| **Preco** | $24 (~R$ 137) | R$ 79,90 | $45 (~R$ 257) | R$ 179,90 |
-| **Creditos** | 1.500 | 1.700 | 4.000 | 4.000 |
-| **vs Weavy** | — | **42% mais barato** | — | **30% mais barato** |
+| **Preco** | $24 (~R$137) | R$44,90 | $45 (~R$257) | R$99,90 |
+| **Creditos** | 1.500 | 1.000 | 4.000 | 2.500 |
+| **vs Weavy** | — | **67% mais barato** | — | **61% mais barato** |
 
 ### Vantagens competitivas
 
 1. **Preco em BRL** — pagamento via PIX, sem cartao internacional
-2. **Custo por credito** — 50-60% menor que o Weavy
-3. **Custo por geracao** — 20-25% menos creditos por geracao nos mesmos modelos
-4. **Imagem + Video** — mesma plataforma para ambos
-5. **Modelos de ponta** — Kling 3, Veo 3.1, GPT Image 1.5
-6. **LLM integrado** — pre-processamento de prompts com GPT
-
----
-
-## Estrategia de lancamento
+2. **Pipeline automatizado** — monte uma vez, troque o input e rode novamente
+3. **Multi-provider** — Kie + fal.ai + PiAPI + OpenAI na mesma plataforma
+4. **Templates prontos** — workflows pre-montados para nichos (imobiliario, e-commerce, UGC)
+5. **LLM integrado** — pre-processamento de prompts com GPT + vision
+6. **Modelos de ponta** — Kling 3, Veo 3.1, GPT Image 1.5, Seedance 2.0
 
 ### Publico-alvo
 
 | Quem | Uso no Fluxo AI |
 |---|---|
-| **Criador UGC** | Gera videos de produto sozinho |
-| **Lojista Shopee/ML** | Gera fotos profissionais com IA |
-| **Social media** | Cria conteudo unico com IA |
-| **Agencia pequena** | Workflow automatizado |
-| **Afiliado digital** | Gera criativos ilimitados |
-
-### Modelo: Ensina e Vende
-
-O mercado brasileiro de IA criativa nao tem ninguem. Quem educa o mercado, domina o mercado.
-
-```
-Conteudo gratuito (atrai)          →    Produto pago (converte)
-─────────────────────────────────────────────────────────────
-Reels/TikTok mostrando resultado   →    "Fiz isso no Fluxo AI"
-Tutorial "como fazer X com IA"     →    "Link na bio, 50 creditos gratis"
-Live montando workflow ao vivo     →    "Assina o Creator por R$ 79,90"
-```
+| **Criador UGC** | Pipeline automatizado: gera 50 videos/semana sem pensar |
+| **Lojista Shopee/ML** | Template "Video Produto" — troca foto, sai video pronto |
+| **Corretor de imoveis** | Template "Tour FPV" — joga fotos novas de cada imovel |
+| **Agencia pequena** | Workflow repetivel para multiplos clientes |
+| **Social media** | Cria conteudo unico com IA em escala |
 
 ---
 
@@ -467,12 +486,13 @@ Live montando workflow ao vivo     →    "Assina o Creator por R$ 79,90"
 - **Storage proprio** — Cloudflare R2 (substituir catbox.moe)
 
 ### Media prioridade
-- **Templates de workflow** — workflows pre-montados para clonar
+- **Sora 2** — Integracao via PiAPI ou fal.ai (text/image to video)
 - **Batch processing** — rodar workflow com diferentes inputs
 - **Variaveis no prompt** — {{nome}}, {{produto}} para reusar workflows
+- **Fallback de providers** — se um provider cai, redireciona para outro
 
 ### Futuro
-- **Wan 2.1 I2V** — video NSFW a partir de imagem (apos estabilizar gerador)
+- **Sora 2 Characters** — personagens persistentes para videos consistentes (fal.ai)
 - **Workflow marketplace** — publicar e vender templates
 - **API publica** — expor workflows como endpoints REST
 - **Integracao redes sociais** — publicar direto no Instagram/TikTok
