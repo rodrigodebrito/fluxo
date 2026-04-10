@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-      headers: { Authorization: `Token ${apiToken}` },
+      headers: { Authorization: `Bearer ${apiToken}` },
     });
 
     if (!res.ok) {

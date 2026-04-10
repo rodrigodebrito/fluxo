@@ -47,17 +47,15 @@ export async function POST(request: NextRequest) {
 
     console.log("[seedance-rep] creating prediction:", JSON.stringify({ model: SEEDANCE_MODEL, input }));
 
-    // Create async prediction via Replicate API
-    const res = await fetch("https://api.replicate.com/v1/predictions", {
+    // Create prediction via model-specific endpoint (no version needed)
+    const res = await fetch(`https://api.replicate.com/v1/models/${SEEDANCE_MODEL}/predictions`, {
       method: "POST",
       headers: {
-        Authorization: `Token ${apiToken}`,
+        Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
+        Prefer: "respond-async",
       },
-      body: JSON.stringify({
-        model: SEEDANCE_MODEL,
-        input,
-      }),
+      body: JSON.stringify({ input }),
     });
 
     const data = await res.json();
