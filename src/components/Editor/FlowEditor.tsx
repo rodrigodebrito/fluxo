@@ -957,7 +957,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         else costPerRun = 60;
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
-        const perSec = isFast ? 20 : 26;
+        const perSec = isFast ? 33 : 41;
         costPerRun = perSec * (pipeline.sdDuration || 8);
       } else if (m === "kling") {
         const perSec = pipeline.klingMode === "pro"

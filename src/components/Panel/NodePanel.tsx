@@ -356,7 +356,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
-    const perSec = isFast ? 20 : 26;
+    const perSec = isFast ? 33 : 41;
     costPerRun = perSec * sdDuration;
   }
   if (model === "kling") {

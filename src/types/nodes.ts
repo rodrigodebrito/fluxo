@@ -46,8 +46,8 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     id: "seedance",
     name: "Seedance 2.0",
     type: "video",
-    description: "Video IA (ByteDance)",
-    costPerRun: 40,
+    description: "Video IA (ByteDance via Kie AI)",
+    costPerRun: 328,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "negative-prompt", label: "Neg. Prompt", required: false },
