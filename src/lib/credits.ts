@@ -14,7 +14,8 @@ export async function checkCredits(userId: string, amount: number): Promise<bool
 export async function debitCredits(
   userId: string,
   amount: number,
-  reason: string
+  reason: string,
+  details?: { model?: string; prompt?: string; status?: string; metadata?: Record<string, unknown> }
 ): Promise<{ success: boolean; remaining: number }> {
   const supabase = await createServiceClient();
 
@@ -38,11 +39,15 @@ export async function debitCredits(
     .update({ credits: newCredits })
     .eq("id", userId);
 
-  // Log the debit
+  // Log the debit with details
   await supabase.from("credit_logs").insert({
     user_id: userId,
     amount: -amount,
     reason,
+    model: details?.model || reason.replace("generation_", "") || null,
+    prompt: details?.prompt?.slice(0, 500) || null,
+    status: details?.status || "pending",
+    metadata: details?.metadata || null,
   });
 
   return { success: true, remaining: newCredits };
@@ -51,7 +56,8 @@ export async function debitCredits(
 export async function addCredits(
   userId: string,
   amount: number,
-  reason: string = "admin_grant"
+  reason: string = "admin_grant",
+  details?: { model?: string; status?: string; metadata?: Record<string, unknown> }
 ): Promise<number> {
   const supabase = await createServiceClient();
 
@@ -72,6 +78,9 @@ export async function addCredits(
     user_id: userId,
     amount,
     reason,
+    model: details?.model || null,
+    status: details?.status || (reason === "refund" ? "refund" : reason),
+    metadata: details?.metadata || null,
   });
 
   return newCredits;
@@ -99,6 +108,10 @@ export function getModelCost(model: string): number {
     case "wan-i2v": return 80;
     case "kling-avatar": return 40; // fallback, real cost is per-second
     case "grok-i2v": return 10;
+    case "zimage-t2i": return 2;
+    case "zimage-i2i": return 2;
+    case "zimage-lora": return 3;
+    case "zimage-i2i-lora": return 3;
     case "llm": return 1;
     default: return 18;
   }

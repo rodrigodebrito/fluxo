@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const result = await submitFalTask(falKey, endpoint, input);
 
-    await chargeCredits(user.id, model, finalCost);
+    await chargeCredits(user.id, model, finalCost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
     return NextResponse.json({
       taskId: result.request_id,

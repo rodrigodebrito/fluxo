@@ -26,9 +26,9 @@ export async function verifyCredits(userId: string, model: string, cost?: number
   return { hasCredits, cost: finalCost };
 }
 
-export async function chargeCredits(userId: string, model: string, cost?: number) {
+export async function chargeCredits(userId: string, model: string, cost?: number, details?: { prompt?: string; status?: string; metadata?: Record<string, unknown> }) {
   const finalCost = cost || getModelCost(model);
-  return debitCredits(userId, finalCost, `generation_${model}`);
+  return debitCredits(userId, finalCost, `generation_${model}`, { model, ...details });
 }
 
 export function rateLimitResponse(resetIn: number) {

@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
         audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
       });
 
-      await chargeCredits(user.id, costModel, cost);
+      await chargeCredits(user.id, costModel, cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
       // Return with piapi: prefix so status polling knows which provider to use
       return NextResponse.json({ taskId: `piapi:${taskId}` });
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, costModel, cost);
+    await chargeCredits(user.id, costModel, cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const audioUrl = urlData.publicUrl;
 
     // Charge credits
-    await chargeCredits(user.id, "extract-audio", cost);
+    await chargeCredits(user.id, "extract-audio", cost, { status: "pending" });
 
     return NextResponse.json({ audioUrl });
   } catch (err) {

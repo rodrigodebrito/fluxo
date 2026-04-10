@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "kling-avatar", finalCost);
+    await chargeCredits(user.id, "kling-avatar", finalCost, { prompt: (text || prompt || "").slice(0, 500), status: "pending" });
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

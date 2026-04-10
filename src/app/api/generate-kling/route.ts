@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await chargeCredits(user.id, "kling-motion", cost);
+      await chargeCredits(user.id, "kling-motion", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
       return NextResponse.json({ taskId: result.data.taskId });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "kling", cost);
+    await chargeCredits(user.id, "kling", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

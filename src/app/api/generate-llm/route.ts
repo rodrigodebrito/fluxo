@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     const text = completion.choices[0]?.message?.content || "";
 
-    await chargeCredits(user.id, "llm", cost);
+    await chargeCredits(user.id, "llm", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
     return NextResponse.json({ text });
   } catch (err) {

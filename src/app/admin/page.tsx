@@ -129,6 +129,14 @@ export default function AdminPage() {
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [editThumbnailUploading, setEditThumbnailUploading] = useState(false);
 
+  // User history modal
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
+  const [historyLogs, setHistoryLogs] = useState<{ id: string; amount: number; reason: string; model: string | null; prompt: string | null; status: string | null; metadata: Record<string, unknown> | null; created_at: string }[]>([]);
+  const [historyStats, setHistoryStats] = useState<{ totalSpent: number; totalAdded: number; modelCounts: Record<string, number>; statusCounts: Record<string, number> } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+
   const fetchData = useCallback(async () => {
     try {
       const [usersRes, statsRes] = await Promise.all([
@@ -293,6 +301,23 @@ export default function AdminPage() {
       setCreditAmounts((prev) => ({ ...prev, [userId]: "" }));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro");
+    }
+  };
+
+  const openUserHistory = async (user: UserProfile, page = 1) => {
+    setHistoryUser(user);
+    setHistoryLoading(true);
+    setHistoryPage(page);
+    try {
+      const res = await fetch(`/api/admin/user-history?userId=${user.id}&page=${page}&limit=30`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryLogs(data.logs || []);
+        setHistoryTotalPages(data.totalPages || 1);
+        setHistoryStats(data.stats || null);
+      }
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -549,6 +574,13 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openUserHistory(user)}
+                            className="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded transition-colors"
+                            title="Ver historico de creditos"
+                          >
+                            Historico
+                          </button>
                           <input
                             type="number"
                             min="1"
@@ -1291,6 +1323,125 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* User History Modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setHistoryUser(null)}>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+              <div>
+                <h3 className="text-lg font-semibold text-white">{historyUser.name || historyUser.email}</h3>
+                <p className="text-xs text-zinc-500">{historyUser.email} — {historyUser.credits} creditos</p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} className="text-zinc-500 hover:text-white transition-colors text-xl">&times;</button>
+            </div>
+
+            {/* Stats */}
+            {historyStats && (
+              <div className="px-6 py-3 border-b border-zinc-800 flex gap-6 text-xs">
+                <div><span className="text-zinc-500">Total gasto:</span> <span className="text-red-400 font-semibold">{historyStats.totalSpent}</span></div>
+                <div><span className="text-zinc-500">Total recebido:</span> <span className="text-green-400 font-semibold">{historyStats.totalAdded}</span></div>
+                {Object.entries(historyStats.modelCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([model, count]) => (
+                  <div key={model}><span className="text-zinc-500">{MODEL_LABELS[model] || model}:</span> <span className="text-zinc-300">{count}x</span></div>
+                ))}
+              </div>
+            )}
+
+            {/* Logs Table */}
+            <div className="overflow-y-auto max-h-[60vh]">
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : historyLogs.length === 0 ? (
+                <div className="text-center py-16 text-zinc-600 text-sm">Nenhuma transacao</div>
+              ) : (
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-zinc-900">
+                    <tr className="border-b border-zinc-800">
+                      <th className="text-left px-4 py-2 text-[10px] text-zinc-500 font-medium">Data/Hora</th>
+                      <th className="text-left px-4 py-2 text-[10px] text-zinc-500 font-medium">Modelo</th>
+                      <th className="text-left px-4 py-2 text-[10px] text-zinc-500 font-medium">Prompt</th>
+                      <th className="text-center px-4 py-2 text-[10px] text-zinc-500 font-medium">Status</th>
+                      <th className="text-right px-4 py-2 text-[10px] text-zinc-500 font-medium">Creditos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyLogs.map((log) => {
+                      const isDebit = log.amount < 0;
+                      const statusColors: Record<string, string> = {
+                        pending: "text-yellow-400 bg-yellow-500/10",
+                        success: "text-green-400 bg-green-500/10",
+                        fail: "text-red-400 bg-red-500/10",
+                        refund: "text-blue-400 bg-blue-500/10",
+                        cancel: "text-zinc-400 bg-zinc-500/10",
+                        purchase: "text-emerald-400 bg-emerald-500/10",
+                        admin: "text-purple-400 bg-purple-500/10",
+                      };
+                      const statusLabel: Record<string, string> = {
+                        pending: "Pendente", success: "OK", fail: "Falha",
+                        refund: "Reembolso", cancel: "Cancelado", purchase: "Compra", admin: "Admin",
+                      };
+                      const st = log.status || "success";
+                      const modelLabel = log.model ? (MODEL_LABELS[log.model] || log.model) : log.reason.replace("generation_", "");
+
+                      return (
+                        <tr key={log.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                          <td className="px-4 py-2">
+                            <span className="text-[11px] text-zinc-400">
+                              {new Date(log.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                              {" "}
+                              {new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <span className="text-xs text-zinc-200">{modelLabel}</span>
+                          </td>
+                          <td className="px-4 py-2 max-w-[250px]">
+                            <p className="text-[11px] text-zinc-500 truncate" title={log.prompt || ""}>{log.prompt || "-"}</p>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColors[st] || statusColors.success}`}>
+                              {statusLabel[st] || st}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <span className={`text-xs font-semibold ${isDebit ? "text-red-400" : "text-green-400"}`}>
+                              {isDebit ? "" : "+"}{log.amount}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {historyTotalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 px-6 py-3 border-t border-zinc-800">
+                <button
+                  onClick={() => openUserHistory(historyUser, Math.max(1, historyPage - 1))}
+                  disabled={historyPage === 1}
+                  className="px-2 py-1 text-[10px] bg-zinc-800 text-zinc-300 rounded disabled:opacity-30 hover:bg-zinc-700"
+                >
+                  Anterior
+                </button>
+                <span className="text-[10px] text-zinc-500">{historyPage} / {historyTotalPages}</span>
+                <button
+                  onClick={() => openUserHistory(historyUser, Math.min(historyTotalPages, historyPage + 1))}
+                  disabled={historyPage === historyTotalPages}
+                  className="px-2 py-1 text-[10px] bg-zinc-800 text-zinc-300 rounded disabled:opacity-30 hover:bg-zinc-700"
+                >
+                  Proxima
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

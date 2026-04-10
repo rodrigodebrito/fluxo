@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Charge credits
-    await chargeCredits(user.id, "custom-model", finalCost);
+    await chargeCredits(user.id, "custom-model", finalCost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
     // Save to generations
     await supabase.from("generations").insert({

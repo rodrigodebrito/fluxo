@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await chargeCredits(user.id, "wan-i2v", cost);
+  await chargeCredits(user.id, "wan-i2v", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
   return NextResponse.json({ taskId: result.data.taskId });
 }

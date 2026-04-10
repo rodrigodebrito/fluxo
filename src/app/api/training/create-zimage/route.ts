@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       .eq("id", dbRecord.id);
 
     // 7. Charge credits
-    await chargeCredits(user.id, "custom-model", TRAINING_COST);
+    await chargeCredits(user.id, "custom-model", TRAINING_COST, { prompt: `Z-Image Training: ${name} (${triggerWord})`, status: "pending" });
 
     return NextResponse.json({
       id: dbRecord.id,

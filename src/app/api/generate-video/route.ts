@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await chargeCredits(user.id, "veo3", cost);
+  await chargeCredits(user.id, "veo3", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
   return NextResponse.json({ taskId: result.data.taskId });
 }
