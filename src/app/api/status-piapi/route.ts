@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
 
     if (data.code !== 200 || !data.data) {
       return NextResponse.json({
-        state: "generating",
-        progress: 20,
+        state: "fail",
+        progress: 0,
         resultUrls: [],
-        error: null,
+        error: data.message || "Erro ao buscar status PiAPI",
       });
     }
 
@@ -63,11 +63,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[status-piapi] error:", err);
+    const message = err instanceof Error ? err.message : "Erro ao buscar status";
     return NextResponse.json({
-      state: "generating",
-      progress: 20,
+      state: "fail",
+      progress: 0,
       resultUrls: [],
-      error: null,
+      error: message,
     });
   }
 }

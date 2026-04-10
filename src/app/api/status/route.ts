@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
       });
     } catch (err) {
       console.error("[veo-status] error:", err);
-      // Retornar como "generating" em vez de erro para não parar o polling
+      const message = err instanceof Error ? err.message : "Erro ao buscar status";
       return NextResponse.json({
-        state: "generating",
-        progress: 20,
+        state: "fail",
+        progress: 0,
         resultUrls: [],
-        error: null,
+        error: message,
       });
     }
   }

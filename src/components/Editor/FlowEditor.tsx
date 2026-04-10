@@ -1132,8 +1132,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         return;
       }
 
-      // Veo usa endpoint diferente de polling, os outros usam recordInfo
-      const pollType = pipeline.model === "veo3" ? "video" : "image";
+      const videoModels = ["veo3", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "wan-i2v", "grok-i2v", "kling-avatar"];
+      const pollType = videoModels.includes(pipeline.model) ? "video" : "image";
       const resultPromises = taskIds.map((taskId, idx) => {
         const promptForTask = pipeline.iteratorPrompts?.[idx] || pipeline.prompt;
         return pollTaskStatus(taskId, (progress) => {

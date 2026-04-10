@@ -1040,10 +1040,12 @@ export async function pollTaskStatus(
   const isPiAPI = taskId.startsWith("piapi:");
   const piApiTaskId = isPiAPI ? taskId.slice(6) : "";
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
+  let consecutiveErrors = 0;
 
   for (let i = 0; i < maxAttempts; i++) {
     // Check abort before waiting
     if (signal?.aborted) {
+      if (model) await refundCredits(model, taskId, cost);
       return { resultUrls: [], error: "Cancelado" };
     }
 
@@ -1056,6 +1058,7 @@ export async function pollTaskStatus(
     });
 
     if (signal?.aborted) {
+      if (model) await refundCredits(model, taskId, cost);
       return { resultUrls: [], error: "Cancelado" };
     }
 
@@ -1078,11 +1081,12 @@ export async function pollTaskStatus(
       try { data = JSON.parse(statusText); } catch { console.error("[poll] Invalid JSON:", statusText.slice(0, 200)); continue; }
 
       if (!response.ok) {
-        // Para video, continuar tentando em vez de parar
-        if (type === "video") { console.warn("Veo status error, retrying...", data); continue; }
+        consecutiveErrors++;
+        if (consecutiveErrors < 3) { console.warn(`Poll error (${consecutiveErrors}/3), retrying...`, data); continue; }
         throw new Error(data.error || "Erro ao buscar status");
       }
 
+      consecutiveErrors = 0;
       onProgress(data.progress || 0);
 
       if (data.state === "success") {
@@ -1101,9 +1105,13 @@ export async function pollTaskStatus(
         return { resultUrls: [], error: data.error || "Geração falhou" };
       }
     } catch (err) {
-      if (signal?.aborted) return { resultUrls: [], error: "Cancelado" };
-      if (type === "video") { console.warn("Poll error, retrying...", err); continue; }
-      // Devolver creditos em erro inesperado
+      if (signal?.aborted) {
+        if (model) await refundCredits(model, taskId, cost);
+        return { resultUrls: [], error: "Cancelado" };
+      }
+      consecutiveErrors++;
+      if (consecutiveErrors < 3) { console.warn(`Poll exception (${consecutiveErrors}/3), retrying...`, err); continue; }
+      // Devolver creditos em erro persistente
       if (model) await refundCredits(model, taskId, cost);
       throw err;
     }
