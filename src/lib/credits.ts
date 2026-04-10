@@ -19,27 +19,48 @@ export async function debitCredits(
 ): Promise<{ success: boolean; remaining: number }> {
   const supabase = await createServiceClient();
 
-  // Get current credits
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("credits")
-    .eq("id", userId)
-    .single();
+  // Debit atômico via RPC (evita race condition)
+  const { data: remaining, error: rpcError } = await supabase.rpc("debit_credits", {
+    p_user_id: userId,
+    p_amount: amount,
+  });
 
-  const current = profile?.credits || 0;
-  if (current < amount) {
-    return { success: false, remaining: current };
+  if (rpcError) {
+    console.error("[debitCredits] RPC error, falling back:", rpcError.message);
+    // Fallback: método não-atômico (caso RPC não exista ainda)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", userId)
+      .single();
+    const current = profile?.credits || 0;
+    if (current < amount) return { success: false, remaining: current };
+    const newCredits = current - amount;
+    await supabase.from("profiles").update({ credits: newCredits }).eq("id", userId);
+
+    await supabase.from("credit_logs").insert({
+      user_id: userId,
+      amount: -amount,
+      reason,
+      model: details?.model || reason.replace("generation_", "") || null,
+      prompt: details?.prompt?.slice(0, 500) || null,
+      status: details?.status || "pending",
+      metadata: details?.metadata || null,
+    });
+    return { success: true, remaining: newCredits };
   }
 
-  const newCredits = current - amount;
+  // RPC retorna -1 se créditos insuficientes
+  if (remaining === -1) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", userId)
+      .single();
+    return { success: false, remaining: profile?.credits || 0 };
+  }
 
-  // Update credits
-  await supabase
-    .from("profiles")
-    .update({ credits: newCredits })
-    .eq("id", userId);
-
-  // Log the debit with details
+  // Log the debit
   await supabase.from("credit_logs").insert({
     user_id: userId,
     amount: -amount,
@@ -50,7 +71,7 @@ export async function debitCredits(
     metadata: details?.metadata || null,
   });
 
-  return { success: true, remaining: newCredits };
+  return { success: true, remaining: remaining as number };
 }
 
 export async function addCredits(

@@ -2,9 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPaymentClient, getCreditsForProductId } from "@/lib/mercadopago";
 import { addCredits } from "@/lib/credits";
 import { createServiceClient } from "@/lib/supabase/server";
+import crypto from "crypto";
+
+// Verificar assinatura do webhook do Mercado Pago (HMAC-SHA256)
+function verifyMPSignature(request: NextRequest, body: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn("[mp-webhook] MP_WEBHOOK_SECRET nao configurado — pulando verificacao de assinatura");
+    return true; // Permitir sem secret configurado (dev), mas logar warning
+  }
+
+  const xSignature = request.headers.get("x-signature");
+  const xRequestId = request.headers.get("x-request-id");
+  if (!xSignature || !xRequestId) {
+    console.error("[mp-webhook] Headers x-signature ou x-request-id ausentes");
+    return false;
+  }
+
+  // Extrair ts e v1 do header x-signature (formato: "ts=xxx,v1=yyy")
+  const parts = Object.fromEntries(xSignature.split(",").map((p) => {
+    const [k, ...v] = p.trim().split("=");
+    return [k, v.join("=")];
+  }));
+  const ts = parts.ts;
+  const v1 = parts.v1;
+  if (!ts || !v1) return false;
+
+  // Extrair data.id do body
+  const parsed = JSON.parse(body);
+  const dataId = parsed.data?.id;
+
+  // Construir manifest e calcular HMAC
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+  const hmac = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
+
+  return hmac === v1;
+}
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const rawBody = await request.text();
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Verificar assinatura se MP_WEBHOOK_SECRET estiver configurado
+  if (process.env.MP_WEBHOOK_SECRET && !verifyMPSignature(request, rawBody)) {
+    console.error("[mp-webhook] Assinatura invalida — rejeitando webhook");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+  }
 
   // Só processar notificações de pagamento
   if (body.type !== "payment" && body.action !== "payment.updated" && body.action !== "payment.created") {
