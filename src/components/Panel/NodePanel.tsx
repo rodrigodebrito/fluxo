@@ -284,7 +284,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const generateAudio = (node.data.generateAudio as boolean) ?? true;
   const webSearch = (node.data.webSearch as boolean) ?? false;
   const fixedLens = (node.data.fixedLens as boolean) ?? false;
-  const isSeedance = model === "seedance";
+  const isSeedance = model === "seedance" || model === "seedance-rep";
   const isKling = model === "kling" || model === "kling-o3-i2v" || model === "kling-o3-edit" || model === "kling-o1-ref";
   const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img";
   const isMotion = model === "kling-motion";
@@ -354,6 +354,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "nano-banana-pro" && resolution === "4K") costPerRun = 24;
   if ((model === "gpt-image-txt" || model === "gpt-image-img") && gptQuality === "high") costPerRun = 22;
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
+  if (model === "seedance-rep") {
+    costPerRun = 34 * sdDuration;
+  }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
     const perSec = isFast ? 33 : 41;
@@ -1182,8 +1185,8 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Seedance Model */}
-        {isSeedance && (
+        {/* Seedance Model (only for Kie AI seedance, not Replicate) */}
+        {model === "seedance" && (
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Model</span>

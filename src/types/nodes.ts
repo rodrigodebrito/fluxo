@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "seedance-rep" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora";
 
 export interface ModelInfo {
   id: AIModel;
@@ -58,6 +58,18 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     ],
     params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "seed", "runs"],
     dynamicReferences: true, // suporta reference_image_urls (até 9)
+  },
+  {
+    id: "seedance-rep",
+    name: "Seedance 2.0 (Replicate)",
+    type: "video",
+    description: "Video IA (ByteDance via Replicate)",
+    costPerRun: 170,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
+    ],
+    params: ["aspectRatio", "sdDuration", "runs"],
   },
   {
     id: "kling",

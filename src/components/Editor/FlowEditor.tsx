@@ -40,6 +40,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "16:9", enhancePrompt: true };
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
+    case "model-seedance-rep":
+      return { label: "Seedance 2.0 (Rep)", model: "seedance-rep", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "16:9", sdDuration: 5 };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":
@@ -955,6 +957,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
         else costPerRun = 60;
+      } else if (m === "seedance-rep") {
+        costPerRun = 34 * (pipeline.sdDuration || 5);
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
         const perSec = isFast ? 33 : 41;
@@ -1153,7 +1157,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         return;
       }
 
-      const videoModels = ["veo3", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "wan-i2v", "grok-i2v", "kling-avatar"];
+      const videoModels = ["veo3", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "seedance-rep", "wan-i2v", "grok-i2v", "kling-avatar"];
       const pollType = videoModels.includes(pipeline.model) ? "video" : "image";
       const resultPromises = taskIds.map((taskId, idx) => {
         const promptForTask = pipeline.iteratorPrompts?.[idx] || pipeline.prompt;
@@ -1713,6 +1717,7 @@ const MENU_STRUCTURE: MenuItem[] = [
     children: [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
       { type: "model-seedance", label: "Seedance 2.0" },
+      { type: "model-seedance-rep", label: "Seedance 2.0 (Replicate)" },
       { type: "model-kling", label: "Kling 3" },
       { type: "model-kling-o3-i2v", label: "Kling O3" },
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },

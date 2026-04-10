@@ -92,6 +92,7 @@ export function getModelCost(model: string): number {
     case "nano-banana-pro": return 18;
     case "veo3": return 60;
     case "seedance": return 165;
+    case "seedance-rep": return 170;
     case "kling": return 70;
     case "kling-o3-i2v": return 120;
     case "kling-o3-edit": return 180;
