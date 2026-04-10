@@ -4,13 +4,13 @@ import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyC
 import { checkPromptSafety } from "@/lib/content-filter";
 
 // Registra imagem na Asset Library e aguarda ficar pronta (Kie AI)
-async function registerAndWaitAsset(apiKey: string, url: string): Promise<string> {
+async function registerAndWaitAsset(apiKey: string, url: string, assetType: "Image" | "Video" | "Audio" = "Image"): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result: any = await createByteDanceAsset(apiKey, url, "Image");
+  const result: any = await createByteDanceAsset(apiKey, url, assetType);
   const assetId = result.data || result.id;
   if (!assetId) {
     console.warn("[seedance] Asset creation failed for", url, result);
-    throw new Error("Falha ao registrar imagem na Asset Library");
+    throw new Error(`Falha ao registrar ${assetType.toLowerCase()} na Asset Library`);
   }
   console.log("[seedance] Asset criado:", assetId, "— aguardando processamento...");
 
@@ -254,12 +254,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let processedVideoUrls: string[] | undefined;
+    if (referenceVideoUrl) {
+      const videoAsset = await registerAndWaitAsset(apiKey, referenceVideoUrl, "Video");
+      processedVideoUrls = [videoAsset];
+    }
+
+    let processedAudioUrls: string[] | undefined;
+    if (referenceAudioUrl) {
+      const audioAsset = await registerAndWaitAsset(apiKey, referenceAudioUrl, "Audio");
+      processedAudioUrls = [audioAsset];
+    }
+
     const result = await createSeedanceTask(apiKey, {
       prompt,
       sdModel,
       firstFrameUrl: processedFirstFrame,
       lastFrameUrl: processedLastFrame,
       referenceImageUrls: processedRefUrls,
+      referenceVideoUrls: processedVideoUrls,
+      referenceAudioUrls: processedAudioUrls,
       resolution,
       aspectRatio,
       duration,

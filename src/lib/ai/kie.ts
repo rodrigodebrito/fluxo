@@ -110,6 +110,8 @@ interface CreateSeedanceInput {
   firstFrameUrl?: string;
   lastFrameUrl?: string;
   referenceImageUrls?: string[];
+  referenceVideoUrls?: string[];
+  referenceAudioUrls?: string[];
   resolution?: string;
   aspectRatio?: string;
   duration?: number;
@@ -173,6 +175,12 @@ export async function createSeedanceTask(
   }
   if (input.referenceImageUrls && input.referenceImageUrls.length > 0) {
     inputBody.reference_image_urls = input.referenceImageUrls;
+  }
+  if (input.referenceVideoUrls && input.referenceVideoUrls.length > 0) {
+    inputBody.reference_video_urls = input.referenceVideoUrls;
+  }
+  if (input.referenceAudioUrls && input.referenceAudioUrls.length > 0) {
+    inputBody.reference_audio_urls = input.referenceAudioUrls;
   }
   if (input.fixedLens != null) {
     inputBody.fixed_lens = input.fixedLens;
