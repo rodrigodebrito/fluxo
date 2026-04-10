@@ -235,45 +235,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let processedFirstFrame: string | undefined;
-    let processedLastFrame: string | undefined;
-
-    if (firstFrameUrl) {
-      processedFirstFrame = await registerAndWaitAsset(apiKey, firstFrameUrl);
-    }
-    if (lastFrameUrl) {
-      processedLastFrame = await registerAndWaitAsset(apiKey, lastFrameUrl);
-    }
-
-    let processedRefUrls: string[] | undefined;
-    if (referenceImageUrls && referenceImageUrls.length > 0) {
-      processedRefUrls = [];
-      for (const refUrl of referenceImageUrls) {
-        const assetUrl = await registerAndWaitAsset(apiKey, refUrl);
-        processedRefUrls.push(assetUrl);
-      }
-    }
-
-    let processedVideoUrls: string[] | undefined;
-    if (referenceVideoUrl) {
-      const videoAsset = await registerAndWaitAsset(apiKey, referenceVideoUrl, "Video");
-      processedVideoUrls = [videoAsset];
-    }
-
-    let processedAudioUrls: string[] | undefined;
-    if (referenceAudioUrl) {
-      const audioAsset = await registerAndWaitAsset(apiKey, referenceAudioUrl, "Audio");
-      processedAudioUrls = [audioAsset];
-    }
-
+    // Seedance 2.0 accepts direct public URLs (no asset registration needed)
     const result = await createSeedanceTask(apiKey, {
       prompt,
       sdModel,
-      firstFrameUrl: processedFirstFrame,
-      lastFrameUrl: processedLastFrame,
-      referenceImageUrls: processedRefUrls,
-      referenceVideoUrls: processedVideoUrls,
-      referenceAudioUrls: processedAudioUrls,
+      firstFrameUrl: firstFrameUrl || undefined,
+      lastFrameUrl: lastFrameUrl || undefined,
+      referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+      referenceVideoUrls: referenceVideoUrl ? [referenceVideoUrl] : undefined,
+      referenceAudioUrls: referenceAudioUrl ? [referenceAudioUrl] : undefined,
       resolution,
       aspectRatio,
       duration,
