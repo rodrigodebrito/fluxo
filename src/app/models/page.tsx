@@ -10,6 +10,8 @@ interface TrainedModel {
   trigger_word: string;
   replicate_model_id: string | null;
   replicate_version: string | null;
+  provider: string | null;
+  weights_url: string | null;
   status: string;
   thumbnail_url: string | null;
   created_at: string;
@@ -50,6 +52,7 @@ export default function ModelsPage() {
   const [triggerWord, setTriggerWord] = useState(() => generateTriggerWord());
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [trainingProvider, setTrainingProvider] = useState<"replicate" | "fal-zimage">("replicate");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchModels = useCallback(async () => {
@@ -120,7 +123,11 @@ export default function ModelsPage() {
         formData.append("images", file);
       }
 
-      const res = await fetch("/api/training/create", {
+      const endpoint = trainingProvider === "fal-zimage"
+        ? "/api/training/create-zimage"
+        : "/api/training/create";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -137,6 +144,7 @@ export default function ModelsPage() {
       setSelectedFiles([]);
       previews.forEach((p) => URL.revokeObjectURL(p));
       setPreviews([]);
+      setTrainingProvider("replicate");
       setShowCreateModal(false);
 
       // Refresh list
@@ -279,6 +287,11 @@ export default function ModelsPage() {
                     {STATUS_LABELS[model.status] || model.status}
                   </div>
 
+                  {/* Provider badge */}
+                  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/50 text-zinc-300 backdrop-blur-sm">
+                    {model.provider === "fal-zimage" ? "Z-Image" : "Flux"}
+                  </div>
+
                   {/* Training spinner */}
                   {model.status === "training" && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -334,7 +347,7 @@ export default function ModelsPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10 rounded-t-2xl">
               <div>
                 <h3 className="text-lg font-semibold text-white">Treinar Novo Modelo</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Custo: 50 creditos</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Custo: {trainingProvider === "fal-zimage" ? "34" : "50"} creditos</p>
               </div>
               <button
                 onClick={() => !creating && setShowCreateModal(false)}
@@ -348,6 +361,37 @@ export default function ModelsPage() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Provider Toggle */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Tipo de Modelo
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setTrainingProvider("replicate")}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                      trainingProvider === "replicate"
+                        ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                    }`}
+                  >
+                    <div className="font-medium">Flux LoRA</div>
+                    <div className="text-[10px] mt-0.5 opacity-70">50 creditos — Replicate</div>
+                  </button>
+                  <button
+                    onClick={() => setTrainingProvider("fal-zimage")}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                      trainingProvider === "fal-zimage"
+                        ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                    }`}
+                  >
+                    <div className="font-medium">Z-Image LoRA</div>
+                    <div className="text-[10px] mt-0.5 opacity-70">34 creditos — fal.ai</div>
+                  </button>
+                </div>
+              </div>
+
               {/* Model Name */}
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-1.5">
@@ -480,7 +524,7 @@ export default function ModelsPage() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Iniciar Treino (50 creditos)
+                    Iniciar Treino ({trainingProvider === "fal-zimage" ? "34" : "50"} creditos)
                   </>
                 )}
               </button>

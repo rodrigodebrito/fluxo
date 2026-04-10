@@ -72,6 +72,120 @@ const KLING_ASPECT_RATIOS = [
   { value: "1:1", label: "1:1" },
 ];
 
+function ZImageLoraSelector({ loras, onUpdate }: {
+  loras: { path: string; scale: number }[];
+  onUpdate: (loras: { path: string; scale: number }[]) => void;
+}) {
+  const [models, setModels] = useState<{ id: string; name: string; trigger_word: string; weights_url: string | null; provider: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/training/list")
+      .then((r) => r.json())
+      .then((data) => {
+        setModels(
+          (data.models || []).filter(
+            (m: { status: string; provider: string | null; weights_url: string | null }) =>
+              m.status === "ready" && m.provider === "fal-zimage" && m.weights_url
+          )
+        );
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const addFromTrained = (weightsUrl: string) => {
+    if (loras.length >= 3) return;
+    if (loras.some((l) => l.path === weightsUrl)) return;
+    onUpdate([...loras, { path: weightsUrl, scale: 1 }]);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-zinc-300">LoRAs ({loras.length}/3)</span>
+      </div>
+
+      {/* Trained models quick-add */}
+      {!loading && models.length > 0 && loras.length < 3 && (
+        <div className="mb-2">
+          <select
+            value=""
+            onChange={(e) => { if (e.target.value) addFromTrained(e.target.value); }}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+          >
+            <option value="">+ Adicionar modelo treinado...</option>
+            {models.map((m) => (
+              <option key={m.id} value={m.weights_url || ""}>
+                {m.name} ({m.trigger_word})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Manual add */}
+      {loras.length < 3 && (
+        <button
+          onClick={() => onUpdate([...loras, { path: "", scale: 1 }])}
+          className="text-xs text-purple-400 hover:text-purple-300 mb-2"
+        >
+          + Adicionar URL manual
+        </button>
+      )}
+
+      {/* LoRA list */}
+      {loras.map((lora, idx) => (
+        <div key={idx} className="mb-2 p-2 bg-zinc-800 rounded-lg border border-zinc-700">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-xs text-zinc-400">LoRA {idx + 1}</span>
+            <button
+              onClick={() => onUpdate(loras.filter((_, i) => i !== idx))}
+              className="ml-auto text-xs text-red-400 hover:text-red-300"
+            >
+              Remover
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder="URL do LoRA"
+            value={lora.path}
+            onChange={(e) => {
+              const updated = [...loras];
+              updated[idx] = { ...updated[idx], path: e.target.value };
+              onUpdate(updated);
+            }}
+            className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-300 mb-1 focus:outline-none focus:border-purple-500"
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400">Peso: {lora.scale.toFixed(1)}</span>
+            <input
+              type="range"
+              min={0}
+              max={20}
+              value={Math.round(lora.scale * 10)}
+              onChange={(e) => {
+                const updated = [...loras];
+                updated[idx] = { ...updated[idx], scale: parseInt(e.target.value) / 10 };
+                onUpdate(updated);
+              }}
+              className="flex-1 accent-purple-500"
+            />
+          </div>
+        </div>
+      ))}
+
+      {loras.length === 0 && (
+        <p className="text-xs text-zinc-500">
+          {loading ? "Carregando..." : models.length === 0
+            ? <>Nenhum LoRA Z-Image treinado. <a href="/models" className="text-purple-400 hover:text-purple-300">Treinar um</a></>
+            : "Selecione um modelo treinado ou adicione URL manual."
+          }
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TrainedModelSelector({ label, subtitle, selectedId, triggerWord, onSelect, allowEmpty }: {
   label?: string;
   subtitle?: string;
@@ -986,64 +1100,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
 
         {/* Z-Image LoRAs */}
         {params.includes("zimageLoras") && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-zinc-300">LoRAs ({zimageLoras.length}/3)</span>
-              {zimageLoras.length < 3 && (
-                <button
-                  onClick={() => update({ zimageLoras: [...zimageLoras, { path: "", scale: 1 }] })}
-                  className="text-xs text-purple-400 hover:text-purple-300"
-                >
-                  + Adicionar
-                </button>
-              )}
-            </div>
-            {zimageLoras.map((lora: { path: string; scale: number }, idx: number) => (
-              <div key={idx} className="mb-2 p-2 bg-zinc-800 rounded-lg border border-zinc-700">
-                <div className="flex items-center gap-1 mb-1">
-                  <span className="text-xs text-zinc-400">LoRA {idx + 1}</span>
-                  <button
-                    onClick={() => {
-                      const updated = zimageLoras.filter((_: { path: string; scale: number }, i: number) => i !== idx);
-                      update({ zimageLoras: updated });
-                    }}
-                    className="ml-auto text-xs text-red-400 hover:text-red-300"
-                  >
-                    Remover
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  placeholder="URL ou path do LoRA"
-                  value={lora.path}
-                  onChange={(e) => {
-                    const updated = [...zimageLoras];
-                    updated[idx] = { ...updated[idx], path: e.target.value };
-                    update({ zimageLoras: updated });
-                  }}
-                  className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-300 mb-1 focus:outline-none focus:border-purple-500"
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Peso: {lora.scale.toFixed(1)}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={20}
-                    value={Math.round(lora.scale * 10)}
-                    onChange={(e) => {
-                      const updated = [...zimageLoras];
-                      updated[idx] = { ...updated[idx], scale: parseInt(e.target.value) / 10 };
-                      update({ zimageLoras: updated });
-                    }}
-                    className="flex-1 accent-purple-500"
-                  />
-                </div>
-              </div>
-            ))}
-            {zimageLoras.length === 0 && (
-              <p className="text-xs text-zinc-500">Nenhum LoRA adicionado. Treine um no fal.ai (Z-Image Trainer).</p>
-            )}
-          </div>
+          <ZImageLoraSelector
+            loras={zimageLoras}
+            onUpdate={(updated) => update({ zimageLoras: updated })}
+          />
         )}
 
         {/* Aspect Ratio */}
