@@ -210,6 +210,15 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const grokDuration = (node.data.grokDuration as number) || 6;
   const grokMode = (node.data.grokMode as string) || "normal";
 
+  // Z-Image Turbo
+  const isZimage = model === "zimage-t2i" || model === "zimage-i2i" || model === "zimage-lora" || model === "zimage-i2i-lora";
+  const zimageSize = (node.data.zimageSize as string) || "landscape_4_3";
+  const zimageSteps = (node.data.zimageSteps as number) || 8;
+  const zimageAcceleration = (node.data.zimageAcceleration as string) || "regular";
+  const zimageSafety = (node.data.zimageSafety as boolean) ?? false;
+  const zimageStrength = (node.data.zimageStrength as number) ?? 0.6;
+  const zimageLoras = (node.data.zimageLoras as { path: string; scale: number }[]) || [];
+
   // Kling Avatar TTS
   const isAvatar = model === "kling-avatar";
   const avatarTier = (node.data.avatarTier as string) || "standard";
@@ -286,6 +295,16 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   }
   if (model === "custom-model") {
     costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
+  }
+  if (model === "zimage-t2i" || model === "zimage-i2i") {
+    // $0.005/MP ~ 1MP padrao = 2 cred
+    const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+    costPerRun = hdSizes.includes(zimageSize) ? 3 : 2;
+  }
+  if (model === "zimage-lora" || model === "zimage-i2i-lora") {
+    // $0.0085/MP ~ 1MP padrao = 3 cred
+    const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+    costPerRun = hdSizes.includes(zimageSize) ? 5 : 3;
   }
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
@@ -869,6 +888,161 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               <option value="portrait_4_3">Portrait 4:3</option>
               <option value="portrait_16_9">Portrait 16:9 (HD)</option>
             </select>
+          </div>
+        )}
+
+        {/* Z-Image Size */}
+        {params.includes("zimageSize") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Tamanho</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="HD = mais caro. Padrao = mais barato">i</span>
+            </div>
+            <select
+              value={zimageSize}
+              onChange={(e) => update({ zimageSize: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="auto">Auto</option>
+              <option value="square">Square (1:1)</option>
+              <option value="square_hd">Square HD (1:1)</option>
+              <option value="landscape_4_3">Landscape 4:3</option>
+              <option value="landscape_16_9">Landscape 16:9 (HD)</option>
+              <option value="portrait_4_3">Portrait 4:3</option>
+              <option value="portrait_16_9">Portrait 16:9 (HD)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Z-Image Steps */}
+        {params.includes("zimageSteps") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Steps: {zimageSteps}</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Mais steps = mais qualidade, mais lento (1-8)">i</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={8}
+              value={zimageSteps}
+              onChange={(e) => update({ zimageSteps: parseInt(e.target.value) })}
+              className="w-full accent-purple-500"
+            />
+          </div>
+        )}
+
+        {/* Z-Image Strength (I2I only) */}
+        {params.includes("zimageStrength") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Forca: {Math.round(zimageStrength * 100)}%</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Quanto mais alto, mais transforma a imagem original (0-100%)">i</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(zimageStrength * 100)}
+              onChange={(e) => update({ zimageStrength: parseInt(e.target.value) / 100 })}
+              className="w-full accent-purple-500"
+            />
+          </div>
+        )}
+
+        {/* Z-Image Acceleration */}
+        {params.includes("zimageAcceleration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Aceleracao</span>
+            </div>
+            <select
+              value={zimageAcceleration}
+              onChange={(e) => update({ zimageAcceleration: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="none">Nenhuma</option>
+              <option value="regular">Regular</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        )}
+
+        {/* Z-Image Safety Checker */}
+        {params.includes("zimageSafety") && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-zinc-300">Filtro NSFW</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Desligado = sem censura">i</span>
+            </div>
+            <button
+              onClick={() => update({ zimageSafety: !zimageSafety })}
+              className={`w-10 h-5 rounded-full transition-colors ${zimageSafety ? "bg-purple-600" : "bg-zinc-700"}`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${zimageSafety ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        )}
+
+        {/* Z-Image LoRAs */}
+        {params.includes("zimageLoras") && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-zinc-300">LoRAs ({zimageLoras.length}/3)</span>
+              {zimageLoras.length < 3 && (
+                <button
+                  onClick={() => update({ zimageLoras: [...zimageLoras, { path: "", scale: 1 }] })}
+                  className="text-xs text-purple-400 hover:text-purple-300"
+                >
+                  + Adicionar
+                </button>
+              )}
+            </div>
+            {zimageLoras.map((lora: { path: string; scale: number }, idx: number) => (
+              <div key={idx} className="mb-2 p-2 bg-zinc-800 rounded-lg border border-zinc-700">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs text-zinc-400">LoRA {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      const updated = zimageLoras.filter((_: { path: string; scale: number }, i: number) => i !== idx);
+                      update({ zimageLoras: updated });
+                    }}
+                    className="ml-auto text-xs text-red-400 hover:text-red-300"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="URL ou path do LoRA"
+                  value={lora.path}
+                  onChange={(e) => {
+                    const updated = [...zimageLoras];
+                    updated[idx] = { ...updated[idx], path: e.target.value };
+                    update({ zimageLoras: updated });
+                  }}
+                  className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-300 mb-1 focus:outline-none focus:border-purple-500"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400">Peso: {lora.scale.toFixed(1)}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={20}
+                    value={Math.round(lora.scale * 10)}
+                    onChange={(e) => {
+                      const updated = [...zimageLoras];
+                      updated[idx] = { ...updated[idx], scale: parseInt(e.target.value) / 10 };
+                      update({ zimageLoras: updated });
+                    }}
+                    className="flex-1 accent-purple-500"
+                  />
+                </div>
+              </div>
+            ))}
+            {zimageLoras.length === 0 && (
+              <p className="text-xs text-zinc-500">Nenhum LoRA adicionado. Treine um no fal.ai (Z-Image Trainer).</p>
+            )}
           </div>
         )}
 

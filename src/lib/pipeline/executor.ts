@@ -94,6 +94,13 @@ interface PipelineData {
   promptExtend?: boolean;
   // Extract Audio
   audioFormat?: string;
+  // Z-Image Turbo
+  zimageSteps?: number;
+  zimageAcceleration?: string;
+  zimageSafety?: boolean;
+  zimageStrength?: number;
+  zimageSize?: string;
+  zimageLoras?: { path: string; scale: number }[];
   // Kling Avatar
   avatarTier?: string;
   avatarText?: string;
@@ -580,6 +587,13 @@ export async function startGeneration(
     negativePrompt?: string;
     promptExtend?: boolean;
     audioFormat?: string;
+    // Z-Image Turbo
+    zimageSteps?: number;
+    zimageAcceleration?: string;
+    zimageSafety?: boolean;
+    zimageStrength?: number;
+    zimageSize?: string;
+    zimageLoras?: { path: string; scale: number }[];
     cost?: number;
   }
 ): Promise<string> {
@@ -761,7 +775,7 @@ export async function startGeneration(
   }
 
   // fal.ai models (Kling O3 i2v, O3 edit, O3 ref, Flux 2, utilities)
-  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale"];
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale", "zimage-t2i", "zimage-i2i", "zimage-lora", "zimage-i2i-lora"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai
     let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
@@ -808,6 +822,13 @@ export async function startGeneration(
         fluxImageSize: options.fluxImageSize,
         seed: options.seed ?? undefined,
         upscaleScale: options.upscaleScale,
+        // Z-Image Turbo
+        zimageSteps: options.zimageSteps,
+        zimageAcceleration: options.zimageAcceleration,
+        zimageSafety: options.zimageSafety,
+        zimageStrength: options.zimageStrength,
+        zimageSize: options.zimageSize,
+        zimageLoras: options.zimageLoras,
         cost: options.cost,
       }),
     });

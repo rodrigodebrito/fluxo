@@ -19,12 +19,16 @@ const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string; std_t2v
   },
 };
 
-// Flux 2 + utility endpoints (no tier distinction)
+// Flux 2 + utility + Z-Image endpoints (no tier distinction)
 const FLUX_ENDPOINTS: Record<string, string> = {
   "flux-2-pro": "fal-ai/flux-2-pro",
   "flux-2-edit": "fal-ai/flux-2-pro/edit",
   "bg-removal": "fal-ai/birefnet/v2",
   "upscale": "fal-ai/esrgan",
+  "zimage-t2i": "fal-ai/z-image/turbo",
+  "zimage-i2i": "fal-ai/z-image/turbo/image-to-image",
+  "zimage-lora": "fal-ai/z-image/turbo/lora",
+  "zimage-i2i-lora": "fal-ai/z-image/turbo/image-to-image/lora",
 };
 
 export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro", hasImage: boolean = true): string | null {
@@ -258,6 +262,13 @@ interface FalGenerateInput {
   seed?: number;
   // Upscale
   upscaleScale?: number;
+  // Z-Image Turbo
+  zimageSteps?: number;
+  zimageAcceleration?: string;
+  zimageSafety?: boolean;
+  zimageStrength?: number;
+  zimageSize?: string;
+  zimageLoras?: { path: string; scale: number }[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -372,6 +383,76 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
       face: false,
       output_format: "png",
     };
+  }
+
+  if (model === "zimage-t2i") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_size: input.zimageSize || "landscape_4_3",
+      num_inference_steps: input.zimageSteps || 8,
+      num_images: 1,
+      output_format: "png",
+      enable_safety_checker: input.zimageSafety ?? false,
+      acceleration: input.zimageAcceleration || "regular",
+    };
+    if (input.seed != null) body.seed = input.seed;
+    return body;
+  }
+
+  if (model === "zimage-i2i") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_url: input.imageUrls?.[0] || "",
+      strength: input.zimageStrength ?? 0.6,
+      image_size: input.zimageSize || "auto",
+      num_inference_steps: input.zimageSteps || 8,
+      num_images: 1,
+      output_format: "png",
+      enable_safety_checker: input.zimageSafety ?? false,
+      acceleration: input.zimageAcceleration || "regular",
+    };
+    if (input.seed != null) body.seed = input.seed;
+    return body;
+  }
+
+  if (model === "zimage-lora") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_size: input.zimageSize || "landscape_4_3",
+      num_inference_steps: input.zimageSteps || 8,
+      num_images: 1,
+      output_format: "png",
+      enable_safety_checker: input.zimageSafety ?? false,
+      acceleration: input.zimageAcceleration || "regular",
+    };
+    if (input.zimageLoras && input.zimageLoras.length > 0) {
+      body.loras = input.zimageLoras;
+    }
+    if (input.seed != null) body.seed = input.seed;
+    return body;
+  }
+
+  if (model === "zimage-i2i-lora") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body: Record<string, any> = {
+      prompt: input.prompt,
+      image_url: input.imageUrls?.[0] || "",
+      strength: input.zimageStrength ?? 0.6,
+      image_size: input.zimageSize || "auto",
+      num_inference_steps: input.zimageSteps || 8,
+      num_images: 1,
+      output_format: "png",
+      enable_safety_checker: input.zimageSafety ?? false,
+      acceleration: input.zimageAcceleration || "regular",
+    };
+    if (input.zimageLoras && input.zimageLoras.length > 0) {
+      body.loras = input.zimageLoras;
+    }
+    if (input.seed != null) body.seed = input.seed;
+    return body;
   }
 
   throw new Error(`Modelo fal.ai desconhecido: ${model}`);

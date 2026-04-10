@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
-  if (prompt && !isUtilityTool) {
+  const isZimage = model === "zimage-t2i" || model === "zimage-i2i" || model === "zimage-lora" || model === "zimage-i2i-lora";
+  if (prompt && !isUtilityTool && !isZimage) {
     const safety = checkPromptSafety(prompt);
     if (!safety.safe) {
       return NextResponse.json({ error: safety.reason }, { status: 403 });
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
       fluxImageSize: body.fluxImageSize,
       seed: body.seed,
       upscaleScale: body.upscaleScale,
+      // Z-Image Turbo
+      zimageSteps: body.zimageSteps,
+      zimageAcceleration: body.zimageAcceleration,
+      zimageSafety: body.zimageSafety,
+      zimageStrength: body.zimageStrength,
+      zimageSize: body.zimageSize,
+      zimageLoras: body.zimageLoras,
     });
 
     console.log("[generate-fal] model:", model, "endpoint:", endpoint, "input:", JSON.stringify(input));

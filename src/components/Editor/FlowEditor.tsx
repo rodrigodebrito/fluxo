@@ -72,6 +72,14 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
     case "model-grok-i2v":
       return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "16:9" };
+    case "model-zimage-t2i":
+      return { label: "Z-Image Turbo", model: "zimage-t2i", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, seed: null };
+    case "model-zimage-i2i":
+      return { label: "Z-Image I2I", model: "zimage-i2i", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, seed: null };
+    case "model-zimage-lora":
+      return { label: "Z-Image LoRA", model: "zimage-lora", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
+    case "model-zimage-i2i-lora":
+      return { label: "Z-Image I2I + LoRA", model: "zimage-i2i-lora", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
     case "audioInput":
       return { label: "Audio", audioUrl: "", fileName: "", audioDuration: 0 };
     case "klingElement":
@@ -1020,6 +1028,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         }
       } else if (m === "extract-audio") {
         costPerRun = 1;
+      } else if (m === "zimage-t2i" || m === "zimage-i2i") {
+        const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+        costPerRun = hdSizes.includes(pipeline.zimageSize || "") ? 3 : 2;
+      } else if (m === "zimage-lora" || m === "zimage-i2i-lora") {
+        const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
+        costPerRun = hdSizes.includes(pipeline.zimageSize || "") ? 5 : 3;
       }
 
       const genOptions = {
@@ -1077,6 +1091,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         grokDuration: pipeline.grokDuration,
         grokMode: pipeline.grokMode,
         audioFormat: pipeline.audioFormat,
+        // Z-Image Turbo
+        zimageSteps: pipeline.zimageSteps,
+        zimageAcceleration: pipeline.zimageAcceleration,
+        zimageSafety: pipeline.zimageSafety,
+        zimageStrength: pipeline.zimageStrength,
+        zimageSize: pipeline.zimageSize,
+        zimageLoras: pipeline.zimageLoras,
         cost: costPerRun,
       };
 
@@ -1683,6 +1704,8 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-bg-removal", label: "BG Removal" },
       { type: "model-upscale", label: "Upscale" },
       { type: "model-extract-audio", label: "Extract Audio" },
+      { type: "model-zimage-t2i", label: "Z-Image Turbo" },
+      { type: "model-zimage-i2i", label: "Z-Image I2I" },
     ],
   },
   {
@@ -1715,6 +1738,8 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "LoRA",
     children: [
       { type: "model-custom", label: "Modelo Treinado" },
+      { type: "model-zimage-lora", label: "Z-Image LoRA" },
+      { type: "model-zimage-i2i-lora", label: "Z-Image I2I + LoRA" },
     ],
   },
 ];
