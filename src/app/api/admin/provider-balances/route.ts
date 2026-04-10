@@ -16,7 +16,7 @@ const LOW_THRESHOLDS: Record<string, number> = {
 };
 
 async function fetchFalBalance(): Promise<ProviderBalance> {
-  const key = process.env.FAL_KEY;
+  const key = process.env.FAL_ADMIN_KEY || process.env.FAL_KEY;
   if (!key) return { provider: "fal.ai", balance: null, currency: "USD", error: "FAL_KEY nao configurada" };
 
   try {
