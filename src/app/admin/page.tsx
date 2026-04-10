@@ -627,20 +627,20 @@ export default function AdminPage() {
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                        <button onClick={() => openUserHistory(user)} className="flex items-center gap-3 text-left w-full group">
                           <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shrink-0">
                             <span className="text-[10px] font-bold text-white">{(user.name || user.email).charAt(0).toUpperCase()}</span>
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm text-zinc-200 truncate">{user.name || "Sem nome"}</p>
+                              <p className="text-sm text-zinc-200 truncate group-hover:text-purple-400 transition-colors">{user.name || "Sem nome"}</p>
                               {user.role === "admin" && (
                                 <span className="text-[9px] bg-red-600/20 text-red-400 px-1.5 py-0.5 rounded font-medium">admin</span>
                               )}
                             </div>
                             <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
                           </div>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${PLAN_COLORS[user.plan] || PLAN_COLORS.free}`}>
@@ -657,7 +657,7 @@ export default function AdminPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => openUserHistory(user)}
-                            className="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded transition-colors"
+                            className="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-xs font-medium rounded transition-colors border border-blue-500/20"
                             title="Ver historico de creditos"
                           >
                             Historico
