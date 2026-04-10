@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
 
   // Generic Kie AI tasks (Nano Banana, Seedance, Kling, Wan, Grok, etc)
   const result = await getTaskStatus(apiKey, taskId);
+  console.log("[kie-status]", taskId, "model:", model, "response:", JSON.stringify(result).slice(0, 500));
 
   if (result.code !== 200 || !result.data) {
     return NextResponse.json(
@@ -76,12 +77,16 @@ export async function GET(request: NextRequest) {
   }
 
   const { state, resultJson, failMsg, progress } = result.data;
-  const resultUrls = state === "success" ? parseResultUrls(resultJson) : [];
+
+  // Normalizar estados — Kie AI pode retornar variantes
+  const stateStr = state as string;
+  const normalizedState = (stateStr === "failed" || stateStr === "error") ? "fail" : stateStr;
+  const resultUrls = normalizedState === "success" ? parseResultUrls(resultJson) : [];
 
   return NextResponse.json({
-    state,
+    state: normalizedState,
     progress,
     resultUrls,
-    error: state === "fail" ? failMsg : null,
+    error: normalizedState === "fail" ? (failMsg || "Geracao falhou") : null,
   });
 }
