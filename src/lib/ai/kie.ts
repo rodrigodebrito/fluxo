@@ -225,7 +225,23 @@ export async function getTaskStatus(
 export function parseResultUrls(resultJson: string): string[] {
   try {
     const parsed = JSON.parse(resultJson);
-    return parsed.resultUrls || [];
+    // Kie AI pode retornar URLs em diferentes campos dependendo do modelo
+    const urls = parsed.resultUrls
+      || parsed.fullResultUrls
+      || parsed.full_result_urls
+      || parsed.videoUrls
+      || parsed.video_urls
+      || parsed.imageUrls
+      || parsed.image_urls
+      || [];
+    // Se for string unica, converter pra array
+    if (typeof urls === "string") return [urls];
+    if (Array.isArray(urls)) return urls;
+    // Tentar extrair URL de objeto
+    if (parsed.url) return [parsed.url];
+    if (parsed.videoUrl) return [parsed.videoUrl];
+    console.warn("[parseResultUrls] formato desconhecido:", resultJson.slice(0, 500));
+    return [];
   } catch {
     return [];
   }

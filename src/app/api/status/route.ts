@@ -83,6 +83,10 @@ export async function GET(request: NextRequest) {
   const normalizedState = (stateStr === "failed" || stateStr === "error") ? "fail" : stateStr;
   const resultUrls = normalizedState === "success" ? parseResultUrls(resultJson) : [];
 
+  if (normalizedState === "success" && resultUrls.length === 0) {
+    console.error("[kie-status] SUCCESS but no URLs! resultJson:", resultJson);
+  }
+
   return NextResponse.json({
     state: normalizedState,
     progress,
