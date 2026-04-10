@@ -4,39 +4,40 @@
  */
 
 const BLOCKED_KEYWORDS = [
-  // English
-  "child", "children", "kid", "kids", "minor", "minors", "underage", "under age",
-  "teenager", "teen", "teens", "preteen", "pre-teen", "pubescent", "prepubescent",
-  "juvenile", "youngster", "toddler", "infant", "baby", "newborn",
-  "boy", "girl", "schoolgirl", "schoolboy", "school girl", "school boy",
+  // Sempre bloqueado — termos inequivocos de CSAM
+  "underage", "under age", "preteen", "pre-teen", "prepubescent",
   "loli", "lolita", "shota", "shotacon", "lolicon",
   "pedophile", "pedophilia", "pedo",
-  "yr old", "yrs old",
+  "schoolgirl", "schoolboy", "school girl", "school boy",
   // Portuguese
-  "crianca", "criança", "crianças", "criancas",
-  "menor", "menores", "menor de idade", "menores de idade",
-  "adolescente", "adolescentes",
-  "menino", "menina", "meninos", "meninas",
-  "garoto", "garota", "garotos", "garotas",
-  "bebe", "bebê", "recem nascido", "recém nascido", "recém-nascido",
-  "infantil", "infância", "infancia",
-  "escolar", "colegial", "estudante menor",
-  "jovem", "jovens",
+  "menor de idade", "menores de idade",
+  "recem nascido", "recém nascido", "recém-nascido",
+  "estudante menor",
   "pedofilia", "pedofilo", "pedófilo",
-  "anos de idade",
   // Spanish
-  "niño", "niña", "niños", "niñas", "nino", "nina",
   "menor de edad", "menores de edad",
-  "chico", "chica",
-  "bebe", "bebé", "infante",
-  "adolescente", "puberto",
 ];
 
 // Words that when combined with sexual context are blocked, but alone are fine
 // e.g., "young woman" is ok, but "young" + sexual content is not
 const CONTEXTUAL_KEYWORDS = [
+  // So bloqueia se combinado com conteudo sexual
   "young", "little", "small", "tiny", "petit", "petite",
+  "child", "children", "kid", "kids", "minor", "minors",
+  "teenager", "teen", "teens", "pubescent",
+  "juvenile", "youngster", "toddler", "infant", "baby", "newborn",
+  "boy", "girl", "boys", "girls",
+  // Portuguese
   "novo", "nova", "novinha", "novinho", "pequena", "pequeno",
+  "crianca", "criança", "crianças", "criancas",
+  "menor", "menores", "adolescente", "adolescentes",
+  "menino", "menina", "meninos", "meninas",
+  "garoto", "garota", "garotos", "garotas",
+  "bebe", "bebê", "infantil", "infância", "infancia",
+  "escolar", "colegial", "jovem", "jovens",
+  // Spanish
+  "niño", "niña", "niños", "niñas", "nino", "nina",
+  "chico", "chica", "infante", "puberto",
   "joven",
 ];
 
