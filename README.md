@@ -10,12 +10,13 @@ O diferencial nao e o modelo — e o fluxo. Nenhuma ferramenta gratis conecta im
 - **ReactFlow** (@xyflow/react v12) - canvas de nos
 - **Supabase** (PostgreSQL + Auth + RLS) - banco de dados e autenticacao
 - **Tailwind CSS 4** - estilizacao
-- **Kie.ai API** - backend de IA (imagens, videos, avatar, TTS)
-- **fal.ai** - Kling O3, Flux 2 Pro, BG Removal, Upscale
-- **PiAPI** - Seedance 2.0 (video)
+- **Kie.ai API** - backend de IA (imagens, videos, avatar, TTS, Seedance 2.0)
+- **fal.ai** - Kling O3, Flux 2 Pro, BG Removal, Upscale, Z-Image Turbo
 - **Replicate** - Fine-tune LoRA (modelos personalizados)
+- **PiAPI** - Seedance 2.0 (fallback, codigo pronto)
 - **OpenAI API** - LLM (GPT-4.1, GPT-5.4 family)
 - **ElevenLabs** (via Kie.ai) - Text-to-Speech
+- **Mercado Pago** - pagamentos (PIX, cartao)
 - **Render** - deploy de producao
 
 ## Setup
@@ -26,9 +27,9 @@ O diferencial nao e o modelo — e o fluxo. Nenhuma ferramenta gratis conecta im
 - Conta na [Kie.ai](https://kie.ai) para API key
 - Projeto no [Supabase](https://supabase.com) (PostgreSQL + Auth)
 - API key da [OpenAI](https://platform.openai.com) para funcionalidades LLM
-- API key da [PiAPI](https://piapi.ai) para Seedance 2.0
-- API key da [fal.ai](https://fal.ai) para Kling O3, Flux, BG Removal, Upscale
+- API key da [fal.ai](https://fal.ai) para Kling O3, Flux, BG Removal, Upscale, Z-Image
 - API token do [Replicate](https://replicate.com) para modelos personalizados (LoRA)
+- Conta no [Mercado Pago](https://www.mercadopago.com.br/developers) para pagamentos
 
 ### Instalacao
 
@@ -36,22 +37,39 @@ O diferencial nao e o modelo — e o fluxo. Nenhuma ferramenta gratis conecta im
 cd fluxo-ai
 npm install
 
-# Configurar variaveis de ambiente (.env)
+# Configurar variaveis de ambiente (.env.local)
 NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 KIE_API_KEY="sua-api-key-aqui"
 OPENAI_API_KEY="sk-..."
-PIAPI_API_KEY="sua-piapi-key"
 FAL_KEY="sua-fal-key"
+FAL_ADMIN_KEY="sua-fal-admin-key"  # Para consultar saldo no admin
 REPLICATE_API_TOKEN="r8_..."
 REPLICATE_USERNAME="seu-username"
+MP_ACCESS_TOKEN="seu-mp-access-token"
+
+# Opcionais
+PIAPI_API_KEY="sua-piapi-key"  # Seedance 2.0 via PiAPI (fallback)
+MP_WEBHOOK_SECRET="secret-do-mp"  # Verificacao de assinatura do webhook
+REPLICATE_WEBHOOK_SECRET="secret-do-replicate"  # Verificacao de webhook de treino
 
 # Rodar em desenvolvimento
 npm run dev
 ```
 
 Abrir [http://localhost:3000](http://localhost:3000).
+
+### Migrations (Supabase SQL Editor)
+
+Rodar no SQL Editor do Supabase antes de usar:
+
+1. `supabase/migrations/create_trained_models.sql`
+2. `supabase/migrations/create_coupons.sql`
+3. `supabase/migrations/create_workflow_templates.sql`
+4. `supabase/migrations/add_credit_history.sql`
+5. `supabase/migrations/atomic_credit_debit.sql` — funcao atomica pra debitar creditos
+6. `supabase/migrations/enable_rls_policies.sql` — RLS em todas as tabelas
 
 ### Build de producao
 
@@ -71,27 +89,35 @@ src/
       generate/              # Nano Banana Pro (image)
       generate-gpt-image/    # GPT Image 1.5 (text-to-image e image-to-image)
       generate-kling/        # Kling 3.0 + Kling Motion (video)
-      generate-seedance/     # Seedance 2.0 via PiAPI (video)
+      generate-seedance/     # Seedance 2.0 via Kie AI (default) ou PiAPI (fallback)
       generate-video/        # Veo 3.1 (video)
       generate-wan/          # Wan 2.7 (video)
-      generate-fal/          # fal.ai models (Kling O3, Flux, BG Removal, Upscale)
+      generate-grok/         # Grok Imagine I2V (video)
+      generate-fal/          # fal.ai models (Kling O3, Flux, BG Removal, Upscale, Z-Image)
       generate-avatar/       # Kling Avatar TTS (talking head)
       generate-replicate/    # Modelos personalizados LoRA (image)
       generate-llm/          # OpenAI GPT (text generation)
       extract-audio/         # Extrair audio de video (ffmpeg)
       training/              # Treino de modelos LoRA (create/status/list)
       webhooks/replicate/    # Webhook do Replicate (treino completo)
-      status/                # Polling de status de tasks
-      upload/                # Upload de arquivos (catbox.moe)
+      webhook/mercadopago/   # Webhook de pagamento Mercado Pago
+      status/                # Polling de status (Kie AI)
+      status-fal/            # Polling de status (fal.ai)
+      status-piapi/          # Polling de status (PiAPI)
+      upload/                # Upload de arquivos (Supabase Storage)
       workflows/             # CRUD de workflows
       templates/             # CRUD de system prompt templates
-      credits/               # Saldo e historico de creditos
-      admin/                 # Painel admin (usuarios, creditos, templates)
+      credits/               # Saldo, historico e refund de creditos
+      checkout/              # Checkout Mercado Pago
+      admin/                 # Painel admin (usuarios, creditos, templates, saldos)
       health/                # Health check
     editor/[id]/             # Pagina do editor (Canvas + App tabs)
     dashboard/               # Dashboard estilo Weavy (templates + meus arquivos)
     models/                  # Pagina "Meus Modelos" (treino LoRA)
     history/                 # Historico de geracoes
+    credits/                 # Historico de creditos do usuario
+    admin/                   # Painel admin
+    pricing/                 # Pagina de precos
     terms/                   # Termos de uso
     login/                   # Pagina de login
     register/                # Pagina de registro
@@ -119,12 +145,14 @@ src/
       OutputNode.tsx         # No de saida
   lib/
     ai/kie.ts                # Funcoes de API para todos os modelos (Kie.ai, Avatar, TTS)
-    ai/fal.ts                # fal.ai models (Kling O3, Flux, BG Removal, Upscale)
+    ai/fal.ts                # fal.ai models (Kling O3, Flux, BG Removal, Upscale, Z-Image)
     ai/replicate.ts          # Replicate API (treino LoRA + inferencia)
     pipeline/executor.ts     # Orquestrador: extrai dados, faz upload, inicia geracao, polling
     auth-guard.ts            # Verificacao de auth e creditos nas API routes
-    content-filter.ts        # Filtro de seguranca (blocklist CSAM)
-    credits.ts               # Calculo de custos por modelo
+    content-filter.ts        # Filtro de seguranca (CSAM contextual)
+    credits.ts               # Debit atomico, refund, calculo de custos por modelo
+    rate-limit.ts            # Rate limiting por usuario e operacao
+    mercadopago.ts           # Client Mercado Pago (checkout, pagamentos)
     supabase/                # Clients Supabase (browser e server)
   types/nodes.ts             # Definicoes de modelos, handles, parametros
 ```
@@ -135,11 +163,12 @@ src/
 2. Clica "Run Model" em um no de modelo
 3. `executor.ts` percorre as edges para coletar prompt, imagens, parametros
 4. Se houver LLM chain (AnyLLM conectado ao modelo), roda o LLM primeiro
-5. Faz upload de imagens locais para catbox.moe (URLs permanentes)
+5. Faz upload de imagens locais para Supabase Storage
 6. Chama a API route correspondente ao modelo
-7. API route verifica creditos, cobra, e chama a API do provider
-8. Polling a cada 3s ate task completar (com refund em caso de falha)
-9. Resultado (URLs de imagens/videos) exibido no no do modelo
+7. API route verifica creditos, cobra atomicamente, e chama a API do provider
+8. Polling a cada 3s ate task completar (com refund automatico em caso de falha)
+9. Tasks pendentes salvas em localStorage — recupera apos refresh da pagina
+10. Resultado (URLs de imagens/videos) exibido no no do modelo
 
 ---
 
@@ -154,6 +183,10 @@ src/
 | **GPT Image 1.5 Edit** | Kie | Image to Image | Edicao de imagens com GPT, aceita ate 16 imagens |
 | **Flux 2 Pro** | fal.ai | Text to Image | Imagens HD via fal.ai |
 | **Flux 2 Edit** | fal.ai | Image to Image | Edicao de imagens com Flux |
+| **Z-Image Turbo** | fal.ai | Text to Image | Imagem rapida e barata (6B params) |
+| **Z-Image I2I** | fal.ai | Image to Image | Image to Image com Z-Image |
+| **Z-Image LoRA** | fal.ai | Text to Image | Imagem com ate 3 LoRAs |
+| **Z-Image I2I + LoRA** | fal.ai | Image to Image | I2I com ate 3 LoRAs |
 | **Modelo Treinado (LoRA)** | Replicate | Text to Image | Modelos personalizados via fine-tune |
 
 ### Videos
@@ -166,7 +199,7 @@ src/
 | **Kling O3** | fal.ai | Image to Video | Kling O3 Pro, standard/pro com audio |
 | **Kling O3 Edit** | fal.ai | Video to Video | Editar video existente com IA |
 | **Kling O3 Ref** | fal.ai | Reference to Video | Video de referencia + imagens |
-| **Seedance 2.0** | PiAPI | Text/Image to Video | ByteDance, modos Normal/Fast |
+| **Seedance 2.0** | Kie | Text/Image to Video | ByteDance, modos Normal/Fast, refs de imagem/video/audio |
 | **Wan 2.7** | Kie | Image to Video | Wan 2.7, 720p/1080p |
 | **Grok Imagine** | Kie | Image to Video | I2V economico, 480p/720p |
 | **Kling Avatar TTS** | Kie | Image+Audio to Video | Talking head — foto + texto/audio vira video falando |
@@ -221,6 +254,9 @@ src/
 | Nano Banana Pro | 18 (24 em 4K) |
 | GPT Image 1.5 | 4 low / 22 high |
 | Flux 2 Pro | 6 (9 HD) |
+| Z-Image Turbo | 2 |
+| Z-Image I2I | 2 |
+| Z-Image LoRA | 3 |
 | BG Removal | 1 |
 | Upscale | 2 |
 | Custom LoRA | 10 |
@@ -241,8 +277,8 @@ src/
 | Kling Avatar Std | 8/s |
 | Kling Avatar Pro | 16/s |
 | Wan 2.7 | 16/s (720p) / 24/s (1080p) |
-| Seedance 2 | 26/s |
-| Seedance 2 Fast | 20/s |
+| Seedance 2.0 Std (Kie) | 41/s (720p, sem video input) |
+| Seedance 2.0 Fast (Kie) | 33/s (720p, sem video input) |
 
 #### Videos (fixo por geracao)
 
@@ -262,32 +298,54 @@ src/
 
 ---
 
-## Ferramentas (Tools)
+## Seguranca
 
-| Ferramenta | Descricao |
-|------------|-----------|
-| **Prompt** | Campo de texto para escrever prompts |
-| **File Input** | Upload de imagens e videos com preview |
-| **Audio Input** | Upload de audio (MP3/WAV/AAC/OGG/M4A) com player inline |
-| **Any LLM** | No de LLM com suporte a vision (imagens), gera texto para usar como prompt |
-| **Router** | Divide conexoes para multiplos destinos (auto-expande ao conectar) |
-| **Prompt Concat** | Combina multiplos prompts em um so |
-| **Video Concat** | Concatenacao de videos |
-| **Last Frame** | Extrai ultimo frame de video |
-| **Extract Audio** | Extrai audio de video (MP3/WAV) |
-| **Kling Element** | No auxiliar para Kling Elements (ate 3 elements com 2-4 imagens cada) |
-| **Group / Section** | Grupo visual com cores, notas multi-linha e tamanho de fonte ajustavel |
-| **Output** | No de saida (imagem, video ou audio) |
+### Implementado
+
+- **Webhook Mercado Pago** — verificacao de assinatura HMAC-SHA256 (via `MP_WEBHOOK_SECRET`) + validacao do pagamento via API
+- **Webhook Replicate** — verificacao de assinatura HMAC-SHA256 (via `REPLICATE_WEBHOOK_SECRET`)
+- **Debit atomico de creditos** — funcao SQL `debit_credits` previne race condition em requests concorrentes
+- **Refund protegido** — idempotencia (sem refund duplo), verificacao de debito existente, cap de valor maximo
+- **RLS (Row Level Security)** — todas as tabelas protegidas a nivel de banco. Usuarios so acessam seus proprios dados
+- **Upload com whitelist** — aceita apenas imagens, videos e audio. Bloqueia executaveis e scripts
+- **Filtro de conteudo contextual** — termos inequivocos (loli, pedophilia, etc) sempre bloqueados; termos ambiguos (girl, boy, teen) so bloqueados quando combinados com conteudo sexual
+- **Rate limiting** — por usuario e tipo de operacao (geracao, upload)
+- **Auth em todas as rotas** — verificacao de sessao via Supabase Auth
+- **Imagens persistentes** — imagens geradas via Replicate (LoRA) salvas no Supabase Storage (URLs do Replicate expiram em ~1h)
+
+### Recuperacao de geracoes
+
+Geracoes em andamento sao salvas em localStorage. Se o usuario recarregar a pagina ou fechar o browser acidentalmente, o polling retoma automaticamente ao reabrir o editor. Tasks com mais de 15 minutos sao descartadas.
 
 ---
 
-## Aba App
+## Providers de IA
 
-O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de aplicativos).
+### Seedance 2.0 — Kie AI (default)
 
-### Apps disponiveis
+O Seedance 2.0 foi migrado do PiAPI para o Kie AI como provider principal. Motivo: melhor suporte a rostos reais (PiAPI bloqueava com filtro de seguranca). O codigo do PiAPI continua pronto no app — basta passar `sdModel` com "piapi" para ativar.
 
-- **Gerador de System Prompt**: Preencha 7 campos e gere um system prompt profissional usando GPT-4.1 (1 credito). Suporta salvar e carregar templates.
+**Precos Kie AI (720P, sem video input):**
+- Standard: 41 cred/s ($0.205/s)
+- Fast: 33 cred/s ($0.165/s)
+
+### Monitoramento de saldo
+
+O painel admin exibe saldo de todos os providers em tempo real:
+- **fal.ai** — requer `FAL_ADMIN_KEY` (Admin API Key separada)
+- **Kie AI** — via `/api/v1/chat/credit`
+- **PiAPI** — via `/account/info`
+- Alerta visual "SALDO BAIXO" quando saldo abaixo do threshold
+
+---
+
+## Historico de creditos
+
+### Para o usuario
+Pagina `/credits` mostra todas as transacoes: debitos, recargas, refunds, bonus. Com modelo, prompt, status e data.
+
+### Para o admin
+No painel admin, clicar em qualquer usuario abre modal com historico completo + estatisticas (total gasto, total adicionado, modelos mais usados).
 
 ---
 
@@ -315,13 +373,15 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - **Gallery**: fullscreen com navegacao, download e copia de link
 
 ### Pipeline
-- Upload automatico para catbox.moe
+- Upload automatico para Supabase Storage
 - LLM chain: AnyLLM pre-processa prompt antes da geracao de imagem/video
 - Router pass-through: resolucao recursiva para encontrar no de origem real
 - Polling automatico com progresso
 - Cancelar geracao em andamento (AbortController)
+- Recuperacao automatica de geracoes apos refresh da pagina
 - Suporte a multiplas runs por execucao
 - Custo dinamico calculado em tempo real (por segundo para videos)
+- Refund automatico quando geracao falha no provider
 
 ### Dashboard
 - Layout estilo Weavy com carousel de templates no topo
@@ -329,24 +389,45 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - Templates com foto de capa (upload via admin)
 
 ### Autenticacao e creditos
-- Supabase Auth (email/senha) com RLS
-- Sistema de creditos com charge-then-refund
+- Supabase Auth (email/senha) com RLS em todas as tabelas
+- Sistema de creditos com debit atomico (previne race condition)
 - Verificacao de saldo antes de gerar
+- Refund automatico em falha, com protecao contra refund duplicado
 - Exibicao de creditos no header
+- Historico de creditos com modelo, prompt e status
 - Admin panel para gerenciar creditos, usuarios e templates
 - Rate limiting por usuario
 
+### Pagamento
+- Checkout via Mercado Pago (PIX, cartao)
+- Webhook com verificacao de assinatura HMAC-SHA256
+- Idempotencia (nao processa pagamento duplicado)
+- Bonus de 50 creditos na primeira compra
+- Sistema de cupons de desconto
+
+### Admin
+- Painel com estatisticas (usuarios, geracoes, creditos gastos)
+- Saldo dos providers em tempo real (fal.ai, Kie AI, PiAPI) com alerta de saldo baixo
+- Gerenciamento de usuarios (creditos, historico)
+- Clique em qualquer usuario para ver historico completo de geracoes
+- CRUD de templates e cupons
+- Gerenciamento de modelos treinados
+
 ### Seguranca
-- Filtro de conteudo (blocklist CSAM) em todas as rotas de geracao
-- Termos de uso com politica NSFW e tolerancia zero para CSAM
-- Content filter com deteccao contextual (combinacao de keywords)
+- Filtro de conteudo contextual em todas as rotas de geracao
+- Webhooks com verificacao de assinatura
+- Debit atomico de creditos
+- RLS (Row Level Security) em todas as tabelas
+- Upload com whitelist de tipos de arquivo
+- Refund protegido com idempotencia e cap
 
 ### Modelos personalizados (LoRA)
 - Upload de 5-30 fotos para treinar modelo personalizado
 - Treino via Replicate (~2 min)
 - Inferencia via flux-dev-lora com disable_safety_checker
+- Imagens geradas persistidas no Supabase Storage (nao expiram)
 - Pagina "Meus Modelos" para gerenciar modelos treinados
-- Suporte a Extra LoRA (combinar 2 modelos)
+- Suporte a Extra LoRA (combinar 2+ modelos)
 
 ### Avatar TTS
 - Kling Avatar (standard 720p / pro 1080p) via Kie AI
@@ -360,14 +441,18 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 - System prompt templates salvos por usuario
 - Auto-save de workflows
 - Historico de geracoes com galeria
-
-### App
-- Aba App no editor com grade de aplicativos
-- Gerador de System Prompt (7 campos, GPT-4.1, salvar/carregar templates)
+- Geracoes pendentes salvas em localStorage (recovery apos refresh)
 
 ---
 
 ## Features especificas por modelo
+
+### Seedance 2.0 (Kie AI) - Referencia multimodal
+1. Conecte imagens de referencia (File Input) ao Seedance 2.0
+2. Conecte video de referencia (handle "Video Ref")
+3. Conecte audio de referencia (handle "Audio")
+4. Aceita ate 9 imagens, video e audio simultaneamente
+5. URLs publicas enviadas diretamente (sem asset registration)
 
 ### Kling 3 - Elements + Multi-Shot
 1. Adicione um no "Kling Element" ao canvas
@@ -378,11 +463,6 @@ O editor possui duas abas: **Canvas** (editor de workflow) e **App** (grade de a
 
 ### GPT Image 1.5 - Background transparente
 Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Background.
-
-### Seedance 2.0 - Referencia de imagem
-1. Conecte imagens de referencia (File Input) ao Seedance 2.0
-2. O sistema auto-injeta `@image1`, `@image2` no prompt
-3. Usa modo `omni_reference` automaticamente quando ha imagens/video/audio
 
 ### Veo 3.1 - Image to Video
 - Suporta First Frame + Last Frame (FIRST_AND_LAST_FRAMES_2_VIDEO)
@@ -402,6 +482,7 @@ Disponivel apenas no modo text-to-image, selecione "Transparent" no parametro Ba
 3. Aguarde ~2 min o treino no Replicate (50 creditos)
 4. No editor, arraste "Modelo Treinado" e selecione seu modelo
 5. Use a trigger word no prompt para gerar imagens com o rosto/corpo treinado
+6. Imagens geradas sao salvas permanentemente no Supabase Storage
 
 ### Any LLM - Chain com modelos de imagem/video
 1. Adicione um no Any LLM e conecte um Prompt ao input
@@ -429,10 +510,14 @@ O projeto esta em producao no **Render** com deploy automatico a partir do branc
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase | Sim |
 | `KIE_API_KEY` | Kie.ai | Sim |
 | `OPENAI_API_KEY` | OpenAI | Sim |
-| `PIAPI_API_KEY` | PiAPI | Sim (Seedance 2.0) |
-| `FAL_KEY` | fal.ai | Sim (Kling O3, Flux, BG Removal, Upscale) |
+| `FAL_KEY` | fal.ai | Sim |
+| `FAL_ADMIN_KEY` | fal.ai | Recomendada (saldo no admin) |
 | `REPLICATE_API_TOKEN` | Replicate | Sim (modelos LoRA) |
 | `REPLICATE_USERNAME` | Replicate | Sim (modelos LoRA) |
+| `MP_ACCESS_TOKEN` | Mercado Pago | Sim (pagamentos) |
+| `MP_WEBHOOK_SECRET` | Mercado Pago | Recomendada (seguranca) |
+| `REPLICATE_WEBHOOK_SECRET` | Replicate | Recomendada (seguranca) |
+| `PIAPI_API_KEY` | PiAPI | Opcional (Seedance fallback) |
 
 ---
 
@@ -462,7 +547,7 @@ A margem esta na venda dos pacotes — o custo dos providers e repassado 1:1 em 
 
 1. **Preco em BRL** — pagamento via PIX, sem cartao internacional
 2. **Pipeline automatizado** — monte uma vez, troque o input e rode novamente
-3. **Multi-provider** — Kie + fal.ai + PiAPI + OpenAI na mesma plataforma
+3. **Multi-provider** — Kie + fal.ai + Replicate + OpenAI na mesma plataforma
 4. **Templates prontos** — workflows pre-montados para nichos (imobiliario, e-commerce, UGC)
 5. **LLM integrado** — pre-processamento de prompts com GPT + vision
 6. **Modelos de ponta** — Kling 3, Veo 3.1, GPT Image 1.5, Seedance 2.0
@@ -479,25 +564,31 @@ A margem esta na venda dos pacotes — o custo dos providers e repassado 1:1 em 
 
 ---
 
-## Proximos passos
+## Roadmap de melhorias
 
-### Alta prioridade
-- **Pagamento** — Stripe com PIX, cartao e boleto
-- **Storage proprio** — Cloudflare R2 (substituir catbox.moe)
+### Estado atual: 8/10
 
-### Media prioridade
-- **Sora 2** — Integracao via PiAPI ou fal.ai (text/image to video)
-- **Batch processing** — rodar workflow com diferentes inputs
-- **Variaveis no prompt** — {{nome}}, {{produto}} para reusar workflows
-- **Fallback de providers** — se um provider cai, redireciona para outro
+| Area | Nota | Status |
+|------|------|--------|
+| Arquitetura | 8/10 | Solida |
+| UI/UX | 7.5/10 | Boa |
+| Integracao IA | 8/10 | Forte |
+| Features | 8/10 | Completa |
+| Seguranca | 8/10 | Robusta |
+| Producao | 7/10 | Funcional |
+| Testes | 0/10 | Inexistente |
 
-### Futuro
-- **Sora 2 Characters** — personagens persistentes para videos consistentes (fal.ai)
-- **Workflow marketplace** — publicar e vender templates
-- **API publica** — expor workflows como endpoints REST
-- **Integracao redes sociais** — publicar direto no Instagram/TikTok
-- **Modo mobile** — interface responsiva para workflows simples
-- **Webhooks** — conectar com Zapier/n8n/Make
+### O que falta para 10/10 em cada area
+
+| Area | Atual | Para chegar a 10 |
+|------|-------|-------------------|
+| **Arquitetura** | 8 | Caching layer (SWR/React Query), validacao de env vars no startup, error boundary global, logging centralizado |
+| **UI/UX** | 7.5 | Acessibilidade (ARIA labels, keyboard nav), dark/light mode, loading skeletons, toast notifications, responsivo mobile, i18n (PT/EN) |
+| **Integracao IA** | 8 | Fallback automatico entre providers, retry com backoff exponencial, queue de geracoes, estimativa de tempo |
+| **Features** | 8 | Pastas/organizacao de workflows, favoritos, compartilhar workflow, batch download, API publica |
+| **Seguranca** | 8 | Rate limiting com Redis (Upstash), CSRF tokens, CSP headers, WAF, pen test, audit log de acoes admin |
+| **Producao** | 7 | Monitoramento (Datadog/Grafana), alertas automaticos, CI/CD pipeline, staging environment, health checks detalhados |
+| **Testes** | 0 | Testes unitarios (creditos, filtro, webhooks), testes de integracao, testes E2E (Playwright), coverage >80% |
 
 ---
 
