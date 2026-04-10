@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Modelo fal.ai invalido: ${model}` }, { status: 400 });
   }
 
-  const endpoint = getFalEndpoint(model, tier || "pro");
+  const hasImage = Array.isArray(body.imageUrls) && body.imageUrls.length > 0;
+  const endpoint = getFalEndpoint(model, tier || "pro", hasImage);
   if (!endpoint) {
     return NextResponse.json({ error: `Endpoint fal.ai nao encontrado: ${model}/${tier}` }, { status: 400 });
   }

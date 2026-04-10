@@ -37,7 +37,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "negative-prompt", label: "Neg. Prompt", required: false },
-      { id: "image-1", label: "First Frame*", required: true },
+      { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
     params: ["veoModel", "aspectRatio", "enhancePrompt", "seed", "runs"],
@@ -82,10 +82,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     costPerRun: 120,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
-      { id: "image-1", label: "Start Frame*", required: true },
+      { id: "image-1", label: "Start Frame", required: false },
       { id: "image-2", label: "End Frame", required: false },
     ],
-    params: ["falTier", "multiShots", "klingO3Duration", "generateAudio", "runs"],
+    params: ["falTier", "multiShots", "klingO3Duration", "aspectRatio", "generateAudio", "runs"],
   },
   {
     id: "kling-o3-edit",

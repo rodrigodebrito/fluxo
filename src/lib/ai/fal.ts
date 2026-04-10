@@ -1,11 +1,13 @@
 const QUEUE_BASE = "https://queue.fal.run";
 const QUEUE_BASE_ALT = "https://api.fal.ai/queue";
 
-// Endpoints map — tier (std/pro) is resolved dynamically
-const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string }> = {
+// Endpoints map — tier (std/pro) is resolved dynamically, t2v variants for text-to-video
+const FAL_ENDPOINT_TEMPLATES: Record<string, { std: string; pro: string; std_t2v?: string; pro_t2v?: string }> = {
   "kling-o3-i2v": {
     std: "fal-ai/kling-video/o3/standard/image-to-video",
     pro: "fal-ai/kling-video/o3/pro/image-to-video",
+    std_t2v: "fal-ai/kling-video/o3/standard/text-to-video",
+    pro_t2v: "fal-ai/kling-video/o3/pro/text-to-video",
   },
   "kling-o3-edit": {
     std: "fal-ai/kling-video/o3/standard/video-to-video/edit",
@@ -25,11 +27,16 @@ const FLUX_ENDPOINTS: Record<string, string> = {
   "upscale": "fal-ai/esrgan",
 };
 
-export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro"): string | null {
+export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro", hasImage: boolean = true): string | null {
   // Check Flux endpoints first
   if (FLUX_ENDPOINTS[model]) return FLUX_ENDPOINTS[model];
   const template = FAL_ENDPOINT_TEMPLATES[model];
   if (!template) return null;
+  // Use T2V endpoint when no image is provided
+  if (!hasImage) {
+    const t2vKey = (tier + "_t2v") as "std_t2v" | "pro_t2v";
+    if (template[t2vKey]) return template[t2vKey]!;
+  }
   return template[tier];
 }
 
@@ -258,12 +265,16 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
   const model = input.model;
 
   if (model === "kling-o3-i2v") {
-    // Kling O3 Image-to-Video
-    // API only accepts: image_url, end_image_url, prompt/multi_prompt, duration, generate_audio, shot_type
+    // Kling O3 — I2V when image provided, T2V when no image
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body: Record<string, any> = {};
-    if (input.imageUrls && input.imageUrls[0]) body.image_url = input.imageUrls[0];
-    if (input.endImageUrl) body.end_image_url = input.endImageUrl;
+    if (input.imageUrls && input.imageUrls[0]) {
+      body.image_url = input.imageUrls[0];
+      if (input.endImageUrl) body.end_image_url = input.endImageUrl;
+    } else {
+      // T2V mode: include aspect_ratio (I2V infers from image)
+      body.aspect_ratio = input.aspectRatio || "16:9";
+    }
     body.generate_audio = input.generateAudio ?? false;
 
     // Multi-Shot: use multi_prompt instead of prompt + duration
