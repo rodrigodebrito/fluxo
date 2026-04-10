@@ -162,7 +162,7 @@ export async function createSeedanceTask(
     prompt: input.prompt,
     aspect_ratio: input.aspectRatio || "16:9",
     resolution: input.resolution || "720p",
-    duration: String(input.duration || 8),
+    duration: input.duration || 8,
     generate_audio: input.generateAudio ?? true,
     web_search: input.webSearch ?? false,
   };
