@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
 
   const taskId = request.nextUrl.searchParams.get("taskId");
   const type = request.nextUrl.searchParams.get("type") || "image";
+  const model = request.nextUrl.searchParams.get("model") || "";
 
   if (!taskId) {
     return NextResponse.json({ error: "taskId é obrigatório" }, { status: 400 });
   }
 
-  // Veo video tasks
-  if (type === "video") {
+  // Veo video tasks (only veo3 uses the special veo endpoint)
+  if (type === "video" && (model === "veo3" || !model)) {
     try {
       const result = await getVeoTaskStatus(apiKey, taskId);
       console.log("[veo-status]", taskId, JSON.stringify(result));
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Nano Banana image tasks
+  // Generic Kie AI tasks (Nano Banana, Seedance, Kling, Wan, Grok, etc)
   const result = await getTaskStatus(apiKey, taskId);
 
   if (result.code !== 200 || !result.data) {

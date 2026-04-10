@@ -1101,7 +1101,7 @@ export async function pollTaskStatus(
         const falResponseUrl = parts[3] || "";
         statusUrl = `/api/status-fal?taskId=${encodeURIComponent(falTaskId)}&falEndpoint=${encodeURIComponent(falEndpoint)}${falStatusUrl ? `&statusUrl=${encodeURIComponent(falStatusUrl)}` : ""}${falResponseUrl ? `&responseUrl=${encodeURIComponent(falResponseUrl)}` : ""}`;
       } else {
-        statusUrl = `/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}`;
+        statusUrl = `/api/status?taskId=${encodeURIComponent(taskId)}&type=${type}${model ? `&model=${encodeURIComponent(model)}` : ""}`;
       }
       const response = await fetch(statusUrl, { signal });
       const statusText = await response.text();
