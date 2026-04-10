@@ -129,6 +129,10 @@ export default function AdminPage() {
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [editThumbnailUploading, setEditThumbnailUploading] = useState(false);
 
+  // Provider balances
+  const [providerBalances, setProviderBalances] = useState<{ provider: string; balance: number | null; currency: string; error?: string; low?: boolean }[]>([]);
+  const [balancesLoading, setBalancesLoading] = useState(false);
+
   // User history modal
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyLogs, setHistoryLogs] = useState<{ id: string; amount: number; reason: string; model: string | null; prompt: string | null; status: string | null; metadata: Record<string, unknown> | null; created_at: string }[]>([]);
@@ -159,6 +163,19 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchBalances = useCallback(async () => {
+    setBalancesLoading(true);
+    try {
+      const res = await fetch("/api/admin/provider-balances");
+      if (res.ok) {
+        const data = await res.json();
+        setProviderBalances(data.providers || []);
+      }
+    } catch { /* ignore */ } finally {
+      setBalancesLoading(false);
     }
   }, []);
 
@@ -231,7 +248,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchBalances();
+  }, [fetchData, fetchBalances]);
 
   const fetchTrainedModels = useCallback(async () => {
     setTrainedModelsLoading(true);
@@ -458,6 +476,69 @@ export default function AdminPage() {
                   <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Provider Balances */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-zinc-300">Saldo dos Provedores</h3>
+                <button
+                  onClick={fetchBalances}
+                  disabled={balancesLoading}
+                  className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+                >
+                  {balancesLoading ? "Atualizando..." : "Atualizar"}
+                </button>
+              </div>
+              {balancesLoading && providerBalances.length === 0 ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {providerBalances.map((p) => (
+                    <div
+                      key={p.provider}
+                      className={`rounded-lg p-4 border ${
+                        p.low
+                          ? "bg-red-500/5 border-red-500/30"
+                          : "bg-zinc-800/50 border-zinc-700/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-zinc-400">{p.provider}</span>
+                        {p.low && (
+                          <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-medium animate-pulse">
+                            SALDO BAIXO
+                          </span>
+                        )}
+                      </div>
+                      {p.error ? (
+                        <p className="text-xs text-red-400/70">{p.error}</p>
+                      ) : (
+                        <p className={`text-xl font-bold ${p.low ? "text-red-400" : "text-white"}`}>
+                          {p.currency === "USD" ? "$" : ""}{p.balance !== null ? p.balance.toLocaleString("pt-BR") : "—"}
+                          {p.currency !== "USD" && <span className="text-xs text-zinc-500 ml-1">{p.currency}</span>}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  {/* Replicate - manual */}
+                  <div className="rounded-lg p-4 border bg-zinc-800/50 border-zinc-700/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-zinc-400">Replicate</span>
+                    </div>
+                    <a
+                      href="https://replicate.com/account/billing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      Ver no dashboard &rarr;
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Model usage */}
