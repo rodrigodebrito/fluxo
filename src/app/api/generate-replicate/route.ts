@@ -146,6 +146,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Persist images to Supabase Storage (Replicate URLs expire after ~1h)
+    const persistedUrls: string[] = [];
+    for (const url of imageUrls) {
+      try {
+        const imgRes = await fetch(url);
+        if (!imgRes.ok) { persistedUrls.push(url); continue; }
+        const buffer = Buffer.from(await imgRes.arrayBuffer());
+        const contentType = imgRes.headers.get("content-type") || "image/webp";
+        const ext = contentType.includes("png") ? "png" : contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "webp";
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("upload")
+          .upload(fileName, buffer, { contentType, upsert: false });
+
+        if (uploadError) {
+          console.warn("[generate-replicate] storage upload failed:", uploadError.message);
+          persistedUrls.push(url);
+          continue;
+        }
+
+        const { data: publicUrl } = supabase.storage.from("upload").getPublicUrl(fileName);
+        persistedUrls.push(publicUrl.publicUrl);
+        console.log("[generate-replicate] persisted:", publicUrl.publicUrl);
+      } catch (err) {
+        console.warn("[generate-replicate] persist failed:", err);
+        persistedUrls.push(url);
+      }
+    }
+
     // Charge credits
     await chargeCredits(user.id, "custom-model", finalCost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
 
@@ -154,14 +184,14 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       model: "custom-model",
       prompt,
-      result_urls: imageUrls,
+      result_urls: persistedUrls,
       cost: finalCost,
       type: "image",
     });
 
     return NextResponse.json({
       success: true,
-      urls: imageUrls,
+      urls: persistedUrls,
     });
   } catch (err) {
     console.error("[generate-replicate] error:", err);
