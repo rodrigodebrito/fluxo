@@ -20,6 +20,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
   }
 
+  // Whitelist de tipos permitidos (imagem, video, audio)
+  const ALLOWED_TYPES = [
+    "image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "image/bmp", "image/svg+xml",
+    "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo",
+    "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/aac",
+  ];
+  const ALLOWED_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "mp4", "webm", "mov", "avi", "mp3", "wav", "ogg", "aac"];
+
+  for (const file of files) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: `Tipo de arquivo nao permitido: ${file.name} (${file.type})` },
+        { status: 400 }
+      );
+    }
+  }
+
   const urls: string[] = [];
 
   for (const file of files) {
