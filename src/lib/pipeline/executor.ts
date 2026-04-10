@@ -183,6 +183,13 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.avatarText = (modelNode.data.avatarText as string) || "";
   result.avatarVoice = (modelNode.data.avatarVoice as string) || "pFZP5JQG7iQjIQuC4Bku";
   result.avatarSpeed = (modelNode.data.avatarSpeed as number) ?? 1.0;
+  // Z-Image Turbo
+  result.zimageSteps = (modelNode.data.zimageSteps as number) || 8;
+  result.zimageAcceleration = (modelNode.data.zimageAcceleration as string) || "regular";
+  result.zimageSafety = (modelNode.data.zimageSafety as boolean) ?? false;
+  result.zimageStrength = (modelNode.data.zimageStrength as number) ?? 0.6;
+  result.zimageSize = (modelNode.data.zimageSize as string) || "landscape_4_3";
+  result.zimageLoras = (modelNode.data.zimageLoras as { path: string; scale: number }[]) || [];
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
