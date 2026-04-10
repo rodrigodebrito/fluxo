@@ -27,6 +27,45 @@ import {
   runLLMChain,
 } from "@/lib/pipeline/executor";
 
+// --- Pending tasks recovery (localStorage) ---
+interface PendingTask {
+  taskId: string;
+  modelNodeId: string;
+  model: string;
+  pollType: "image" | "video";
+  cost: number;
+  prompt: string;
+  savedAt: number;
+}
+
+const PENDING_TASKS_KEY = "fluxo-pending-tasks";
+
+function savePendingTasks(tasks: PendingTask[]) {
+  try { localStorage.setItem(PENDING_TASKS_KEY, JSON.stringify(tasks)); } catch {}
+}
+
+function loadPendingTasks(): PendingTask[] {
+  try {
+    const raw = localStorage.getItem(PENDING_TASKS_KEY);
+    if (!raw) return [];
+    const tasks: PendingTask[] = JSON.parse(raw);
+    // Descartar tasks com mais de 15 min (provavelmente já expiraram)
+    const cutoff = Date.now() - 15 * 60 * 1000;
+    return tasks.filter((t) => t.savedAt > cutoff);
+  } catch { return []; }
+}
+
+function addPendingTask(task: PendingTask) {
+  const tasks = loadPendingTasks().filter((t) => t.taskId !== task.taskId);
+  tasks.push(task);
+  savePendingTasks(tasks);
+}
+
+function removePendingTask(taskId: string) {
+  const tasks = loadPendingTasks().filter((t) => t.taskId !== taskId);
+  savePendingTasks(tasks);
+}
+
 // Dados padrão para cada tipo de nó
 const getDefaultData = (type: string): Record<string, unknown> => {
   switch (type) {
@@ -1159,11 +1198,26 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       const videoModels = ["veo3", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "seedance-rep", "wan-i2v", "grok-i2v", "kling-avatar"];
       const pollType = videoModels.includes(pipeline.model) ? "video" : "image";
+
+      // Salvar tasks pendentes no localStorage para recuperar após refresh
+      for (const taskId of taskIds) {
+        addPendingTask({
+          taskId,
+          modelNodeId: pipeline.modelNodeId,
+          model: pipeline.model,
+          pollType,
+          cost: costPerRun,
+          prompt: pipeline.prompt,
+          savedAt: Date.now(),
+        });
+      }
+
       const resultPromises = taskIds.map((taskId, idx) => {
         const promptForTask = pipeline.iteratorPrompts?.[idx] || pipeline.prompt;
         return pollTaskStatus(taskId, (progress) => {
           console.log(`Task ${taskId} progresso:`, progress);
-        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun, promptForTask);
+        }, pollType as "image" | "video", ac.signal, pipeline.model, costPerRun, promptForTask)
+          .finally(() => removePendingTask(taskId));
       });
 
       const results = await Promise.all(resultPromises);
@@ -1382,6 +1436,100 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       window.removeEventListener("fluxo-run-llm", llmHandler);
     };
   }, [executePipeline, cancelPipeline, setNodes]);
+
+  // Recuperar gerações pendentes após refresh da página
+  useEffect(() => {
+    const pending = loadPendingTasks();
+    if (pending.length === 0) return;
+
+    console.log(`[recovery] Encontradas ${pending.length} gerações pendentes, resumindo polling...`);
+
+    // Agrupar por modelNodeId para juntar resultados
+    const grouped = new Map<string, PendingTask[]>();
+    for (const task of pending) {
+      const arr = grouped.get(task.modelNodeId) || [];
+      arr.push(task);
+      grouped.set(task.modelNodeId, arr);
+    }
+
+    for (const [modelNodeId, tasks] of grouped) {
+      // Marcar nó como rodando
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === modelNodeId
+            ? { ...n, data: { ...n.data, isRunning: true } }
+            : n
+        )
+      );
+
+      // Criar abort controller para poder cancelar
+      const ac = new AbortController();
+      abortControllers.current.set(modelNodeId, ac);
+
+      // Polling de todas as tasks desse nó
+      const promises = tasks.map((task) =>
+        pollTaskStatus(
+          task.taskId,
+          (progress) => console.log(`[recovery] ${task.taskId} progresso:`, progress),
+          task.pollType,
+          ac.signal,
+          task.model,
+          task.cost,
+          task.prompt
+        ).finally(() => removePendingTask(task.taskId))
+      );
+
+      Promise.all(promises).then((results) => {
+        const allUrls: string[] = [];
+        const errors: string[] = [];
+        for (const result of results) {
+          if (result.error) errors.push(result.error);
+          allUrls.push(...result.resultUrls);
+        }
+
+        if (errors.length > 0 && allUrls.length === 0) {
+          alert("Erro na geração recuperada: " + errors[0]);
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
+            )
+          );
+          return;
+        }
+
+        if (allUrls.length > 0) {
+          setNodes((nds) =>
+            nds.map((n) => {
+              if (n.id === modelNodeId) {
+                const prevResults = (n.data.results as string[]) || [];
+                return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls] } };
+              }
+              return n;
+            })
+          );
+          window.dispatchEvent(new Event("fluxo-credits-update"));
+        } else {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
+            )
+          );
+        }
+      }).catch((err) => {
+        if (!ac.signal.aborted) {
+          console.error("[recovery] Erro ao recuperar geração:", err);
+        }
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
+          )
+        );
+      }).finally(() => {
+        abortControllers.current.delete(modelNodeId);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Atualizar dados de um nó
   const handleUpdateNodeData = useCallback(
