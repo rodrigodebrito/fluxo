@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: safety.reason }, { status: 403 });
   }
 
-  // --- Seedance 2.0 via PiAPI ---
-  if (sdModel.includes("seedance-2")) {
+  // --- Seedance 2.0 via PiAPI (alternativo — ativar passando sdModel com "piapi") ---
+  if (sdModel.includes("piapi")) {
     try {
       const piApiKey = process.env.PIAPI_API_KEY;
       if (!piApiKey) throw new Error("PIAPI_API_KEY nao configurada");
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // --- Seedance 1.5 via Kie AI (fallback when available) ---
+  // --- Seedance 2.0 via Kie AI (default) ---
   const apiKey = process.env.KIE_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "KIE API key nao configurada" }, { status: 500 });
