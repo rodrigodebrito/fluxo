@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 import { checkPromptSafety } from "@/lib/content-filter";
 
-const SEEDANCE_MODEL = "bytedance/seedance-1-pro";
+const SEEDANCE_MODEL = "bytedance/seedance-2.0";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
