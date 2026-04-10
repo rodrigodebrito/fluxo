@@ -948,25 +948,6 @@ export async function startGeneration(
   }
 
   // Seedance 2.0
-  if (options?.model === "seedance-rep") {
-    const response = await fetch("/api/generate-seedance-rep", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        firstFrameUrl: publicUrls[0] || undefined,
-        aspectRatio: options?.aspectRatio || "16:9",
-        duration: options?.sdDuration || 5,
-        cost: options?.cost,
-      }),
-    });
-    const repText = await response.text();
-    let data;
-    try { data = JSON.parse(repText); } catch { throw new Error(`Resposta invalida do servidor: ${repText.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedance Replicate");
-    return data.taskId;
-  }
-
   if (options?.model === "seedance") {
     // Upload reference images separadamente
     let refPublicUrls: string[] | undefined;
@@ -1086,9 +1067,6 @@ export async function pollTaskStatus(
   // Detect PiAPI tasks (taskId starts with "piapi:")
   const isPiAPI = taskId.startsWith("piapi:");
   const piApiTaskId = isPiAPI ? taskId.slice(6) : "";
-  // Detect Replicate tasks (taskId starts with "rep:")
-  const isReplicate = taskId.startsWith("rep:");
-  const repTaskId = isReplicate ? taskId.slice(4) : "";
   const maxAttempts = 180; // ~9 min para video, ~6 min para imagem
   let consecutiveErrors = 0;
 
@@ -1114,9 +1092,7 @@ export async function pollTaskStatus(
 
     try {
       let statusUrl: string;
-      if (isReplicate) {
-        statusUrl = `/api/status-replicate?taskId=${encodeURIComponent(repTaskId)}`;
-      } else if (isPiAPI) {
+      if (isPiAPI) {
         statusUrl = `/api/status-piapi?taskId=${encodeURIComponent(piApiTaskId)}`;
       } else if (isFal) {
         const parts = taskId.split("|");
