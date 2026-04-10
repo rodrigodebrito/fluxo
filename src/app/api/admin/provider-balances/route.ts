@@ -25,6 +25,9 @@ async function fetchFalBalance(): Promise<ProviderBalance> {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
+      if (res.status === 403) {
+        return { provider: "fal.ai", balance: null, currency: "USD", error: "Sem permissao (requer Admin Key no fal.ai)" };
+      }
       const text = await res.text();
       return { provider: "fal.ai", balance: null, currency: "USD", error: `HTTP ${res.status}: ${text.slice(0, 100)}` };
     }
