@@ -3,9 +3,32 @@
 import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import { useCallback, useState } from "react";
 
+// Gera thumbnail pequeno (max 300px) a partir de um File pra nao carregar 4K inteira na memoria
+function createThumbnail(file: File, maxSize = 300): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = () => resolve(reader.result as string);
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ImageInputNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements } = useReactFlow();
-  const images = (data.images as Array<{ url: string; name: string }>) || [];
+  const images = (data.images as Array<{ url: string; name: string; thumbUrl?: string }>) || [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -16,18 +39,19 @@ export default function ImageInputNode({ id, data }: NodeProps) {
       if (files.length === 0) return;
       e.target.value = "";
 
-      // Mostrar preview imediato com blob URL enquanto faz upload
-      const previews = files.map((file) => ({
-        url: URL.createObjectURL(file),
+      // Gerar thumbnails leves pra preview (nao carrega 4K na memoria)
+      const thumbs = await Promise.all(files.map((f) => createThumbnail(f)));
+
+      const previews = files.map((file, i) => ({
+        url: "",
         name: file.name,
-        uploading: true,
+        thumbUrl: thumbs[i],
       }));
-      const currentImages = [...images, ...previews.map((p) => ({ url: p.url, name: p.name }))];
+      const currentImages = [...images, ...previews];
       updateNodeData(id, { images: currentImages });
       setIsUploading(true);
 
       try {
-        // Upload para servidor (catbox.moe) — URLs permanentes
         const formData = new FormData();
         for (const file of files) {
           formData.append("files", file);
@@ -38,23 +62,21 @@ export default function ImageInputNode({ id, data }: NodeProps) {
         try { json = JSON.parse(text); } catch { json = null; }
 
         if (json?.urls) {
-          // Substituir blob URLs pelas URLs permanentes
           const uploaded = json.urls as string[];
           const finalImages = [...images];
           for (let i = 0; i < files.length; i++) {
             finalImages.push({
-              url: uploaded[i] || previews[i].url,
+              url: uploaded[i] || "",
               name: files[i].name,
+              thumbUrl: thumbs[i],
             });
           }
           updateNodeData(id, { images: finalImages });
-          previews.forEach((p) => URL.revokeObjectURL(p.url));
         } else {
-          console.warn("Upload response invalid, keeping blob URLs:", text);
+          console.warn("Upload response invalid:", text);
         }
       } catch (err) {
         console.error("Upload failed:", err);
-        // Manter blob URLs como fallback
       } finally {
         setIsUploading(false);
       }
@@ -115,9 +137,11 @@ export default function ImageInputNode({ id, data }: NodeProps) {
               />
             ) : (
               <img
-                src={images[safeIndex]?.url}
+                src={images[safeIndex]?.thumbUrl || images[safeIndex]?.url}
                 alt={images[safeIndex]?.name}
                 className="w-full h-[130px] object-cover rounded-md"
+                loading="lazy"
+                decoding="async"
               />
             )}
 

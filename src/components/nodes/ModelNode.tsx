@@ -2,8 +2,43 @@
 
 import { Handle, Position, type NodeProps, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import { AVAILABLE_MODELS } from "@/types/nodes";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import Gallery from "@/components/Gallery/Gallery";
+
+// Cache global de thumbnails — evita recriar ao re-render
+const thumbCache = new Map<string, string>();
+
+function useThumbUrl(url: string | undefined, enabled: boolean): string | undefined {
+  const [thumb, setThumb] = useState<string | undefined>(() => url ? thumbCache.get(url) : undefined);
+
+  useEffect(() => {
+    if (!url || !enabled) return;
+    if (thumbCache.has(url)) { setThumb(thumbCache.get(url)); return; }
+
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (cancelled) return;
+      const maxSize = 400;
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      if (ratio >= 1) { thumbCache.set(url, url); setThumb(url); return; } // ja e pequena
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      thumbCache.set(url, dataUrl);
+      setThumb(dataUrl);
+    };
+    img.onerror = () => { if (!cancelled) setThumb(url); };
+    img.src = url;
+    return () => { cancelled = true; };
+  }, [url, enabled]);
+
+  return thumb;
+}
 
 export default function ModelNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements } = useReactFlow();
@@ -41,6 +76,9 @@ export default function ModelNode({ id, data }: NodeProps) {
   }, [results.length]);
 
   const safeIndex = Math.min(currentIndex, Math.max(results.length - 1, 0));
+  const currentResultUrl = results[safeIndex] as string | undefined;
+  const isImage = !isVideo && !isAudio;
+  const thumbUrl = useThumbUrl(currentResultUrl, isImage && results.length > 0);
 
   useEffect(() => {
     const coverUrl = results.length > 0 ? results[safeIndex] : null;
@@ -285,9 +323,11 @@ export default function ModelNode({ id, data }: NodeProps) {
               />
             ) : (
               <img
-                src={results[safeIndex]}
+                src={thumbUrl || results[safeIndex]}
                 alt={`Resultado ${safeIndex + 1}`}
                 className="w-full rounded-md max-h-[180px] object-cover"
+                loading="lazy"
+                decoding="async"
               />
             )}
 

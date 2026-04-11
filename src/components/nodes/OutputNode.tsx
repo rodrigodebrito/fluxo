@@ -69,6 +69,8 @@ export default function OutputNode({ id, data }: NodeProps) {
                 src={resultUrl}
                 alt="Resultado"
                 className="w-full h-40 object-cover rounded-lg"
+                loading="lazy"
+                decoding="async"
               />
             )}
           </div>
