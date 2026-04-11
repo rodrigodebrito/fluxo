@@ -2,6 +2,7 @@
 
 import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import { useCallback, useState } from "react";
+import { showToast } from "@/components/Toast";
 
 // Gera thumbnail pequeno (max 300px) a partir de um File pra nao carregar 4K inteira na memoria
 function createThumbnail(file: File, maxSize = 300): Promise<string> {
@@ -45,7 +46,7 @@ export default function ImageInputNode({ id, data }: NodeProps) {
 
       if (rejected.length > 0) {
         const names = rejected.map((f) => `${f.name} (${Math.round(f.size / 1024 / 1024)}MB)`).join(", ");
-        alert(`Imagem muito grande (max 30MB): ${names}\n\nUse a imagem original sem upscale.`);
+        showToast(`Imagem muito grande (max 30MB): ${names} — Use o Resize Tool ou a imagem sem upscale`, "error");
         if (files.length === 0) return;
       }
 

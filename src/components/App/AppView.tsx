@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SystemPromptGenerator from "./SystemPromptGenerator";
 import CloneFoto from "./CloneFoto";
+import ResizeTool from "./ResizeTool";
 
 interface AppCard {
   id: string;
@@ -33,6 +34,16 @@ const APPS: AppCard[] = [
       </svg>
     ),
   },
+  {
+    id: "resize-tool",
+    name: "Resize Tool",
+    description: "Redimensione imagens grandes para usar como input no gerador",
+    icon: (
+      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+      </svg>
+    ),
+  },
 ];
 
 export default function AppView() {
@@ -44,6 +55,10 @@ export default function AppView() {
 
   if (activeApp === "clone-foto") {
     return <CloneFoto onBack={() => setActiveApp(null)} />;
+  }
+
+  if (activeApp === "resize-tool") {
+    return <ResizeTool onBack={() => setActiveApp(null)} />;
   }
 
   return (
