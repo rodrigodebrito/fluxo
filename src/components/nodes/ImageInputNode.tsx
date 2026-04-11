@@ -35,9 +35,19 @@ export default function ImageInputNode({ id, data }: NodeProps) {
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      if (files.length === 0) return;
+      const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+      const allFiles = Array.from(e.target.files || []);
+      if (allFiles.length === 0) return;
       e.target.value = "";
+
+      const rejected = allFiles.filter((f) => f.size > MAX_FILE_SIZE);
+      const files = allFiles.filter((f) => f.size <= MAX_FILE_SIZE);
+
+      if (rejected.length > 0) {
+        const names = rejected.map((f) => `${f.name} (${Math.round(f.size / 1024 / 1024)}MB)`).join(", ");
+        alert(`Imagem muito grande (max 30MB): ${names}\n\nUse a imagem original sem upscale.`);
+        if (files.length === 0) return;
+      }
 
       // Gerar thumbnails leves pra preview (nao carrega 4K na memoria)
       // Criar blob URLs como fallback caso upload falhe
