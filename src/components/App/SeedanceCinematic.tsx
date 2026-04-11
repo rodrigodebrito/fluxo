@@ -9,6 +9,7 @@ interface Props {
 const DURATION_OPTIONS = [
   { value: "5s", label: "5 segundos (1-2 shots)" },
   { value: "10s", label: "10 segundos (2-3 shots)" },
+  { value: "12s", label: "12 segundos (3-4 shots)" },
   { value: "15s", label: "15 segundos (3-4 shots)" },
 ];
 
