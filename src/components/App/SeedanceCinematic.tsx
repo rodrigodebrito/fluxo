@@ -27,23 +27,39 @@ const MOOD_OPTIONS = [
   { value: "horror", label: "Horror / Suspense" },
 ];
 
+const ROLE_OPTIONS = [
+  { value: "character", label: "Personagem" },
+  { value: "scene", label: "Cenario / Locacao" },
+  { value: "prop", label: "Objeto / Prop" },
+  { value: "style", label: "Referencia de Estilo" },
+];
+
+interface ImageSlot {
+  id: number;
+  role: string;
+  roleLabel: string;
+  mode: "upload" | "url";
+  file: File | null;
+  preview: string | null;
+  url: string;
+}
+
+let slotCounter = 0;
+
 const SEEDANCE_SYSTEM_PROMPT = `You are a world-class cinematic video prompt architect. Your job is to take a creative brief and transform it into a structured, shot-by-shot video prompt optimized for Seedance 2.0 AI video generation.
 
 ## Output Format
 
 Your output MUST follow this exact structure:
 
-### Section 1 — Image References (if provided)
+### Section 1 — Image References
 
-If the user provides a character image, start with:
-\`\`\`
-@image1 as the character reference — [role description]. [Detailed description of their clothing, accessories, and styling. Do NOT describe physical traits like hair color, skin tone, eye color, body type, ethnicity, or age — the identity comes from the reference image itself. Only describe what they are WEARING and their general vibe/energy.]
-\`\`\`
+For EACH image the user provides, write a reference line using the exact @imageN notation provided. Match the role the user assigned:
 
-If the user provides a scene/location image, add:
-\`\`\`
-@image2 as the location reference — [detailed description of the environment: architecture, furniture, lighting, colors, textures, materials, atmosphere, time of day, weather if outdoor, every visual detail that defines the space.]
-\`\`\`
+- **Character**: "@imageN as the character reference — [role in the story]. [Detailed description of their clothing, accessories, styling, posture, and energy. Do NOT describe physical traits like hair color, skin tone, eye color, body type, ethnicity, or age — the identity comes from the reference image. Only describe what they are WEARING and their vibe.]"
+- **Scene/Location**: "@imageN as the location reference — [detailed description of the environment: architecture, furniture, lighting, colors, textures, materials, atmosphere, time of day, weather if outdoor.]"
+- **Prop/Object**: "@imageN as the prop reference — [detailed description of the object, its material, color, size, how it will be used in the scene.]"
+- **Style Reference**: "@imageN as the style reference — [describe the visual style, color palette, mood, cinematography approach to emulate.]"
 
 ### Section 2 — Global Cinematography
 
@@ -58,10 +74,8 @@ After the image references, write ONE paragraph establishing the overall camera 
 
 Break the video into numbered shots with timecodes:
 
-\`\`\`
 SHOT [N] ([start]-[end])
 — [Shot Title] EFFECT: [Camera type] (tracking, static, dolly, crane, handheld, steadicam, drone, etc.), [camera movement description]. [Detailed description of what happens in the frame: character actions, expressions, body language, environment interactions, lighting changes, atmospheric details. Be CINEMATIC — describe it like a director briefing a DP.]
-\`\`\`
 
 ## Rules:
 
@@ -71,8 +85,9 @@ SHOT [N] ([start]-[end])
 4. **Environmental storytelling** — the environment should feel alive, not just a backdrop. Describe ambient details: light particles, reflections, shadows, movement in the background
 5. **Character action must be specific** — not "she walks" but "she shuffles forward with heavy groggy steps, one hand rubbing her eyes slowly, the other hanging loose at her side"
 6. **Breathing camera** — always include subtle organic camera movement (natural drift, slight handheld sway) unless the shot specifically calls for locked-off tripod
-7. **No physical traits in character description** — NEVER describe hair, eyes, skin, body type, ethnicity, age. The identity comes from @image1. Only describe clothing, accessories, makeup, and energy/vibe
+7. **No physical traits in character description** — NEVER describe hair, eyes, skin, body type, ethnicity, age. The identity comes from the reference image. Only describe clothing, accessories, makeup, and energy/vibe
 8. **End with a strong final frame** — the last shot should have a clear, memorable closing image
+9. **Use @imageN references in shots** — when a character or scene from a reference appears in a shot, reference them naturally (e.g., "the protagonist (@image1) enters the room (@image3)")
 
 ## Mood Adaptation:
 
@@ -100,41 +115,57 @@ export default function SeedanceCinematic({ onBack }: Props) {
   const [duration, setDuration] = useState("10s");
   const [mood, setMood] = useState("cinematic");
   const [extraDetails, setExtraDetails] = useState("");
-
-  // Character image (@image1)
-  const [charFile, setCharFile] = useState<File | null>(null);
-  const [charPreview, setCharPreview] = useState<string | null>(null);
-  const [charUrl, setCharUrl] = useState("");
-  const [charMode, setCharMode] = useState<"upload" | "url">("upload");
-  const charInputRef = useRef<HTMLInputElement>(null);
-
-  // Scene image (@image2)
-  const [sceneFile, setSceneFile] = useState<File | null>(null);
-  const [scenePreview, setScenePreview] = useState<string | null>(null);
-  const [sceneUrl, setSceneUrl] = useState("");
-  const [sceneMode, setSceneMode] = useState<"upload" | "url">("upload");
-  const sceneInputRef = useRef<HTMLInputElement>(null);
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const [result, setResult] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleImageSelect = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setFile: (f: File | null) => void,
-    setPreview: (p: string | null) => void
-  ) => {
+  const addSlot = (role: string) => {
+    const roleOpt = ROLE_OPTIONS.find((r) => r.value === role);
+    slotCounter++;
+    setImageSlots((prev) => [
+      ...prev,
+      {
+        id: slotCounter,
+        role,
+        roleLabel: roleOpt?.label || role,
+        mode: "upload",
+        file: null,
+        preview: null,
+        url: "",
+      },
+    ]);
+  };
+
+  const removeSlot = (id: number) => {
+    setImageSlots((prev) => {
+      const slot = prev.find((s) => s.id === id);
+      if (slot?.preview) URL.revokeObjectURL(slot.preview);
+      return prev.filter((s) => s.id !== id);
+    });
+  };
+
+  const updateSlot = (id: number, updates: Partial<ImageSlot>) => {
+    setImageSlots((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  };
+
+  const handleSlotFileSelect = (id: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFile(file);
+    e.target.value = "";
     const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
+    reader.onload = () => {
+      updateSlot(id, { file, preview: reader.result as string });
+    };
     reader.readAsDataURL(file);
   };
 
-  const hasChar = charMode === "upload" ? !!charFile : charUrl.trim().startsWith("http");
-  const hasScene = sceneMode === "upload" ? !!sceneFile : sceneUrl.trim().startsWith("http");
+  const slotHasImage = (slot: ImageSlot) => {
+    return slot.mode === "upload" ? !!slot.file : slot.url.trim().startsWith("http");
+  };
 
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -154,48 +185,33 @@ export default function SeedanceCinematic({ onBack }: Props) {
 
     try {
       const imageUrls: string[] = [];
-      let charImageUrl = "";
-      let sceneImageUrl = "";
+      const imageDescriptions: string[] = [];
 
-      // Upload character image if provided
-      if (hasChar) {
+      // Upload all images that have content
+      const activeSlots = imageSlots.filter(slotHasImage);
+      if (activeSlots.length > 0) {
         setIsUploading(true);
-        if (charMode === "url") {
-          charImageUrl = charUrl.trim();
-        } else {
-          charImageUrl = await uploadFile(charFile!);
+        for (let i = 0; i < activeSlots.length; i++) {
+          const slot = activeSlots[i];
+          let url: string;
+          if (slot.mode === "url") {
+            url = slot.url.trim();
+          } else {
+            url = await uploadFile(slot.file!);
+          }
+          imageUrls.push(url);
+          imageDescriptions.push(`- Image ${i + 1} (@image${i + 1}) = ${slot.roleLabel.toUpperCase()} reference`);
         }
-        imageUrls.push(charImageUrl);
+        setIsUploading(false);
       }
 
-      // Upload scene image if provided
-      if (hasScene) {
-        setIsUploading(true);
-        if (sceneMode === "url") {
-          sceneImageUrl = sceneUrl.trim();
-        } else {
-          sceneImageUrl = await uploadFile(sceneFile!);
-        }
-        imageUrls.push(sceneImageUrl);
-      }
-      setIsUploading(false);
-
-      // Build user prompt
-      const imageContext = [];
-      if (hasChar && hasScene) {
-        imageContext.push("I'm providing 2 reference images:");
-        imageContext.push("- First image = CHARACTER reference (@image1) — describe their clothing/accessories/styling");
-        imageContext.push("- Second image = SCENE/LOCATION reference (@image2) — describe the environment in detail");
-      } else if (hasChar) {
-        imageContext.push("I'm providing 1 reference image:");
-        imageContext.push("- The image = CHARACTER reference (@image1) — describe their clothing/accessories/styling");
-        imageContext.push("No scene reference provided — create the environment from the brief description.");
-      } else if (hasScene) {
-        imageContext.push("I'm providing 1 reference image:");
-        imageContext.push("- The image = SCENE/LOCATION reference (@image2) — describe the environment in detail");
-        imageContext.push("No character reference provided — do not use @image1.");
+      // Build image context for user prompt
+      const imageContext: string[] = [];
+      if (activeSlots.length > 0) {
+        imageContext.push(`I'm providing ${activeSlots.length} reference image(s):`);
+        imageContext.push(...imageDescriptions);
       } else {
-        imageContext.push("No reference images provided. Create everything from the brief description. Do not use @image1 or @image2.");
+        imageContext.push("No reference images provided. Create everything from the brief description. Do not use @image references.");
       }
 
       const moodLabel = MOOD_OPTIONS.find((m) => m.value === mood)?.label || mood;
@@ -242,121 +258,6 @@ export default function SeedanceCinematic({ onBack }: Props) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const ImageInput = ({
-    label,
-    description,
-    mode,
-    setMode,
-    file,
-    preview,
-    url,
-    setUrl,
-    inputRef,
-    onSelect,
-    onRemove,
-    required,
-  }: {
-    label: string;
-    description: string;
-    mode: "upload" | "url";
-    setMode: (m: "upload" | "url") => void;
-    file: File | null;
-    preview: string | null;
-    url: string;
-    setUrl: (u: string) => void;
-    inputRef: React.RefObject<HTMLInputElement | null>;
-    onSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onRemove: () => void;
-    required?: boolean;
-  }) => (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-purple-400">{label}</span>
-          {required && <span className="text-red-400 text-xs">*</span>}
-          <span className="text-[10px] text-zinc-600">(opcional)</span>
-        </div>
-        <div className="flex items-center bg-zinc-800 rounded-lg border border-zinc-700 p-0.5">
-          <button
-            onClick={() => setMode("upload")}
-            className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
-              mode === "upload" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Upload
-          </button>
-          <button
-            onClick={() => setMode("url")}
-            className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
-              mode === "url" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            URL
-          </button>
-        </div>
-      </div>
-      <p className="text-xs text-zinc-500 mb-2">{description}</p>
-
-      {mode === "upload" ? (
-        <>
-          {preview ? (
-            <div className="relative group">
-              <img
-                src={preview}
-                alt={label}
-                className="w-full max-h-[150px] object-contain rounded-lg border border-zinc-700 bg-zinc-900"
-              />
-              <button
-                onClick={onRemove}
-                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 border border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="w-full h-[100px] border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center gap-1.5 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
-            >
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-              </svg>
-              <span className="text-[11px]">Clique para enviar</span>
-            </button>
-          )}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            onChange={onSelect}
-            className="hidden"
-          />
-        </>
-      ) : (
-        <>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://exemplo.com/foto.jpg"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
-          />
-          {url.trim().startsWith("http") && (
-            <img
-              src={url.trim()}
-              alt="Preview"
-              className="w-full max-h-[120px] object-contain rounded-lg border border-zinc-700 bg-zinc-900 mt-2"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              onLoad={(e) => { (e.target as HTMLImageElement).style.display = "block"; }}
-            />
-          )}
-        </>
-      )}
-    </div>
-  );
 
   return (
     <div className="flex-1 h-full flex flex-col bg-zinc-950 overflow-hidden">
@@ -430,35 +331,152 @@ export default function SeedanceCinematic({ onBack }: Props) {
             </div>
           </div>
 
-          {/* Character Image (@image1) */}
-          <ImageInput
-            label="Personagem (@image1)"
-            description="Imagem do personagem/avatar — a IA vai descrever roupa e estilo."
-            mode={charMode}
-            setMode={setCharMode}
-            file={charFile}
-            preview={charPreview}
-            url={charUrl}
-            setUrl={setCharUrl}
-            inputRef={charInputRef}
-            onSelect={(e) => handleImageSelect(e, setCharFile, setCharPreview)}
-            onRemove={() => { setCharFile(null); setCharPreview(null); setCharUrl(""); }}
-          />
+          {/* Image References — Dynamic */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-purple-400">Imagens de Referencia</span>
+                <span className="text-[10px] text-zinc-600">({imageSlots.length}/9)</span>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500 mb-3">
+              Adicione ate 9 imagens — personagens, cenarios, objetos ou referencias de estilo.
+            </p>
 
-          {/* Scene Image (@image2) */}
-          <ImageInput
-            label="Cenario (@image2)"
-            description="Imagem do ambiente/locacao — a IA vai descrever o espaco em detalhe."
-            mode={sceneMode}
-            setMode={setSceneMode}
-            file={sceneFile}
-            preview={scenePreview}
-            url={sceneUrl}
-            setUrl={setSceneUrl}
-            inputRef={sceneInputRef}
-            onSelect={(e) => handleImageSelect(e, setSceneFile, setScenePreview)}
-            onRemove={() => { setSceneFile(null); setScenePreview(null); setSceneUrl(""); }}
-          />
+            {/* Existing slots */}
+            {imageSlots.length > 0 && (
+              <div className="space-y-3 mb-3">
+                {imageSlots.map((slot, idx) => (
+                  <div key={slot.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                    {/* Slot header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-300">@image{idx + 1}</span>
+                        <select
+                          value={slot.role}
+                          onChange={(e) => {
+                            const roleOpt = ROLE_OPTIONS.find((r) => r.value === e.target.value);
+                            updateSlot(slot.id, { role: e.target.value, roleLabel: roleOpt?.label || e.target.value });
+                          }}
+                          className="bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1 text-[11px] text-zinc-300 focus:outline-none focus:border-purple-500"
+                        >
+                          {ROLE_OPTIONS.map((r) => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* Upload/URL toggle */}
+                        <div className="flex items-center bg-zinc-800 rounded-md border border-zinc-700 p-0.5">
+                          <button
+                            onClick={() => updateSlot(slot.id, { mode: "upload" })}
+                            className={`px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
+                              slot.mode === "upload" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                            }`}
+                          >
+                            Upload
+                          </button>
+                          <button
+                            onClick={() => updateSlot(slot.id, { mode: "url" })}
+                            className={`px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
+                              slot.mode === "url" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                            }`}
+                          >
+                            URL
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => removeSlot(slot.id)}
+                          className="text-zinc-500 hover:text-red-400 transition-colors"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Image input */}
+                    {slot.mode === "upload" ? (
+                      <>
+                        {slot.preview ? (
+                          <div className="relative group">
+                            <img
+                              src={slot.preview}
+                              alt={`@image${idx + 1}`}
+                              className="w-full max-h-[120px] object-contain rounded-lg border border-zinc-700 bg-zinc-800"
+                            />
+                            <button
+                              onClick={() => {
+                                if (slot.preview) URL.revokeObjectURL(slot.preview);
+                                updateSlot(slot.id, { file: null, preview: null });
+                              }}
+                              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/70 border border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => fileInputRefs.current[slot.id]?.click()}
+                            className="w-full h-[80px] border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center gap-1 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                          >
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                            </svg>
+                            <span className="text-[10px]">Clique para enviar</span>
+                          </button>
+                        )}
+                        <input
+                          ref={(el) => { fileInputRefs.current[slot.id] = el; }}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSlotFileSelect(slot.id, e)}
+                          className="hidden"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          value={slot.url}
+                          onChange={(e) => updateSlot(slot.id, { url: e.target.value })}
+                          placeholder="https://exemplo.com/foto.jpg"
+                          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                        />
+                        {slot.url.trim().startsWith("http") && (
+                          <img
+                            src={slot.url.trim()}
+                            alt="Preview"
+                            className="w-full max-h-[100px] object-contain rounded-lg border border-zinc-700 bg-zinc-800 mt-1"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            onLoad={(e) => { (e.target as HTMLImageElement).style.display = "block"; }}
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add image buttons */}
+            {imageSlots.length < 9 && (
+              <div className="flex flex-wrap gap-2">
+                {ROLE_OPTIONS.map((role) => (
+                  <button
+                    key={role.value}
+                    onClick={() => addSlot(role.value)}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-400 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                  >
+                    + {role.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Extra Details */}
           <div>
