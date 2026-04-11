@@ -10,8 +10,6 @@ const DURATION_OPTIONS = [
   { value: "5s", label: "5 segundos (1-2 shots)" },
   { value: "10s", label: "10 segundos (2-3 shots)" },
   { value: "15s", label: "15 segundos (3-4 shots)" },
-  { value: "20s", label: "20 segundos (4-5 shots)" },
-  { value: "30s", label: "30 segundos (5-7 shots)" },
 ];
 
 const MOOD_OPTIONS = [
