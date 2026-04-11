@@ -48,11 +48,28 @@ export async function POST(request: NextRequest) {
       messages.push({ role: "user", content: prompt });
     }
 
+    // Modelos reasoning (o1, o3, o4, gpt-5.4) usam max_completion_tokens e nao aceitam temperature
+    const selectedModel = model || "gpt-4.1";
+    const isReasoningModel = /^o\d|^gpt-5/.test(selectedModel);
+
+    // gpt-5.4-pro usa endpoint de completions, nao chat
+    if (selectedModel.includes("5.4-pro") || selectedModel.includes("5-pro")) {
+      const completion = await openai.completions.create({
+        model: selectedModel,
+        prompt: (systemPrompt ? systemPrompt + "\n\n" : "") + prompt,
+        max_tokens: 16384,
+      });
+      const text = completion.choices[0]?.text || "";
+      await chargeCredits(user.id, "llm", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+      return NextResponse.json({ text });
+    }
+
     const completion = await openai.chat.completions.create({
-      model: model || "gpt-4.1",
+      model: selectedModel,
       messages,
-      temperature: temperature ?? 0.7,
-      max_tokens: 4096,
+      ...(isReasoningModel
+        ? { max_completion_tokens: 16384 }
+        : { temperature: temperature ?? 0.7, max_tokens: 4096 }),
     });
 
     const text = completion.choices[0]?.message?.content || "";
