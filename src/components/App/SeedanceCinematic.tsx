@@ -73,18 +73,6 @@ Seedance 2.0 has a HARD LIMIT of 1536 characters for the text prompt. Your outpu
 - Be specific with actions: not "walks" but "shuffles forward, one hand rubbing eyes"
 - Reference characters as @imageN in shots when they appear
 
-## CONTENT FILTER — MANDATORY:
-Seedance 2.0 has a strict content filter. You MUST avoid ALL of these words and concepts:
-- NEVER use: gun, pistol, rifle, weapon, firearm, sword, knife, blade, dagger
-- NEVER use: shoot, fire, trigger, bullet, shell, muzzle, ammo, reload
-- NEVER use: kill, murder, die, death, blood, wound, stab, slash, hit, punch, kick, fight
-- NEVER use: explode, explosion, bomb, grenade, missile
-- NEVER use: nude, naked, undress, sexual, explicit
-- For action/combat scenes, use ABSTRACT alternatives: "energy surge", "light streaks", "force wave", "kinetic pulse", "power burst", "luminous trails", "shockwave", "impact ripple"
-- For dodging attacks: "evades incoming streaks", "arches away from light trails", "dodges energy paths"
-- For confrontations: "face off", "tension", "standoff", "rival", "opponent" (NOT "enemy", "fight", "attack")
-- Always describe violence abstractly through motion, energy, and light — never through physical harm or weapons
-
 ## Mood keywords (adapt camera/pacing):
 Epic=crane+wide+dramatic | Intense=close-ups+shaky+harsh | Calm=slow+soft+breathing | Playful=dynamic+quick+bright | Dark=shadows+slow+negative space | Dreamy=soft focus+ethereal | Raw=handheld+available light | Cinematic=dolly+motivated light | Romantic=warm+golden | Horror=dutch angles+creeping
 
