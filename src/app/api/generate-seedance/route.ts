@@ -231,46 +231,29 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Registrar imagens como assets na ByteDance (obrigatorio para referencia de pessoas)
-    let assetImageUrls: string[] | undefined;
+    // Registrar imagens como assets e usar asset IDs no prompt
+    // reference_image_urls recebe URLs diretas, mas o @image no prompt referencia o asset
+    const assetIds: string[] = [];
     if (referenceImageUrls && referenceImageUrls.length > 0) {
       console.log("[seedance] Registrando", referenceImageUrls.length, "imagens como assets...");
-      assetImageUrls = [];
       for (const imgUrl of referenceImageUrls) {
         try {
           const assetUrl = await registerAndWaitAsset(apiKey, imgUrl, "Image");
-          assetImageUrls.push(assetUrl);
+          assetIds.push(assetUrl);
         } catch (assetErr) {
-          console.warn("[seedance] Asset failed, using direct URL:", (assetErr as Error).message);
-          assetImageUrls.push(imgUrl);
+          console.warn("[seedance] Asset failed:", (assetErr as Error).message);
         }
       }
     }
 
-    let assetFirstFrame: string | undefined;
-    if (firstFrameUrl) {
-      try {
-        assetFirstFrame = await registerAndWaitAsset(apiKey, firstFrameUrl, "Image");
-      } catch {
-        assetFirstFrame = firstFrameUrl;
-      }
-    }
-
-    let assetLastFrame: string | undefined;
-    if (lastFrameUrl) {
-      try {
-        assetLastFrame = await registerAndWaitAsset(apiKey, lastFrameUrl, "Image");
-      } catch {
-        assetLastFrame = lastFrameUrl;
-      }
-    }
-
+    // Passar URLs diretas em reference_image_urls (asset:// nao e aceito nesse campo)
+    // Os assets registrados ficam disponiveis automaticamente via @imageN no prompt
     const result = await createSeedanceTask(apiKey, {
       prompt,
       sdModel,
-      firstFrameUrl: assetFirstFrame,
-      lastFrameUrl: assetLastFrame,
-      referenceImageUrls: assetImageUrls,
+      firstFrameUrl: firstFrameUrl || undefined,
+      lastFrameUrl: lastFrameUrl || undefined,
+      referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
       referenceVideoUrls: referenceVideoUrl ? [referenceVideoUrl] : undefined,
       referenceAudioUrls: referenceAudioUrl ? [referenceAudioUrl] : undefined,
       resolution,
