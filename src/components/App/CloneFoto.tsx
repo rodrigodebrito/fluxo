@@ -73,6 +73,8 @@ The identity comes ENTIRELY from the input reference image (LoRA), NOT from the 
 export default function CloneFoto({ onBack }: Props) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageDirectUrl, setImageDirectUrl] = useState("");
+  const [inputMode, setInputMode] = useState<"upload" | "url">("upload");
   const [gender, setGender] = useState("woman");
   const [mode, setMode] = useState("clone");
   const [aspectRatio, setAspectRatio] = useState("9:16");
@@ -95,26 +97,36 @@ export default function CloneFoto({ onBack }: Props) {
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setImageDirectUrl("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const hasImage = inputMode === "upload" ? !!imageFile : imageDirectUrl.trim().startsWith("http");
+
   const handleGenerate = async () => {
-    if (!imageFile) return;
+    if (!hasImage) return;
     setIsGenerating(true);
     setResult("");
 
     try {
-      // 1. Upload image
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append("files", imageFile);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      const uploadText = await uploadRes.text();
-      let uploadData;
-      try { uploadData = JSON.parse(uploadText); } catch { throw new Error("Erro no upload da imagem"); }
-      if (!uploadData?.urls?.[0]) throw new Error("Falha ao fazer upload da imagem");
-      const imageUrl = uploadData.urls[0];
-      setIsUploading(false);
+      let imageUrl: string;
+
+      if (inputMode === "url") {
+        // URL direta — ja e publica, nao precisa upload
+        imageUrl = imageDirectUrl.trim();
+      } else {
+        // Upload do arquivo
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("files", imageFile!);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const uploadText = await uploadRes.text();
+        let uploadData;
+        try { uploadData = JSON.parse(uploadText); } catch { throw new Error("Erro no upload da imagem"); }
+        if (!uploadData?.urls?.[0]) throw new Error("Falha ao fazer upload da imagem");
+        imageUrl = uploadData.urls[0];
+        setIsUploading(false);
+      }
 
       // 2. Build user prompt
       const genderLabel = gender === "woman" ? "Mulher" : "Homem";
@@ -183,52 +195,97 @@ export default function CloneFoto({ onBack }: Props) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left — Form */}
         <div className="w-1/2 border-r border-zinc-800 overflow-y-auto p-6 space-y-5">
-          {/* Image Upload */}
+          {/* Image Input */}
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-purple-400">Imagem de Referencia</span>
-              <span className="text-red-400 text-xs">*</span>
-            </div>
-            <p className="text-xs text-zinc-500 mb-2">
-              Envie a foto que voce quer clonar ou usar como inspiracao de estilo.
-            </p>
-
-            {imagePreview ? (
-              <div className="relative group">
-                <img
-                  src={imagePreview}
-                  alt="Referencia"
-                  className="w-full max-h-[300px] object-contain rounded-lg border border-zinc-700 bg-zinc-900"
-                />
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-purple-400">Imagem de Referencia</span>
+                <span className="text-red-400 text-xs">*</span>
+              </div>
+              <div className="flex items-center bg-zinc-800 rounded-lg border border-zinc-700 p-0.5">
                 <button
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 border border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-red-400 hover:border-red-400/50 transition-colors opacity-0 group-hover:opacity-100"
+                  onClick={() => setInputMode("upload")}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                    inputMode === "upload" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                  }`}
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  Upload
+                </button>
+                <button
+                  onClick={() => setInputMode("url")}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                    inputMode === "url" ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  URL
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-[180px] border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
-              >
-                <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                </svg>
-                <span className="text-sm">Clique para enviar uma imagem</span>
-              </button>
-            )}
+            </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
+            {inputMode === "upload" ? (
+              <>
+                <p className="text-xs text-zinc-500 mb-2">
+                  Envie a foto que voce quer clonar ou usar como inspiracao de estilo.
+                </p>
+                {imagePreview ? (
+                  <div className="relative group">
+                    <img
+                      src={imagePreview}
+                      alt="Referencia"
+                      className="w-full max-h-[300px] object-contain rounded-lg border border-zinc-700 bg-zinc-900"
+                    />
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 border border-zinc-600 flex items-center justify-center text-zinc-400 hover:text-red-400 hover:border-red-400/50 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-[180px] border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                  >
+                    <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                    </svg>
+                    <span className="text-sm">Clique para enviar uma imagem</span>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-zinc-500 mb-2">
+                  Cole a URL da imagem de referencia (precisa ser publica).
+                </p>
+                <input
+                  type="text"
+                  value={imageDirectUrl}
+                  onChange={(e) => setImageDirectUrl(e.target.value)}
+                  placeholder="https://exemplo.com/foto.jpg"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                />
+                {imageDirectUrl.trim().startsWith("http") && (
+                  <img
+                    src={imageDirectUrl.trim()}
+                    alt="Preview"
+                    className="w-full max-h-[200px] object-contain rounded-lg border border-zinc-700 bg-zinc-900 mt-2"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onLoad={(e) => { (e.target as HTMLImageElement).style.display = "block"; }}
+                  />
+                )}
+              </>
+            )}
           </div>
 
           {/* Gender */}
@@ -311,9 +368,9 @@ export default function CloneFoto({ onBack }: Props) {
           <div className="pt-2">
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !imageFile}
+              disabled={isGenerating || !hasImage}
               className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${
-                isGenerating || !imageFile
+                isGenerating || !hasImage
                   ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   : "bg-purple-600 hover:bg-purple-500 text-white"
               }`}
