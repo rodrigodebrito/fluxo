@@ -231,13 +231,46 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Seedance 2.0 accepts direct public URLs (no asset registration needed)
+    // Registrar imagens como assets na ByteDance (obrigatorio para referencia de pessoas)
+    let assetImageUrls: string[] | undefined;
+    if (referenceImageUrls && referenceImageUrls.length > 0) {
+      console.log("[seedance] Registrando", referenceImageUrls.length, "imagens como assets...");
+      assetImageUrls = [];
+      for (const imgUrl of referenceImageUrls) {
+        try {
+          const assetUrl = await registerAndWaitAsset(apiKey, imgUrl, "Image");
+          assetImageUrls.push(assetUrl);
+        } catch (assetErr) {
+          console.warn("[seedance] Asset failed, using direct URL:", (assetErr as Error).message);
+          assetImageUrls.push(imgUrl);
+        }
+      }
+    }
+
+    let assetFirstFrame: string | undefined;
+    if (firstFrameUrl) {
+      try {
+        assetFirstFrame = await registerAndWaitAsset(apiKey, firstFrameUrl, "Image");
+      } catch {
+        assetFirstFrame = firstFrameUrl;
+      }
+    }
+
+    let assetLastFrame: string | undefined;
+    if (lastFrameUrl) {
+      try {
+        assetLastFrame = await registerAndWaitAsset(apiKey, lastFrameUrl, "Image");
+      } catch {
+        assetLastFrame = lastFrameUrl;
+      }
+    }
+
     const result = await createSeedanceTask(apiKey, {
       prompt,
       sdModel,
-      firstFrameUrl: firstFrameUrl || undefined,
-      lastFrameUrl: lastFrameUrl || undefined,
-      referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
+      firstFrameUrl: assetFirstFrame,
+      lastFrameUrl: assetLastFrame,
+      referenceImageUrls: assetImageUrls,
       referenceVideoUrls: referenceVideoUrl ? [referenceVideoUrl] : undefined,
       referenceAudioUrls: referenceAudioUrl ? [referenceAudioUrl] : undefined,
       resolution,
