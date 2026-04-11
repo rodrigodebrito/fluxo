@@ -38,6 +38,7 @@ interface ImageSlot {
   id: number;
   role: string;
   roleLabel: string;
+  description: string;
   mode: "upload" | "url";
   file: File | null;
   preview: string | null;
@@ -132,6 +133,7 @@ export default function SeedanceCinematic({ onBack }: Props) {
         id: slotCounter,
         role,
         roleLabel: roleOpt?.label || role,
+        description: "",
         mode: "upload",
         file: null,
         preview: null,
@@ -200,7 +202,8 @@ export default function SeedanceCinematic({ onBack }: Props) {
             url = await uploadFile(slot.file!);
           }
           imageUrls.push(url);
-          imageDescriptions.push(`- Image ${i + 1} (@image${i + 1}) = ${slot.roleLabel.toUpperCase()} reference`);
+          const desc = slot.description.trim() ? ` — "${slot.description.trim()}"` : "";
+          imageDescriptions.push(`- Image ${i + 1} (@image${i + 1}) = ${slot.roleLabel.toUpperCase()} reference${desc}`);
         }
         setIsUploading(false);
       }
@@ -457,6 +460,15 @@ export default function SeedanceCinematic({ onBack }: Props) {
                         )}
                       </>
                     )}
+
+                    {/* Description */}
+                    <input
+                      type="text"
+                      value={slot.description}
+                      onChange={(e) => updateSlot(slot.id, { description: e.target.value })}
+                      placeholder="Descreva quem/o que e (opcional)"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-[11px] text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
                   </div>
                 ))}
               </div>
