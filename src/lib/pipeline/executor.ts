@@ -467,51 +467,48 @@ export async function runLLMChain(chain: LLMChain): Promise<string> {
 
 // Faz upload das imagens locais (blob) e retorna URLs públicas
 // URLs que já são públicas (http/https) são mantidas sem re-upload
+// Upload individual pra evitar estouro de tamanho com multiplas 4K
 async function uploadImages(blobUrls: string[]): Promise<string[]> {
   if (blobUrls.length === 0) return [];
 
-  const publicUrls: string[] = [];
-  const blobsToUpload: string[] = [];
+  const results: string[] = [];
   const currentOrigin = window.location.origin;
 
   for (const url of blobUrls) {
     if (url.startsWith("http://") || url.startsWith("https://")) {
-      publicUrls.push(url);
-    } else if (url.startsWith("blob:")) {
-      // Blob URLs only work on the domain that created them
-      if (!url.startsWith(`blob:${currentOrigin}/`)) {
-        throw new Error("Imagens expiradas. Remova e adicione as imagens novamente.");
-      }
-      blobsToUpload.push(url);
-    } else {
-      blobsToUpload.push(url);
+      results.push(url);
+      continue;
+    }
+
+    if (url.startsWith("blob:") && !url.startsWith(`blob:${currentOrigin}/`)) {
+      throw new Error("Imagens expiradas. Remova e adicione as imagens novamente.");
+    }
+
+    // Upload individual — uma imagem por request
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const ext = blob.type.split("/")[1] || "png";
+
+    const formData = new FormData();
+    formData.append("files", blob, `image.${ext}`);
+
+    const uploadResponse = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const text = await uploadResponse.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do servidor: ${text.slice(0, 200)}`); }
+    if (!uploadResponse.ok) {
+      throw new Error(data.error || "Erro ao fazer upload da imagem");
+    }
+    if (data.urls?.[0]) {
+      results.push(data.urls[0]);
     }
   }
 
-  if (blobsToUpload.length === 0) return publicUrls;
-
-  const formData = new FormData();
-
-  for (const blobUrl of blobsToUpload) {
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
-    const ext = blob.type.split("/")[1] || "png";
-    formData.append("files", blob, `image.${ext}`);
-  }
-
-  const uploadResponse = await fetch("/api/upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  const text = await uploadResponse.text();
-  let data;
-  try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida do servidor: ${text.slice(0, 200)}`); }
-  if (!uploadResponse.ok) {
-    throw new Error(data.error || "Erro ao fazer upload das imagens");
-  }
-
-  return [...publicUrls, ...data.urls];
+  return results;
 }
 
 // Inicia a geração chamando a API (imagem ou video)

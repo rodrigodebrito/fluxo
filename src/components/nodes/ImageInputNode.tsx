@@ -54,31 +54,29 @@ export default function ImageInputNode({ id, data }: NodeProps) {
       setIsUploading(true);
 
       try {
-        const formData = new FormData();
+        // Upload individual — uma por vez pra evitar estouro com 4K
+        const uploaded: string[] = [];
         for (const file of files) {
+          const formData = new FormData();
           formData.append("files", file);
+          const response = await fetch("/api/upload", { method: "POST", body: formData });
+          const text = await response.text();
+          let json;
+          try { json = JSON.parse(text); } catch { json = null; }
+          uploaded.push(json?.urls?.[0] || "");
         }
-        const response = await fetch("/api/upload", { method: "POST", body: formData });
-        const text = await response.text();
-        let json;
-        try { json = JSON.parse(text); } catch { json = null; }
 
-        if (json?.urls) {
-          const uploaded = json.urls as string[];
-          const finalImages = [...images];
-          for (let i = 0; i < files.length; i++) {
-            finalImages.push({
-              url: uploaded[i] || blobUrls[i],
-              name: files[i].name,
-              thumbUrl: thumbs[i],
-            });
-          }
-          updateNodeData(id, { images: finalImages });
-          // Revogar blob URLs apenas se upload deu certo
-          blobUrls.forEach((b) => URL.revokeObjectURL(b));
-        } else {
-          console.warn("Upload response invalid, keeping blob URLs:", text);
+        const finalImages = [...images];
+        for (let i = 0; i < files.length; i++) {
+          finalImages.push({
+            url: uploaded[i] || blobUrls[i],
+            name: files[i].name,
+            thumbUrl: thumbs[i],
+          });
         }
+        updateNodeData(id, { images: finalImages });
+        // Revogar blob URLs apenas dos que foram uploaded com sucesso
+        blobUrls.forEach((b, i) => { if (uploaded[i]) URL.revokeObjectURL(b); });
       } catch (err) {
         console.error("Upload failed, keeping blob URLs:", err);
       } finally {
