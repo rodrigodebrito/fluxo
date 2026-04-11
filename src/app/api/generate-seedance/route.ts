@@ -266,8 +266,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.code !== 200 || !result.data) {
+      const msg = result.msg || "Erro ao criar task Seedance";
+      const isSensitive = msg.toLowerCase().includes("sensitive");
       return NextResponse.json(
-        { error: result.msg || "Erro ao criar task Seedance" },
+        { error: isSensitive ? "Conteudo bloqueado pelo filtro do Seedance Standard. Tente usar o Seedance 2 Fast." : msg },
         { status: result.code || 500 }
       );
     }
