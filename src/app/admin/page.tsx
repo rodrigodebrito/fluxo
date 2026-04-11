@@ -67,7 +67,6 @@ const MODEL_LABELS: Record<string, string> = {
   kling: "Kling 3.0",
   seedance: "Seedance 2.0",
   llm: "LLM",
-  "custom-model": "Modelo Treinado",
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -85,7 +84,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations" | "coupons" | "trained-models" | "templates">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "waitlist" | "generations" | "coupons" | "templates">("overview");
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,10 +106,6 @@ export default function AdminPage() {
   });
   const [couponSaving, setCouponSaving] = useState(false);
   const [couponError, setCouponError] = useState("");
-
-  // Trained models
-  const [trainedModels, setTrainedModels] = useState<{ id: string; user_id: string; name: string; trigger_word: string; status: string; created_at: string; user_email?: string }[]>([]);
-  const [trainedModelsLoading, setTrainedModelsLoading] = useState(false);
 
   // Templates
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -251,19 +246,6 @@ export default function AdminPage() {
     fetchBalances();
   }, [fetchData, fetchBalances]);
 
-  const fetchTrainedModels = useCallback(async () => {
-    setTrainedModelsLoading(true);
-    try {
-      const res = await fetch("/api/admin/trained-models");
-      if (res.ok) {
-        const data = await res.json();
-        setTrainedModels(data.models || []);
-      }
-    } catch { /* ignore */ } finally {
-      setTrainedModelsLoading(false);
-    }
-  }, []);
-
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
     try {
@@ -295,9 +277,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (tab === "coupons" && coupons.length === 0) fetchCoupons();
-    if (tab === "trained-models" && trainedModels.length === 0) fetchTrainedModels();
     if (tab === "templates" && templates.length === 0) { fetchTemplates(); fetchUserWorkflows(); }
-  }, [tab, coupons.length, fetchCoupons, trainedModels.length, fetchTrainedModels, templates.length, fetchTemplates, fetchUserWorkflows]);
+  }, [tab, coupons.length, fetchCoupons, templates.length, fetchTemplates, fetchUserWorkflows]);
 
   const handleAddCredits = async (userId: string) => {
     const amount = parseInt(creditAmounts[userId] || "0");
@@ -435,7 +416,6 @@ export default function AdminPage() {
             { id: "overview" as const, label: "Visao Geral" },
             { id: "users" as const, label: "Usuarios" },
             { id: "coupons" as const, label: "Cupons" },
-            { id: "trained-models" as const, label: "Modelos LoRA" },
             { id: "templates" as const, label: "Templates" },
             { id: "waitlist" as const, label: "Waitlist" },
             { id: "generations" as const, label: "Geracoes" },
@@ -1035,7 +1015,6 @@ export default function AdminPage() {
                       <option value="imagem">Imagem</option>
                       <option value="video">Video</option>
                       <option value="avatar">Avatar</option>
-                      <option value="lora">LoRA</option>
                       <option value="edicao">Edicao</option>
                     </select>
                   </div>
@@ -1264,8 +1243,7 @@ export default function AdminPage() {
                         <option value="imagem">Imagem</option>
                         <option value="video">Video</option>
                         <option value="avatar">Avatar</option>
-                        <option value="lora">LoRA</option>
-                        <option value="edicao">Edicao</option>
+                          <option value="edicao">Edicao</option>
                       </select>
                     </div>
                     <div>
@@ -1334,75 +1312,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === "trained-models" && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Modelos Treinados (LoRA)</h2>
-                <p className="text-sm text-zinc-500 mt-1">{trainedModels.length} modelos no total</p>
-              </div>
-            </div>
-
-            {trainedModelsLoading ? (
-              <div className="text-center py-10 text-zinc-500 text-sm">Carregando...</div>
-            ) : trainedModels.length === 0 ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-10 text-center">
-                <p className="text-zinc-600 text-sm">Nenhum modelo treinado ainda</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800 text-left">
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Usuario</th>
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Nome</th>
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Trigger</th>
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Status</th>
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Data</th>
-                      <th className="py-3 px-4 text-xs font-medium text-zinc-500">Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trainedModels.map((m) => (
-                      <tr key={m.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
-                        <td className="py-3 px-4 text-sm text-zinc-400">{m.user_email || m.user_id.slice(0, 8)}</td>
-                        <td className="py-3 px-4 text-sm text-zinc-300">{m.name}</td>
-                        <td className="py-3 px-4 text-sm text-purple-400 font-mono">{m.trigger_word}</td>
-                        <td className="py-3 px-4">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                            m.status === "ready" ? "bg-green-500/10 text-green-400 border-green-500/20" :
-                            m.status === "training" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                            m.status === "failed" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                          }`}>
-                            {m.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-zinc-500">{new Date(m.created_at).toLocaleDateString("pt-BR")}</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Deletar este modelo?")) return;
-                              await fetch("/api/admin/trained-models", {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ id: m.id }),
-                              });
-                              fetchTrainedModels();
-                            }}
-                            className="text-xs text-red-400 hover:text-red-300"
-                          >
-                            Deletar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       {/* User History Modal */}

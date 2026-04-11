@@ -104,8 +104,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Upscale", model: "upscale", isRunning: false, results: [], imageInputCount: 1, upscaleScale: 2 };
     case "model-extract-audio":
       return { label: "Extract Audio", model: "extract-audio", isRunning: false, results: [], imageInputCount: 0, audioFormat: "mp3" };
-    case "model-custom":
-      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "model-wan-i2v":
       return { label: "Wan 2.7 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, wanResolution: "720p", wanDuration: 5, promptExtend: true };
     case "model-kling-avatar":
@@ -116,10 +114,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Z-Image Turbo", model: "zimage-t2i", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, seed: null };
     case "model-zimage-i2i":
       return { label: "Z-Image I2I", model: "zimage-i2i", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, seed: null };
-    case "model-zimage-lora":
-      return { label: "Z-Image LoRA", model: "zimage-lora", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
-    case "model-zimage-i2i-lora":
-      return { label: "Z-Image I2I + LoRA", model: "zimage-i2i-lora", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
     case "audioInput":
       return { label: "Audio", audioUrl: "", fileName: "", audioDuration: 0 };
     case "klingElement":
@@ -1045,8 +1039,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         costPerRun = 1;
       } else if (m === "upscale") {
         costPerRun = 2;
-      } else if (m === "custom-model") {
-        costPerRun = 10 * (pipeline.customNumOutputs || 1);
       } else if (m === "wan-i2v") {
         const wanPerSec = pipeline.wanResolution === "1080p" ? 24 : 16;
         costPerRun = wanPerSec * (pipeline.wanDuration || 5);
@@ -1071,9 +1063,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       } else if (m === "zimage-t2i" || m === "zimage-i2i") {
         const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
         costPerRun = hdSizes.includes(pipeline.zimageSize || "") ? 3 : 2;
-      } else if (m === "zimage-lora" || m === "zimage-i2i-lora") {
-        const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
-        costPerRun = hdSizes.includes(pipeline.zimageSize || "") ? 5 : 3;
       }
 
       const genOptions = {
@@ -1112,15 +1101,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         wanDuration: pipeline.wanDuration,
         promptExtend: pipeline.promptExtend,
         negativePrompt: pipeline.negativePrompt,
-        trainedModelId: pipeline.trainedModelId,
-        extraLoraIds: pipeline.extraLoraIds,
-        nsfwEnabled: pipeline.nsfwEnabled,
-        nsfwScale: pipeline.nsfwScale,
-        realismEnabled: pipeline.realismEnabled,
-        realismScale: pipeline.realismScale,
-        mainLoraScale: pipeline.mainLoraScale,
-        customAspectRatio: pipeline.customAspectRatio,
-        customNumOutputs: pipeline.customNumOutputs,
         avatarTier: pipeline.avatarTier,
         avatarText: pipeline.avatarText,
         avatarVoice: pipeline.avatarVoice,
@@ -1137,7 +1117,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         zimageSafety: pipeline.zimageSafety,
         zimageStrength: pipeline.zimageStrength,
         zimageSize: pipeline.zimageSize,
-        zimageLoras: pipeline.zimageLoras,
         cost: costPerRun,
       };
 
@@ -1163,10 +1142,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       // Atualizar creditos na UI apos cobranca
       window.dispatchEvent(new Event("fluxo-credits-update"));
 
-      // Replicate sync models — resultados ja estao no cache, nao precisa polling
-      if (pipeline.model === "custom-model" || pipeline.model === "extract-audio") {
+      // Sync models — resultados ja estao no cache, nao precisa polling
+      if (pipeline.model === "extract-audio") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cache = (window as any).__replicateResultsCache as Map<string, string[]> | undefined;
+        const cache = (window as any).__syncResultsCache as Map<string, string[]> | undefined;
         const allUrls: string[] = [];
         for (const taskId of taskIds) {
           const urls = cache?.get(taskId) || [];
@@ -1882,14 +1861,6 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Lip Sync",
     children: [
       { type: "model-kling-avatar", label: "Kling Avatar TTS" },
-    ],
-  },
-  {
-    label: "LoRA",
-    children: [
-      { type: "model-custom", label: "Modelo Treinado" },
-      { type: "model-zimage-lora", label: "Z-Image LoRA" },
-      { type: "model-zimage-i2i-lora", label: "Z-Image I2I + LoRA" },
     ],
   },
 ];

@@ -63,28 +63,7 @@ CREATE POLICY "Users can read own credit logs" ON credit_logs
 -- Insert feito via service role (backend), nao precisa policy de insert pra anon
 
 
--- 5. TRAINED_MODELS
--- Usuarios podem CRUD apenas seus proprios modelos treinados
-ALTER TABLE trained_models ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can read own models" ON trained_models;
-CREATE POLICY "Users can read own models" ON trained_models
-  FOR SELECT USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can create own models" ON trained_models;
-CREATE POLICY "Users can create own models" ON trained_models
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can update own models" ON trained_models;
-CREATE POLICY "Users can update own models" ON trained_models
-  FOR UPDATE USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Users can delete own models" ON trained_models;
-CREATE POLICY "Users can delete own models" ON trained_models
-  FOR DELETE USING (auth.uid() = user_id);
-
-
--- 6. COUPONS
+-- 5. COUPONS
 -- Somente leitura publica (pra validacao), escrita via service role (admin)
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 

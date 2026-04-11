@@ -9,14 +9,14 @@ interface SidebarProps {
   onBack?: () => void;
 }
 
-type Category = "image-models" | "video-models" | "lipsync-models" | "lora-models" | "tools" | null;
+type Category = "image-models" | "video-models" | "lipsync-models" | "tools" | null;
 
 interface ModelCard {
   type: string; // drag type for ReactFlow
   label: string;
   desc?: string;
   icon: React.ReactNode;
-  category: "image" | "video" | "lipsync" | "lora" | "tool";
+  category: "image" | "video" | "lipsync" | "tool";
 }
 
 const MODEL_CARDS: ModelCard[] = [
@@ -265,18 +265,6 @@ const MODEL_CARDS: ModelCard[] = [
     ),
     category: "tool",
   },
-  // LoRA models
-  {
-    type: "model-custom",
-    label: "Modelo Treinado",
-    desc: "NSFW off",
-    icon: (
-      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-      </svg>
-    ),
-    category: "lora",
-  },
 ];
 
 // Icon bar categories
@@ -305,15 +293,6 @@ const CATEGORIES: { id: Category; icon: React.ReactNode; label: string }[] = [
     icon: (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-      </svg>
-    ),
-  },
-  {
-    id: "lora-models",
-    label: "LoRA",
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.59.659H9.06a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V5.846a2.25 2.25 0 00-.659-1.591L15.409 1.5A2.25 2.25 0 0013.818 1h-3.636a2.25 2.25 0 00-1.591.659L5.659 4.255A2.25 2.25 0 005 5.846V14.5" />
       </svg>
     ),
   },
@@ -353,8 +332,6 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
       cards = cards.filter((c) => c.category === "video");
     } else if (activeCategory === "lipsync-models") {
       cards = cards.filter((c) => c.category === "lipsync");
-    } else if (activeCategory === "lora-models") {
-      cards = cards.filter((c) => c.category === "lora");
     } else if (activeCategory === "tools") {
       cards = cards.filter((c) => c.category === "tool");
     }
@@ -375,11 +352,9 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
         ? "Video Models"
         : activeCategory === "lipsync-models"
           ? "Lip Sync"
-          : activeCategory === "lora-models"
-            ? "LoRA Models"
-            : activeCategory === "tools"
-              ? "Tools"
-              : "";
+          : activeCategory === "tools"
+            ? "Tools"
+            : "";
 
   const categorySubtitle =
     activeCategory === "image-models"
@@ -388,11 +363,9 @@ export default function Sidebar({ workflowName, onNameChange, onBack }: SidebarP
         ? "Generate from text or image"
         : activeCategory === "lipsync-models"
           ? "Foto + audio/texto = video falando"
-          : activeCategory === "lora-models"
-            ? "Modelos personalizados treinados"
-            : activeCategory === "tools"
-              ? "Inputs & utilities"
-              : "";
+          : activeCategory === "tools"
+            ? "Inputs & utilities"
+            : "";
 
   return (
     <div className="flex h-full">

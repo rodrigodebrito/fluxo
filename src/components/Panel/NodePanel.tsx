@@ -72,197 +72,6 @@ const KLING_ASPECT_RATIOS = [
   { value: "1:1", label: "1:1" },
 ];
 
-function ZImageLoraSelector({ loras, onUpdate }: {
-  loras: { path: string; scale: number }[];
-  onUpdate: (loras: { path: string; scale: number }[]) => void;
-}) {
-  const [models, setModels] = useState<{ id: string; name: string; trigger_word: string; weights_url: string | null; provider: string | null }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/training/list")
-      .then((r) => r.json())
-      .then((data) => {
-        setModels(
-          (data.models || []).filter(
-            (m: { status: string; provider: string | null; weights_url: string | null }) =>
-              m.status === "ready" && m.provider === "fal-zimage" && m.weights_url
-          )
-        );
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const addFromTrained = (weightsUrl: string) => {
-    if (loras.length >= 3) return;
-    if (loras.some((l) => l.path === weightsUrl)) return;
-    onUpdate([...loras, { path: weightsUrl, scale: 1 }]);
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-zinc-300">LoRAs ({loras.length}/3)</span>
-      </div>
-
-      {/* Trained models quick-add */}
-      {!loading && models.length > 0 && loras.length < 3 && (
-        <div className="mb-2">
-          <select
-            value=""
-            onChange={(e) => { if (e.target.value) addFromTrained(e.target.value); }}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-          >
-            <option value="">+ Adicionar modelo treinado...</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.weights_url || ""}>
-                {m.name} ({m.trigger_word})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Manual add */}
-      {loras.length < 3 && (
-        <button
-          onClick={() => onUpdate([...loras, { path: "", scale: 1 }])}
-          className="text-xs text-purple-400 hover:text-purple-300 mb-2"
-        >
-          + Adicionar URL manual
-        </button>
-      )}
-
-      {/* LoRA list */}
-      {loras.map((lora, idx) => (
-        <div key={idx} className="mb-2 p-2 bg-zinc-800 rounded-lg border border-zinc-700">
-          <div className="flex items-center gap-1 mb-1">
-            <span className="text-xs text-zinc-400">LoRA {idx + 1}</span>
-            <button
-              onClick={() => onUpdate(loras.filter((_, i) => i !== idx))}
-              className="ml-auto text-xs text-red-400 hover:text-red-300"
-            >
-              Remover
-            </button>
-          </div>
-          <input
-            type="text"
-            placeholder="URL do LoRA"
-            value={lora.path}
-            onChange={(e) => {
-              const updated = [...loras];
-              updated[idx] = { ...updated[idx], path: e.target.value };
-              onUpdate(updated);
-            }}
-            className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-300 mb-1 focus:outline-none focus:border-purple-500"
-          />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400">Peso: {lora.scale.toFixed(1)}</span>
-            <input
-              type="range"
-              min={0}
-              max={20}
-              value={Math.round(lora.scale * 10)}
-              onChange={(e) => {
-                const updated = [...loras];
-                updated[idx] = { ...updated[idx], scale: parseInt(e.target.value) / 10 };
-                onUpdate(updated);
-              }}
-              className="flex-1 accent-purple-500"
-            />
-          </div>
-        </div>
-      ))}
-
-      {loras.length === 0 && (
-        <p className="text-xs text-zinc-500">
-          {loading ? "Carregando..." : models.length === 0
-            ? <>Nenhum LoRA Z-Image treinado. <a href="/models" className="text-purple-400 hover:text-purple-300">Treinar um</a></>
-            : "Selecione um modelo treinado ou adicione URL manual."
-          }
-        </p>
-      )}
-    </div>
-  );
-}
-
-function TrainedModelSelector({ label, subtitle, selectedId, triggerWord, onSelect, allowEmpty }: {
-  label?: string;
-  subtitle?: string;
-  selectedId: string;
-  triggerWord: string;
-  onSelect: (id: string, trigger: string) => void;
-  allowEmpty?: boolean;
-}) {
-  const [models, setModels] = useState<{ id: string; name: string; trigger_word: string; thumbnail_url: string | null; status: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/training/list")
-      .then((r) => r.json())
-      .then((data) => {
-        setModels((data.models || []).filter((m: { status: string }) => m.status === "ready"));
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div>
-        <div className="flex items-center gap-1 mb-2">
-          <span className="text-sm text-zinc-300">{label || "Modelo"}</span>
-        </div>
-        <div className="text-xs text-zinc-500">Carregando modelos...</div>
-      </div>
-    );
-  }
-
-  if (models.length === 0 && !allowEmpty) {
-    return (
-      <div>
-        <div className="flex items-center gap-1 mb-2">
-          <span className="text-sm text-zinc-300">{label || "Modelo"}</span>
-        </div>
-        <div className="text-xs text-zinc-500 mb-2">Nenhum modelo treinado</div>
-        <a href="/models" className="text-xs text-purple-400 hover:text-purple-300">
-          → Treinar um modelo
-        </a>
-      </div>
-    );
-  }
-
-  if (models.length === 0 && allowEmpty) return null;
-
-  return (
-    <div>
-      <div className="flex flex-col mb-2">
-        <span className="text-sm text-zinc-300">{label || "Modelo Treinado"}</span>
-        {subtitle && <span className="text-[10px] text-zinc-500">{subtitle}</span>}
-      </div>
-      <select
-        value={selectedId}
-        onChange={(e) => {
-          const m = models.find((m) => m.id === e.target.value);
-          onSelect(e.target.value, m?.trigger_word || "");
-        }}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-      >
-        <option value="">{allowEmpty ? "Nenhum" : "Selecione um modelo..."}</option>
-        {models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name} ({m.trigger_word})
-          </option>
-        ))}
-      </select>
-      {triggerWord && (
-        <p className="text-[10px] text-zinc-500 mt-1.5">
-          {allowEmpty ? "Trigger" : "Use"} <span className="text-purple-400 font-mono">{triggerWord}</span> {allowEmpty ? "" : "no prompt para ativar"}
-        </p>
-      )}
-    </div>
-  );
-}
-
 export default function NodePanel({ node, onRun, onClose, onUpdateData, iteratorCount = 0 }: NodePanelProps) {
   const model = (node.data.model as string) || "nano-banana-pro";
   const resolution = (node.data.resolution as string) || "1K";
@@ -325,13 +134,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const grokMode = (node.data.grokMode as string) || "normal";
 
   // Z-Image Turbo
-  const isZimage = model === "zimage-t2i" || model === "zimage-i2i" || model === "zimage-lora" || model === "zimage-i2i-lora";
+  const isZimage = model === "zimage-t2i" || model === "zimage-i2i";
   const zimageSize = (node.data.zimageSize as string) || "landscape_4_3";
   const zimageSteps = (node.data.zimageSteps as number) || 8;
   const zimageAcceleration = (node.data.zimageAcceleration as string) || "regular";
   const zimageSafety = (node.data.zimageSafety as boolean) ?? false;
   const zimageStrength = (node.data.zimageStrength as number) ?? 0.6;
-  const zimageLoras = (node.data.zimageLoras as { path: string; scale: number }[]) || [];
 
   // Kling Avatar TTS
   const isAvatar = model === "kling-avatar";
@@ -407,18 +215,10 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const grokPerSec = grokResolution === "720p" ? 3 : 1.6;
     costPerRun = Math.ceil(grokPerSec * grokDuration);
   }
-  if (model === "custom-model") {
-    costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
-  }
   if (model === "zimage-t2i" || model === "zimage-i2i") {
     // $0.005/MP ~ 1MP padrao = 2 cred
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
     costPerRun = hdSizes.includes(zimageSize) ? 3 : 2;
-  }
-  if (model === "zimage-lora" || model === "zimage-i2i-lora") {
-    // $0.0085/MP ~ 1MP padrao = 3 cred
-    const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
-    costPerRun = hdSizes.includes(zimageSize) ? 5 : 3;
   }
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
@@ -869,119 +669,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Trained Model Selection */}
-        {params.includes("trainedModel") && (
-          <>
-            <TrainedModelSelector
-              label="Modelo Principal"
-              selectedId={(node.data.trainedModelId as string) || ""}
-              triggerWord={(node.data.trainedModelTrigger as string) || ""}
-              onSelect={(id, trigger) => update({ trainedModelId: id, trainedModelTrigger: trigger })}
-            />
-            {/* Main model weight - advanced */}
-            <details className="mb-1 -mt-1">
-              <summary className="text-[10px] text-zinc-500 cursor-pointer hover:text-zinc-400 select-none">Advanced</summary>
-              <div className="mt-1.5 px-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-zinc-400">Forca</span>
-                  <span className="text-[10px] text-purple-400 font-mono">{((node.data.mainLoraScale as number) ?? 1).toFixed(1)}</span>
-                </div>
-                <input
-                  type="range" min="0" max="1" step="0.1"
-                  value={(node.data.mainLoraScale as number) ?? 1}
-                  onChange={(e) => update({ mainLoraScale: parseFloat(e.target.value) })}
-                  className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
-                />
-                <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
-                  <span>Fraco</span><span>Forte</span>
-                </div>
-              </div>
-            </details>
-
-
-            {/* Extra LoRAs - dynamic list */}
-            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).map((lora, idx) => (
-              <div key={idx} className="relative">
-                <TrainedModelSelector
-                  label={`LoRA Extra ${idx + 1}`}
-                  subtitle="Ex: produto, roupa, estilo"
-                  selectedId={lora.id}
-                  triggerWord={lora.trigger}
-                  onSelect={(id, trigger) => {
-                    const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
-                    loras[idx] = { id, trigger };
-                    update({ extraLoras: loras });
-                  }}
-                  allowEmpty
-                />
-                <button
-                  onClick={() => {
-                    const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
-                    loras.splice(idx, 1);
-                    update({ extraLoras: loras });
-                  }}
-                  className="absolute top-0 right-0 text-zinc-500 hover:text-red-400 text-xs"
-                  title="Remover LoRA"
-                >
-                  x
-                </button>
-              </div>
-            ))}
-            {((node.data.extraLoras as { id: string; trigger: string }[]) || []).length < 16 && (
-              <button
-                onClick={() => {
-                  const loras = [...((node.data.extraLoras as { id: string; trigger: string }[]) || [])];
-                  loras.push({ id: "", trigger: "" });
-                  update({ extraLoras: loras });
-                }}
-                className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-              >
-                + Adicionar LoRA Extra
-              </button>
-            )}
-          </>
-        )}
-
-        {/* Custom Aspect Ratio */}
-        {params.includes("customAspectRatio") && (
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm text-zinc-300">Aspecto</span>
-            </div>
-            <select
-              value={(node.data.customAspectRatio as string) || "1:1"}
-              onChange={(e) => update({ customAspectRatio: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-            >
-              <option value="1:1">1:1 (Quadrado)</option>
-              <option value="16:9">16:9 (Paisagem)</option>
-              <option value="9:16">9:16 (Retrato)</option>
-              <option value="4:3">4:3</option>
-              <option value="3:4">3:4</option>
-            </select>
-          </div>
-        )}
-
-        {/* Custom Num Outputs */}
-        {params.includes("customNumOutputs") && (
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm text-zinc-300">Quantidade</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Cada imagem adicional custa 10 creditos">i</span>
-            </div>
-            <select
-              value={(node.data.customNumOutputs as number) || 1}
-              onChange={(e) => update({ customNumOutputs: parseInt(e.target.value) })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
-            >
-              <option value={1}>1 imagem</option>
-              <option value={2}>2 imagens</option>
-              <option value={3}>3 imagens</option>
-              <option value={4}>4 imagens</option>
-            </select>
-          </div>
-        )}
-
         {/* Flux Image Size */}
         {params.includes("fluxImageSize") && (
           <div>
@@ -1098,13 +785,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
-        {/* Z-Image LoRAs */}
-        {params.includes("zimageLoras") && (
-          <ZImageLoraSelector
-            loras={zimageLoras}
-            onUpdate={(updated) => update({ zimageLoras: updated })}
-          />
-        )}
 
         {/* Aspect Ratio */}
         {params.includes("aspectRatio") && (

@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i";
 
 export interface ModelInfo {
   id: AIModel;
@@ -208,17 +208,6 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     params: ["audioFormat", "runs"],
   },
   {
-    id: "custom-model",
-    name: "Modelo Treinado",
-    type: "image",
-    description: "Gere imagens com seu modelo personalizado (LoRA via Replicate)",
-    costPerRun: 10,
-    handles: [
-      { id: "prompt", label: "Prompt*", required: true },
-    ],
-    params: ["trainedModel", "customAspectRatio", "customNumOutputs", "runs"],
-  },
-  {
     id: "wan-i2v",
     name: "Wan 2.7 I2V",
     type: "video",
@@ -281,29 +270,6 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["zimageSize", "zimageSteps", "zimageStrength", "zimageAcceleration", "zimageSafety", "seed", "runs"],
-  },
-  {
-    id: "zimage-lora",
-    name: "Z-Image LoRA",
-    type: "image",
-    description: "Imagem com ate 3 LoRAs (Z-Image Turbo via fal.ai)",
-    costPerRun: 3,
-    handles: [
-      { id: "prompt", label: "Prompt*", required: true },
-    ],
-    params: ["zimageSize", "zimageSteps", "zimageAcceleration", "zimageSafety", "zimageLoras", "seed", "runs"],
-  },
-  {
-    id: "zimage-i2i-lora",
-    name: "Z-Image I2I + LoRA",
-    type: "image",
-    description: "Image to Image com ate 3 LoRAs (Z-Image Turbo via fal.ai)",
-    costPerRun: 3,
-    handles: [
-      { id: "prompt", label: "Prompt*", required: true },
-      { id: "image-1", label: "Image*", required: true },
-    ],
-    params: ["zimageSize", "zimageSteps", "zimageStrength", "zimageAcceleration", "zimageSafety", "zimageLoras", "seed", "runs"],
   },
 ];
 

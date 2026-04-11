@@ -1,15 +1,15 @@
 import { type Node, type Edge } from "@xyflow/react";
 
-// Cache for Replicate results (sync generation, no polling needed)
+// Cache for sync results (no polling needed, e.g. extract-audio)
 // Uses window global to ensure same instance across dynamic imports
-function getReplicateCache(): Map<string, string[]> {
+function getSyncCache(): Map<string, string[]> {
   if (typeof window !== "undefined") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
-    if (!w.__replicateResultsCache) {
-      w.__replicateResultsCache = new Map<string, string[]>();
+    if (!w.__syncResultsCache) {
+      w.__syncResultsCache = new Map<string, string[]>();
     }
-    return w.__replicateResultsCache;
+    return w.__syncResultsCache;
   }
   return new Map();
 }
@@ -75,15 +75,6 @@ interface PipelineData {
   wanResolution?: string;
   wanDuration?: number;
   // Custom Model (Replicate LoRA)
-  trainedModelId?: string;
-  extraLoraIds?: string[];
-  nsfwEnabled?: boolean;
-  nsfwScale?: number;
-  realismEnabled?: boolean;
-  realismScale?: number;
-  mainLoraScale?: number;
-  customAspectRatio?: string;
-  customNumOutputs?: number;
   // Grok Imagine
   grokResolution?: string;
   grokDuration?: number;
@@ -100,7 +91,6 @@ interface PipelineData {
   zimageSafety?: boolean;
   zimageStrength?: number;
   zimageSize?: string;
-  zimageLoras?: { path: string; scale: number }[];
   // Kling Avatar
   avatarTier?: string;
   avatarText?: string;
@@ -164,16 +154,6 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.upscaleScale = (modelNode.data.upscaleScale as number) || 2;
   result.wanResolution = (modelNode.data.wanResolution as string) || "720p";
   result.wanDuration = (modelNode.data.wanDuration as number) || 81;
-  result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
-  const extraLoras = (modelNode.data.extraLoras as { id: string; trigger: string }[]) || [];
-  result.extraLoraIds = extraLoras.map((l) => l.id).filter((id) => id !== "");
-  result.nsfwEnabled = (modelNode.data.nsfwEnabled as boolean) ?? true;
-  result.nsfwScale = (modelNode.data.nsfwScale as number) ?? 0.6;
-  result.realismEnabled = (modelNode.data.realismEnabled as boolean) ?? true;
-  result.realismScale = (modelNode.data.realismScale as number) ?? 0.7;
-  result.mainLoraScale = (modelNode.data.mainLoraScale as number) ?? 1;
-  result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
-  result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
   result.grokResolution = (modelNode.data.grokResolution as string) || "480p";
   result.grokDuration = (modelNode.data.grokDuration as number) || 6;
   result.grokMode = (modelNode.data.grokMode as string) || "normal";
@@ -189,7 +169,6 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.zimageSafety = (modelNode.data.zimageSafety as boolean) ?? false;
   result.zimageStrength = (modelNode.data.zimageStrength as number) ?? 0.6;
   result.zimageSize = (modelNode.data.zimageSize as string) || "landscape_4_3";
-  result.zimageLoras = (modelNode.data.zimageLoras as { path: string; scale: number }[]) || [];
 
   const randomSeed = (modelNode.data.randomSeed as boolean) ?? true;
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
@@ -573,15 +552,6 @@ export async function startGeneration(
     upscaleScale?: number;
     wanResolution?: string;
     wanDuration?: number;
-    trainedModelId?: string;
-    extraLoraIds?: string[];
-    nsfwEnabled?: boolean;
-    nsfwScale?: number;
-    realismEnabled?: boolean;
-    realismScale?: number;
-    mainLoraScale?: number;
-    customAspectRatio?: string;
-    customNumOutputs?: number;
     avatarTier?: string;
     avatarText?: string;
     avatarVoice?: string;
@@ -600,8 +570,7 @@ export async function startGeneration(
     zimageSafety?: boolean;
     zimageStrength?: number;
     zimageSize?: string;
-    zimageLoras?: { path: string; scale: number }[];
-    cost?: number;
+      cost?: number;
   }
 ): Promise<string> {
   const publicUrls = await uploadImages(localImageUrls);
@@ -626,7 +595,7 @@ export async function startGeneration(
     if (!response.ok) throw new Error(data.error || "Erro ao extrair audio");
 
     // Store in Replicate cache so FlowEditor picks it up without polling
-    const cache = getReplicateCache();
+    const cache = getSyncCache();
     const fakeId = `extract-audio-${Date.now()}`;
     cache.set(fakeId, [data.audioUrl]);
     return fakeId;
@@ -752,37 +721,8 @@ export async function startGeneration(
     return data.taskId;
   }
 
-  // Custom Model (Replicate LoRA) — retorno sincrono, nao precisa de polling
-  if (options?.model === "custom-model") {
-    const response = await fetch("/api/generate-replicate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        trainedModelId: options.trainedModelId,
-        extraLoraIds: options.extraLoraIds || [],
-        nsfwEnabled: options.nsfwEnabled ?? true,
-        nsfwScale: options.nsfwScale ?? 0.6,
-        realismEnabled: options.realismEnabled ?? true,
-        realismScale: options.realismScale ?? 0.7,
-        mainLoraScale: options.mainLoraScale ?? 1,
-        prompt,
-        aspectRatio: options.customAspectRatio || "1:1",
-        numOutputs: options.customNumOutputs || 1,
-        cost: options.cost,
-      }),
-    });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
-    if (!response.ok) throw new Error(data.error || "Erro ao gerar com modelo treinado");
-    // Store URLs for direct retrieval (skip polling)
-    const taskId = `replicate_${Date.now()}`;
-    getReplicateCache().set(taskId, data.urls || []);
-    return taskId;
-  }
-
   // fal.ai models (Kling O3 i2v, O3 edit, O3 ref, Flux 2, utilities)
-  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale", "zimage-t2i", "zimage-i2i", "zimage-lora", "zimage-i2i-lora"];
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale", "zimage-t2i", "zimage-i2i"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai
     let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
@@ -835,7 +775,6 @@ export async function startGeneration(
         zimageSafety: options.zimageSafety,
         zimageStrength: options.zimageStrength,
         zimageSize: options.zimageSize,
-        zimageLoras: options.zimageLoras,
         cost: options.cost,
       }),
     });
