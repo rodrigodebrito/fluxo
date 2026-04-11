@@ -246,18 +246,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fast aceita URLs diretas, standard precisa de asset://
-    const isFast = sdModel.includes("fast");
-    const finalRefUrls = referenceImageUrls && referenceImageUrls.length > 0
-      ? (isFast ? referenceImageUrls : (assetIds.length > 0 ? assetIds : referenceImageUrls))
-      : undefined;
-
+    // reference_image_urls sempre recebe URLs diretas
+    // os assets registrados acima ficam disponiveis via @imageN no prompt automaticamente
     const result = await createSeedanceTask(apiKey, {
       prompt,
       sdModel,
       firstFrameUrl: firstFrameUrl || undefined,
       lastFrameUrl: lastFrameUrl || undefined,
-      referenceImageUrls: finalRefUrls,
+      referenceImageUrls: referenceImageUrls && referenceImageUrls.length > 0 ? referenceImageUrls : undefined,
       referenceVideoUrls: referenceVideoUrl ? [referenceVideoUrl] : undefined,
       referenceAudioUrls: referenceAudioUrl ? [referenceAudioUrl] : undefined,
       resolution,
