@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitFalTask, buildFalInput, getFalEndpoint, FAL_MODELS } from "@/lib/ai/fal";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
-import { checkPromptSafety } from "@/lib/content-filter";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -45,13 +44,6 @@ export async function POST(request: NextRequest) {
   }
 
   const isZimage = model === "zimage-t2i" || model === "zimage-i2i" || model === "zimage-lora" || model === "zimage-i2i-lora";
-  if (prompt && !isUtilityTool && !isZimage) {
-    const safety = checkPromptSafety(prompt);
-    if (!safety.safe) {
-      return NextResponse.json({ error: safety.reason }, { status: 403 });
-    }
-  }
-
   try {
     const input = buildFalInput({
       model,

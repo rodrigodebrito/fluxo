@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAvatarTask, createTTSTask, getTaskStatus, parseResultUrls } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
-import { checkPromptSafety } from "@/lib/content-filter";
 
 // Poll TTS task until audio URL is ready (max 60s)
 async function waitForTTS(apiKey: string, taskId: string): Promise<string> {
@@ -43,20 +42,6 @@ export async function POST(request: NextRequest) {
 
   if (!audioUrl && !text) {
     return NextResponse.json({ error: "Audio ou texto e obrigatorio" }, { status: 400 });
-  }
-
-  // Safety check on text/prompt
-  if (text) {
-    const safety = checkPromptSafety(text);
-    if (!safety.safe) {
-      return NextResponse.json({ error: safety.reason }, { status: 403 });
-    }
-  }
-  if (prompt) {
-    const safety = checkPromptSafety(prompt);
-    if (!safety.safe) {
-      return NextResponse.json({ error: safety.reason }, { status: 403 });
-    }
   }
 
   const { hasCredits, cost: finalCost } = await verifyCredits(user.id, "kling-avatar", cost);
