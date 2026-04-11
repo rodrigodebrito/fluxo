@@ -1046,6 +1046,9 @@ async function refundCredits(model: string, taskId: string, cost?: number) {
     });
     // Notificar componente de creditos pra atualizar
     window.dispatchEvent(new Event("fluxo-credits-update"));
+    // Toast de refund
+    const { showToast } = await import("@/components/Toast");
+    showToast(`Creditos devolvidos (${model})`, "info");
     console.log(`[refund] Creditos devolvidos para modelo ${model}, task ${taskId}`);
   } catch (err) {
     console.error("[refund] Falha ao devolver creditos:", err);

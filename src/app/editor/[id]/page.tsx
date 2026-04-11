@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import UserCredits from "@/components/Header/UserCredits";
 import AppView from "@/components/App/AppView";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { ToastProvider } from "@/components/Toast";
 import type { FlowEditorHandle } from "@/components/Editor/FlowEditor";
 import type { Node } from "@xyflow/react";
 import { useRouter } from "next/navigation";
@@ -120,6 +122,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   }, []);
 
   return (
+    <ToastProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-950">
       <Sidebar
         onRun={handleRun}
@@ -169,7 +172,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
         {/* Content */}
         <div className={`flex-1 ${activeTab === "canvas" ? "" : "hidden"}`}>
-          <FlowEditor ref={editorRef} onNodeSelect={handleNodeSelect} onFlowChange={triggerAutoSave} />
+          <ErrorBoundary>
+            <FlowEditor ref={editorRef} onNodeSelect={handleNodeSelect} onFlowChange={triggerAutoSave} />
+          </ErrorBoundary>
         </div>
         {activeTab === "app" && <AppView />}
       </div>
@@ -183,5 +188,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         />
       )}
     </div>
+    </ToastProvider>
   );
 }

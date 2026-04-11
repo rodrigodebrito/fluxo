@@ -26,6 +26,7 @@ import {
   pollTaskStatus,
   runLLMChain,
 } from "@/lib/pipeline/executor";
+import { showToast } from "@/components/Toast";
 
 // --- Pending tasks recovery (localStorage) ---
 interface PendingTask {
@@ -952,7 +953,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         window.dispatchEvent(new Event("fluxo-credits-update"));
       } catch (err) {
         setNodes((nds) => nds.map((n) => n.id === llmNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n));
-        alert("Erro no LLM: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+        showToast("Erro no LLM: " + (err instanceof Error ? err.message : "Erro desconhecido"), "error");
         return;
       }
     }
@@ -960,12 +961,12 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     const isMultiShot = pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0;
     const isPromptOptional = pipeline.model === "kling-motion" || pipeline.model === "bg-removal" || pipeline.model === "upscale" || pipeline.model === "extract-audio";
     if (!pipeline.prompt && !isMultiShot && !isPromptOptional) {
-      alert("Conecte um nó de Prompt com texto ao nó de Modelo antes de executar.");
+      showToast("Conecte um no de Prompt com texto ao no de Modelo antes de executar.", "error");
       return;
     }
 
     if (!pipeline.modelNodeId) {
-      alert("Nenhum nó de Modelo encontrado.");
+      showToast("Nenhum no de Modelo encontrado.", "error");
       return;
     }
 
@@ -1184,7 +1185,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
             })
           );
         } else {
-          alert("Nenhum resultado gerado");
+          showToast("Nenhum resultado gerado", "error");
           setNodes((nds) =>
             nds.map((n) => n.id === pipeline.modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n)
           );
@@ -1227,7 +1228,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       }
 
       if (errors.length > 0 && allUrls.length === 0) {
-        alert("Erro na geração: " + errors[0]);
+        showToast("Erro na geracao: " + errors[0], "error");
         setNodes((nds) =>
           nds.map((n) =>
             n.id === pipeline.modelNodeId
@@ -1239,6 +1240,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       }
 
       if (allUrls.length > 0) {
+        showToast(`Geracao concluida! ${allUrls.length} resultado(s)`, "success");
         setNodes((nds) =>
           nds.map((n) => {
             if (n.id === pipeline.modelNodeId) {
@@ -1266,7 +1268,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (errMsg.includes("Creditos insuficientes") || errMsg.includes("402")) {
           setShowNoCredits(true);
         } else {
-          alert("Erro: " + errMsg);
+          showToast(errMsg, "error");
         }
       }
       setNodes((nds) =>
@@ -1358,7 +1360,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       }
 
       if (!prompt) {
-        alert("Conecte um no de Prompt ao handle 'Prompt' do Any LLM.");
+        showToast("Conecte um no de Prompt ao handle 'Prompt' do Any LLM.", "error");
         return;
       }
 
@@ -1419,7 +1421,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         window.dispatchEvent(new Event("fluxo-credits-update"));
       } catch (err) {
         console.error("Erro no LLM:", err);
-        alert("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+        showToast("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"), "error");
         setNodes((nds) => nds.map((n) => n.id === llmNode.id ? { ...n, data: { ...n.data, isRunning: false } } : n));
       }
     };
@@ -1484,7 +1486,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         }
 
         if (errors.length > 0 && allUrls.length === 0) {
-          alert("Erro na geração recuperada: " + errors[0]);
+          showToast("Erro na geracao recuperada: " + errors[0], "error");
           setNodes((nds) =>
             nds.map((n) =>
               n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
