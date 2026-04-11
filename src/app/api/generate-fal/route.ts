@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { submitFalTask, buildFalInput, getFalEndpoint, FAL_MODELS } from "@/lib/ai/fal";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();

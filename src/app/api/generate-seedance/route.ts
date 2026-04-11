@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSeedanceTask, createByteDanceAsset, getAssetStatus } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
+export const maxDuration = 120;
+
 // Registra imagem na Asset Library e aguarda ficar pronta (Kie AI)
 async function registerAndWaitAsset(apiKey: string, url: string, assetType: "Image" | "Video" | "Audio" = "Image"): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

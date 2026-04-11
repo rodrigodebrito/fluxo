@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAvatarTask, createTTSTask, getTaskStatus, parseResultUrls } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
 
+export const maxDuration = 120;
+
 // Poll TTS task until audio URL is ready (max 60s)
 async function waitForTTS(apiKey: string, taskId: string): Promise<string> {
   for (let i = 0; i < 30; i++) {
