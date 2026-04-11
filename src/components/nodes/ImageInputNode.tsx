@@ -40,10 +40,12 @@ export default function ImageInputNode({ id, data }: NodeProps) {
       e.target.value = "";
 
       // Gerar thumbnails leves pra preview (nao carrega 4K na memoria)
+      // Criar blob URLs como fallback caso upload falhe
+      const blobUrls = files.map((f) => URL.createObjectURL(f));
       const thumbs = await Promise.all(files.map((f) => createThumbnail(f)));
 
       const previews = files.map((file, i) => ({
-        url: "",
+        url: blobUrls[i],
         name: file.name,
         thumbUrl: thumbs[i],
       }));
@@ -66,17 +68,19 @@ export default function ImageInputNode({ id, data }: NodeProps) {
           const finalImages = [...images];
           for (let i = 0; i < files.length; i++) {
             finalImages.push({
-              url: uploaded[i] || "",
+              url: uploaded[i] || blobUrls[i],
               name: files[i].name,
               thumbUrl: thumbs[i],
             });
           }
           updateNodeData(id, { images: finalImages });
+          // Revogar blob URLs apenas se upload deu certo
+          blobUrls.forEach((b) => URL.revokeObjectURL(b));
         } else {
-          console.warn("Upload response invalid:", text);
+          console.warn("Upload response invalid, keeping blob URLs:", text);
         }
       } catch (err) {
-        console.error("Upload failed:", err);
+        console.error("Upload failed, keeping blob URLs:", err);
       } finally {
         setIsUploading(false);
       }
