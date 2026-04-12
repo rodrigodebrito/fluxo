@@ -125,6 +125,9 @@ src/
     App/
       AppView.tsx            # Grade de apps (aba App do editor)
       SystemPromptGenerator.tsx  # Gerador de system prompt com IA (GPT-4.1)
+      CloneFoto.tsx          # Gera prompt UGC a partir de foto de referencia (sem descrever pessoa)
+      ResizeTool.tsx         # Redimensiona imagens grandes para input dos geradores
+      SeedanceCinematic.tsx  # Gera prompts cinematograficos shot-by-shot para Seedance 2.0
     Editor/FlowEditor.tsx    # Canvas principal (ReactFlow, toolbar, context menu, undo/redo)
     Gallery/Gallery.tsx      # Galeria fullscreen de resultados
     Header/                  # Header com creditos e usuario
@@ -452,7 +455,15 @@ No painel admin, clicar em qualquer usuario abre modal com historico completo + 
 2. Conecte video de referencia (handle "Video Ref")
 3. Conecte audio de referencia (handle "Audio")
 4. Aceita ate 9 imagens, video e audio simultaneamente
-5. URLs publicas enviadas diretamente (sem asset registration)
+5. Imagens de referencia sao registradas automaticamente na Asset Library do Kie AI antes de gerar (necessario para `@imageN` no prompt funcionar)
+6. Se o Seedance Standard bloquear o prompt com erro "sensitive", a UI sugere tentar novamente no Seedance 2 Fast (filtro mais permissivo)
+
+### App "Seedance 2 Cinematic" (aba Apps)
+Gera prompts cinematograficos shot-by-shot prontos para colar no Seedance 2.0:
+1. Brief criativo + ate 9 slots de imagem dinamicos, cada um com papel (character/scene/prop/style), descricao opcional e upload ou URL
+2. Escolhe duracao (5/8/10/12/15s), aspect ratio e numero de shots
+3. GPT-4.1 Vision analisa as imagens e monta um prompt estruturado com timecodes e movimentos de camera, usando `@image1`, `@image2`, etc.
+4. Enforce do limite de 1536 caracteres do Seedance 2.0 com contador visual (verde/vermelho)
 
 ### Kling 3 - Elements + Multi-Shot
 1. Adicione um no "Kling Element" ao canvas
