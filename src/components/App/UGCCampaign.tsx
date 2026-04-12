@@ -348,10 +348,28 @@ export default function UGCCampaign({ onBack }: Props) {
       throw new Error("Resposta invalida: sem 'scenes'");
     }
     // Normaliza spokenLine (aceita 'ttsScript' como fallback caso o modelo volte o nome antigo)
-    parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
-      ...s,
-      spokenLine: (s.spokenLine as string) ?? (s.ttsScript as string) ?? "",
-    }));
+    // E GARANTE que quando voice_mode=in_video a fala esteja embutida no videoPrompt
+    parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => {
+      const spokenLine = ((s.spokenLine as string) ?? (s.ttsScript as string) ?? "").trim();
+      let videoPrompt = (s.videoPrompt as string) ?? "";
+
+      if (voiceMode === "in_video" && spokenLine) {
+        // Se o GPT nao embutiu a fala dentro do videoPrompt, forcamos aqui via post-processing
+        if (!videoPrompt.includes(spokenLine)) {
+          const trimmed = videoPrompt.trim().replace(/\s*$/, "");
+          const needsPeriod = trimmed && !/[.!?]$/.test(trimmed);
+          videoPrompt =
+            (needsPeriod ? trimmed + "." : trimmed) +
+            ` The character (same reference) speaks in Brazilian Portuguese, with natural intonation, saying exactly: "${spokenLine}"`;
+        }
+      }
+
+      return {
+        ...s,
+        spokenLine,
+        videoPrompt,
+      };
+    });
     return parsed as Campaign;
   }
 
