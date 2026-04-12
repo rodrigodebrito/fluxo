@@ -88,13 +88,30 @@ The brief specifies a voice_mode. Follow it strictly:
   2. Write videoPrompt as visual-only: action, camera, setting, ambient sound. NO dialogue instruction.
   3. Make the narrative readable WITHOUT words — stronger use of visual storytelling, facial expressions, on-screen text overlays
 
-## Brazilian Portuguese Enforcement
+## Language Rules — ABSOLUTE AND NON-NEGOTIABLE
 
-- spokenLine, onScreenText, and caption MUST be in Brazilian Portuguese (pt-br)
-- NEVER in Portugal Portuguese, NEVER translated literally from English
-- Use natural spoken pt-br: "gente", "tipo assim", "sabe?", "nossa", "olha só", "vou te contar"
-- Avoid formal written pt-br (nothing sounds like a news anchor)
-- For Veo 3.1 instructions, you write the wrapper in English but the QUOTED spoken line is pure pt-br
+Each field has a FIXED language. Do NOT deviate:
+
+- **imagePrompt**: ENGLISH ONLY. No Portuguese words anywhere. Ever.
+- **videoPrompt**: ENGLISH ONLY for all description, action, camera, setting, ambient audio. The ONLY Portuguese allowed is the quoted spokenLine in pt-br when voice_mode=in_video — and it MUST be inside double quotes after the phrase \`speaks in Brazilian Portuguese, saying exactly:\`. Everything outside those quotes is English.
+- **spokenLine**: BRAZILIAN PORTUGUESE (pt-br) ONLY. Natural spoken pt-br — contractions ("pra", "tá", "cê"), fillers ("sabe?", "tipo", "gente"), colloquial. NEVER Portugal Portuguese. NEVER formal/news-anchor pt-br. NEVER English.
+- **onScreenText**: BRAZILIAN PORTUGUESE (pt-br) ONLY.
+- **caption**: BRAZILIAN PORTUGUESE (pt-br) ONLY.
+
+### Why this matters
+Image and video models are trained primarily on English prompts and perform significantly worse with Portuguese instructions. Writing imagePrompt or videoPrompt in Portuguese will produce broken, low-quality generations. This rule is not a preference — it is a technical requirement.
+
+### videoPrompt example (voice_mode=in_video, Veo 3.1)
+
+CORRECT:
+\`The same woman reference sits on her sunlit bed holding the Body Splash Delight close to camera with a surprised expression. Morning light streams through the window, birds chirping softly in the background. Camera slowly dollies in toward the bottle then cuts to her surprised face. The character speaks in Brazilian Portuguese, with natural intonation, saying exactly: "Gente, ninguém me contou desse cheirinho delicioso, vem ver isso comigo agora".\`
+
+WRONG (Portuguese description — NEVER do this):
+\`A mulher está sentada em seu quarto iluminado pelo sol, segura o Body Splash Delight...\`
+
+### spokenLine is pt-br only — quoted inline in videoPrompt AND in its own field
+
+The spokenLine field and the quoted text inside videoPrompt must be IDENTICAL (same pt-br string, character-for-character).
 
 ## Duration Fit (in_video mode)
 
@@ -301,7 +318,13 @@ export default function UGCCampaign({ onBack }: Props) {
         ? `TARGET_WORDS per spokenLine: ${targetWords} words (±2). This must fill ${sceneDuration}s of natural pt-br speech. USE THE FULL DURATION.`
         : `voice_mode is "none": set spokenLine="" for every scene, write visual-only videoPrompts.`,
       "",
-      "Output language: Brazilian Portuguese (pt-br) for spokenLine, onScreenText, and caption.",
+      "LANGUAGE RULES (NON-NEGOTIABLE):",
+      "- imagePrompt: ENGLISH ONLY",
+      "- videoPrompt: ENGLISH ONLY (except the quoted pt-br spokenLine when voice_mode=in_video)",
+      "- spokenLine: Brazilian Portuguese only",
+      "- onScreenText: Brazilian Portuguese only",
+      "- caption: Brazilian Portuguese only",
+      "Writing imagePrompt or videoPrompt in Portuguese breaks the generation. Do NOT do it.",
       "Generate the full campaign as strict JSON per the schema in your system prompt.",
     ]
       .filter(Boolean)
