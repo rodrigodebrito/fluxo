@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 interface Props {
   onBack: () => void;
@@ -157,12 +157,16 @@ NEVER describe physical characteristics of the person in imagePrompt or videoPro
 
 ## Video Prompt Adaptation (by target model)
 
-- **seedance-2**: MAX 1536 CHARACTERS. @image1 = product, @image2 = avatar (when provided). Timecode block ("0-2s: ... / 2-5s: ..."), camera, action, environment. No reliable dialogue — if voice_mode=in_video, Seedance is not ideal (prefer Veo 3.1).
-- **kling-3**: multi-shot friendly, @element1 for refs, describe camera moves
-- **kling-o3**: image-to-video, describe motion + camera + final state
-- **veo-3**: BEST for in_video voice mode. Describes action + ambient audio + NATIVE SPEECH. When voice_mode=in_video, use the exact format specified above with the pt-br line quoted.
-- **wan-2-7**: image-to-video, movement + pacing + camera
-- **grok**: image-to-video, economical movement description
+- **seedance-2**: MAX 1536 CHARACTERS. @image1 = product, @image2 = avatar (when provided). Timecode block ("0-2s: ... / 2-5s: ..."), camera, action, environment. Supports native pt-br speech — embed quoted spokenLine when voice_mode=in_video.
+- **kling-3**: multi-shot friendly, @element1 for refs, describe camera moves. NO reliable native speech — still include the quoted spokenLine for reference, but warn the user this model likely won't speak it.
+- **kling-o3**: image-to-video, describe motion + camera + final state. NO reliable native speech — same caveat as kling-3.
+- **veo-3**: describes action + ambient audio + NATIVE SPEECH. Embed the quoted pt-br spokenLine using the exact format specified above.
+- **wan-2-7**: image-to-video, movement + pacing + camera. Supports native pt-br speech — embed the quoted spokenLine.
+- **grok**: image-to-video, economical movement description. Supports native pt-br speech — embed the quoted spokenLine.
+
+### Speech embedding (all models that support it)
+When voice_mode=in_video and the target model supports speech (seedance-2, veo-3, wan-2-7, grok), append this sentence to the videoPrompt:
+\`The character (same reference) speaks in Brazilian Portuguese, with natural intonation, saying exactly: "<spokenLine>".\`
 
 ## On-Screen Text Rules
 
@@ -229,12 +233,6 @@ export default function UGCCampaign({ onBack }: Props) {
   const [videoModel, setVideoModel] = useState("veo-3");
   const [voiceMode, setVoiceMode] = useState<"in_video" | "none">("in_video");
 
-  // Quando voiceMode = in_video, forca Veo 3.1 (unico com fala nativa confiavel)
-  useEffect(() => {
-    if (voiceMode === "in_video" && videoModel !== "veo-3") {
-      setVideoModel("veo-3");
-    }
-  }, [voiceMode, videoModel]);
 
   // Resultado
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -722,18 +720,15 @@ export default function UGCCampaign({ onBack }: Props) {
           <Field
             label="Modelo-alvo de Video"
             description={
-              voiceMode === "in_video"
-                ? "Travado em Veo 3.1 (unico modelo com fala nativa confiavel)."
+              voiceMode === "in_video" && (videoModel === "kling-3" || videoModel === "kling-o3")
+                ? "Aviso: Kling nao gera fala nativa confiavel. Pra fala embutida use Seedance 2, Veo 3.1, Wan 2.7 ou Grok."
                 : "O prompt sera otimizado pro formato desse modelo."
             }
           >
             <select
               value={videoModel}
               onChange={(e) => setVideoModel(e.target.value)}
-              disabled={voiceMode === "in_video"}
-              className={`w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-purple-500 ${
-                voiceMode === "in_video" ? "opacity-60 cursor-not-allowed" : ""
-              }`}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
               {VIDEO_MODELS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
