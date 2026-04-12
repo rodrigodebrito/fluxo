@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   onBack: () => void;
@@ -12,7 +12,7 @@ interface Scene {
   timecode: string;
   imagePrompt: string;
   videoPrompt: string;
-  ttsScript: string;
+  spokenLine: string;
   onScreenText: string;
 }
 
@@ -47,6 +47,14 @@ const VIDEO_MODELS = [
   { value: "grok", label: "Grok Imagine" },
 ];
 
+const VOICE_MODE_OPTIONS = [
+  { value: "in_video", label: "Fala no video (Veo 3.1 nativo)" },
+  { value: "none", label: "So cenas (sem fala)" },
+];
+
+// Palavras por segundo em pt-br natural falado (media ~2.5)
+const WORDS_PER_SECOND = 2.5;
+
 const NUM_SCENES_OPTIONS = [2, 3, 4, 5, 6, 7, 8];
 const DURATION_OPTIONS = [5, 8, 10, 12, 15];
 const ASPECT_RATIO_OPTIONS = [
@@ -55,70 +63,95 @@ const ASPECT_RATIO_OPTIONS = [
   { value: "16:9", label: "16:9 (YouTube)" },
 ];
 
-const UGC_CAMPAIGN_SYSTEM_PROMPT = `You are an expert UGC campaign director and prompt engineer. Your job is to analyze a product photo (and optionally an avatar photo) and generate a complete UGC campaign: a narrative shot list with ready-to-use prompts for image generation, video generation, TTS script, on-screen text, and post caption.
+const UGC_CAMPAIGN_SYSTEM_PROMPT = `You are an elite UGC campaign director and prompt engineer specializing in Brazilian Portuguese content. Your job: analyze a product photo (and optionally an avatar photo) and generate a complete UGC campaign with ready-to-use prompts for image and video generation, spoken lines timed to each scene, on-screen text, and post caption.
 
 ## Input
 
 You will receive:
 - Image 1: the PRODUCT photo (always present)
-- Image 2 (optional): the AVATAR photo (the person who will appear in the content)
-- A text brief with: product name, product description, narrative style, extra style instructions, number of scenes, scene duration, aspect ratio, target image model, target video model
+- Image 2 (optional): the AVATAR photo (the person appearing in the content)
+- A text brief with: product name, description, narrative style, extra style instructions, number of scenes, scene duration, aspect ratio, target image model, target video model, VOICE MODE, and TARGET WORDS PER SCENE
 
-## Your Process
+## Voice Mode — CRITICAL
 
-1. **Analyze the product photo** and extract: color, shape, material, packaging, category, target audience, key visual features.
+The brief specifies a voice_mode. Follow it strictly:
 
-2. **Build a coherent narrative** with the requested number of scenes, following the chosen style:
-   - Scene 1 is ALWAYS a HOOK in the first 2 seconds — pattern interrupt, visual question, surprised expression, bold visual — something that stops the scroll
-   - Middle scenes develop the story (problem, demonstration, benefit, proof)
-   - The final scene ALWAYS has a CTA ("corre no link", "ta no meu perfil", "link na bio")
-   - Style adapts the tone: Descoberta = "gente olha isso", Curiosidade = "ninguem me contou", Review = honest opinion, Unboxing = reveal, Antes/Depois = transformation, Problema/Solucao = pain then relief
+- **voice_mode = "in_video"**: the character speaks INSIDE the video natively (Veo 3.1 generates speech from the prompt). You MUST:
+  1. Write the spokenLine in natural Brazilian Portuguese (pt-br), exactly as a real UGC creator would say it out loud
+  2. Fit the line to the scene duration — the brief tells you the target words per scene. Hit that number ±2 words. Too short = wasted seconds. Too long = cuts off mid-sentence. This is the single most important rule: USE THE FULL DURATION.
+  3. Embed the spokenLine inside the videoPrompt with explicit instruction for Veo 3.1 to speak it. Format: \`The character (same [gender] reference) speaks in Brazilian Portuguese, with natural intonation, saying exactly: "EXACT_PT_BR_LINE_HERE". [then visual action, camera, setting].\`
+  4. The spoken line should NOT be translated — write it directly in pt-br, colloquial, how a real creator talks (contractions, "pra" instead of "para", "tá" instead of "está", "cê" is OK if the style is casual)
+  5. Make the lines flow as ONE continuous conversation across all scenes, not isolated sentences
 
-3. **For each scene, produce 4 outputs**:
-   - imagePrompt: a ready-to-use prompt optimized for the target IMAGE model
-   - videoPrompt: a ready-to-use prompt optimized for the target VIDEO model
-   - ttsScript: short pt-br text the avatar will speak (~15 words max per scene)
-   - onScreenText: short pt-br text overlay for CapCut (max 60 chars, UGC style)
+- **voice_mode = "none"**: the video has NO spoken dialogue — only visuals and ambient audio. You MUST:
+  1. Set spokenLine to empty string ""
+  2. Write videoPrompt as visual-only: action, camera, setting, ambient sound. NO dialogue instruction.
+  3. Make the narrative readable WITHOUT words — stronger use of visual storytelling, facial expressions, on-screen text overlays
 
-4. **Produce a post caption** in pt-br with textual hook + CTA + 5-10 relevant hashtags for the niche.
+## Brazilian Portuguese Enforcement
+
+- spokenLine, onScreenText, and caption MUST be in Brazilian Portuguese (pt-br)
+- NEVER in Portugal Portuguese, NEVER translated literally from English
+- Use natural spoken pt-br: "gente", "tipo assim", "sabe?", "nossa", "olha só", "vou te contar"
+- Avoid formal written pt-br (nothing sounds like a news anchor)
+- For Veo 3.1 instructions, you write the wrapper in English but the QUOTED spoken line is pure pt-br
+
+## Duration Fit (in_video mode)
+
+The brief gives you TARGET_WORDS per scene based on scene duration × 2.5 words/second (natural pt-br speech rate).
+
+- 5s scene  → ~12-14 words
+- 8s scene  → ~19-21 words
+- 10s scene → ~24-26 words
+- 12s scene → ~29-31 words
+- 15s scene → ~36-38 words
+
+HIT the target. Count your words before finalizing. If you are below target, ADD content (reactions, fillers like "sabe?", "tipo", expand the thought). If above, trim aggressively. The scene duration MUST be fully used.
+
+## Narrative Structure (always enforced)
+
+- **Scene 1 = HOOK** in the first 2 seconds: pattern interrupt, visual question, surprised reaction, bold visual. This is what stops the scroll.
+- **Middle scenes** develop the story: problem, demonstration, benefit, proof, transformation
+- **Final scene = CTA**: "corre no link", "tá no meu perfil", "link na bio", "salva esse video"
+
+Style-specific tone:
+- Descoberta: "gente, olha o que eu achei"
+- Curiosidade: "ninguém me contou isso"
+- Review honesto: "vou te falar a real"
+- Unboxing: "acabou de chegar"
+- Antes/Depois: "olha a diferença"
+- Problema/Solução: "cansei de sofrer com isso"
 
 ## ABSOLUTE RULE — Zero Physical Description of People
 
-NEVER describe any physical characteristics of the person in any imagePrompt or videoPrompt:
-- NO hair color/style/length, NO eye color/shape, NO skin tone, NO body type, NO ethnicity/race/age, NO facial features
-- The avatar's identity comes ENTIRELY from the input reference image, NOT from the text prompt
-- Use "same woman reference" or "same man reference" as the placeholder
-- Makeup IS allowed as a style choice (red lipstick, natural makeup, etc.)
+NEVER describe physical characteristics of the person in imagePrompt or videoPrompt:
+- NO hair color/style/length, NO eye color, NO skin tone, NO body type, NO ethnicity, NO age, NO facial features
+- The avatar's identity comes ENTIRELY from the reference image, NOT from text
+- Use "same woman reference" or "same man reference" as placeholder
+- Makeup IS allowed as a style choice (red lipstick, natural makeup)
 
 ## Image Prompt Adaptation (by target model)
 
-- **nano-banana-pro**: long descriptive English, detailed scene (setting, lighting, pose, clothing, mood, camera). Always include: "Candid UGC iPhone 16 Pro Max, deep focus, natural ambient light, no bokeh, no portrait mode. No text, no captions, no watermarks."
-- **gpt-image**: structured with brief lists (Setting / Lighting / Pose / Clothing / Mood), keep the same UGC iPhone boilerplate
-- **flux-2-pro**: shorter, direct, comma-separated style tags, still include the UGC boilerplate
-- **z-image-turbo**: simple, fast, direct description with UGC boilerplate
-- **lora**: include placeholder "<trigger_word>" at the start, then the scene, then UGC boilerplate
+- **nano-banana-pro**: long descriptive English, detailed scene. Always include: "Candid UGC iPhone 16 Pro Max, deep focus, natural ambient light, no bokeh, no portrait mode. No text, no captions, no watermarks."
+- **gpt-image**: structured with brief lists (Setting / Lighting / Pose / Clothing / Mood) + UGC iPhone boilerplate
+- **flux-2-pro**: shorter, direct, comma-separated style tags + UGC boilerplate
+- **z-image-turbo**: simple, fast, direct description + UGC boilerplate
+- **lora**: start with "<trigger_word>" placeholder, then scene, then UGC boilerplate
 
 ## Video Prompt Adaptation (by target model)
 
-- **seedance-2**: MAX 1536 CHARACTERS. Use @image1 = product and @image2 = avatar (when avatar is provided). Include a timecode block ("0-2s: ... / 2-5s: ..."), camera movement, action of the avatar, environment. If no avatar, just use @image1 and "same woman/man reference".
-- **kling-3**: multi-shot friendly, use @element1 for references. Describe camera moves and shot composition.
-- **kling-o3**: image-to-video format — describe the motion, camera movement, and final state. No @image refs.
-- **veo-3**: describe action + ambient audio cues. Veo generates audio natively.
-- **wan-2-7**: image-to-video, describe movement, pacing, camera
-- **grok**: image-to-video, describe movement economically
-
-## TTS Script Rules
-
-- pt-br natural spoken language
-- Short sentences, ~15 words max per scene
-- Tone matches the narrative style
-- No stage directions, no "(laughing)", just the words the avatar will speak
+- **seedance-2**: MAX 1536 CHARACTERS. @image1 = product, @image2 = avatar (when provided). Timecode block ("0-2s: ... / 2-5s: ..."), camera, action, environment. No reliable dialogue — if voice_mode=in_video, Seedance is not ideal (prefer Veo 3.1).
+- **kling-3**: multi-shot friendly, @element1 for refs, describe camera moves
+- **kling-o3**: image-to-video, describe motion + camera + final state
+- **veo-3**: BEST for in_video voice mode. Describes action + ambient audio + NATIVE SPEECH. When voice_mode=in_video, use the exact format specified above with the pt-br line quoted.
+- **wan-2-7**: image-to-video, movement + pacing + camera
+- **grok**: image-to-video, economical movement description
 
 ## On-Screen Text Rules
 
 - pt-br, max 60 characters
-- Written as real UGC creators write: "gente olha isso", "POV: voce descobriu X", "ninguem me contou sobre Y", "ESSE e o segredo", "PARE tudo"
-- Keep it punchy and scroll-stopping
+- UGC style: "gente olha isso", "POV: você descobriu X", "ninguém me contou", "ESSE é o segredo", "PARE tudo"
+- Punchy, scroll-stopping
 
 ## Caption Rules
 
@@ -126,11 +159,11 @@ NEVER describe any physical characteristics of the person in any imagePrompt or 
 - Opens with a textual hook (1 sentence)
 - Brief product mention
 - Clear CTA
-- 5-10 relevant hashtags (niche-specific, not generic #fyp #viral)
+- 5-10 niche-specific hashtags (not generic #fyp #viral — pick real niche tags)
 
-## Output Format — STRICT
+## Output Format — STRICT JSON
 
-Return ONLY valid JSON matching this exact schema. No markdown code fences, no explanatory prose before or after, no trailing comma. Just the JSON object:
+Return ONLY valid JSON matching this exact schema. NO markdown code fences, NO prose before or after, NO trailing commas:
 
 {
   "scenes": [
@@ -140,15 +173,17 @@ Return ONLY valid JSON matching this exact schema. No markdown code fences, no e
       "timecode": "0-5s",
       "imagePrompt": "...",
       "videoPrompt": "...",
-      "ttsScript": "...",
+      "spokenLine": "...",
       "onScreenText": "..."
     }
   ],
   "caption": "..."
 }
 
-The "role" field must be one of: hook, develop, proof, demo, benefit, cta.
-The "timecode" field reflects the cumulative position of this scene in the full video (e.g., scene 2 of 8s scenes = "8-16s").`;
+- "role" must be one of: hook, develop, proof, demo, benefit, cta
+- "timecode" reflects cumulative position in the full video (scene 2 of 8s scenes = "8-16s")
+- "spokenLine" is empty string "" when voice_mode=none, otherwise the exact pt-br line
+- When voice_mode=in_video, the spokenLine must ALSO appear quoted inside the videoPrompt`;
 
 export default function UGCCampaign({ onBack }: Props) {
   // Produto
@@ -174,7 +209,15 @@ export default function UGCCampaign({ onBack }: Props) {
   const [sceneDuration, setSceneDuration] = useState(8);
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [imageModel, setImageModel] = useState("nano-banana-pro");
-  const [videoModel, setVideoModel] = useState("seedance-2");
+  const [videoModel, setVideoModel] = useState("veo-3");
+  const [voiceMode, setVoiceMode] = useState<"in_video" | "none">("in_video");
+
+  // Quando voiceMode = in_video, forca Veo 3.1 (unico com fala nativa confiavel)
+  useEffect(() => {
+    if (voiceMode === "in_video" && videoModel !== "veo-3") {
+      setVideoModel("veo-3");
+    }
+  }, [voiceMode, videoModel]);
 
   // Resultado
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -240,6 +283,7 @@ export default function UGCCampaign({ onBack }: Props) {
     const imageModelLabel = IMAGE_MODELS.find((m) => m.value === imageModel)?.label || imageModel;
     const videoModelLabel = VIDEO_MODELS.find((m) => m.value === videoModel)?.label || videoModel;
     const styleLabel = NARRATIVE_STYLES.find((s) => s.value === narrativeStyle)?.label || narrativeStyle;
+    const targetWords = Math.round(sceneDuration * WORDS_PER_SECOND);
 
     return [
       `Product name: ${productName || "(unnamed)"}`,
@@ -252,7 +296,12 @@ export default function UGCCampaign({ onBack }: Props) {
       `Aspect ratio: ${aspectRatio}`,
       `Target IMAGE model: ${imageModelLabel} (model_key: ${imageModel})`,
       `Target VIDEO model: ${videoModelLabel} (model_key: ${videoModel})`,
+      `voice_mode: ${voiceMode}`,
+      voiceMode === "in_video"
+        ? `TARGET_WORDS per spokenLine: ${targetWords} words (±2). This must fill ${sceneDuration}s of natural pt-br speech. USE THE FULL DURATION.`
+        : `voice_mode is "none": set spokenLine="" for every scene, write visual-only videoPrompts.`,
       "",
+      "Output language: Brazilian Portuguese (pt-br) for spokenLine, onScreenText, and caption.",
       "Generate the full campaign as strict JSON per the schema in your system prompt.",
     ]
       .filter(Boolean)
@@ -275,6 +324,11 @@ export default function UGCCampaign({ onBack }: Props) {
     if (!parsed.scenes || !Array.isArray(parsed.scenes)) {
       throw new Error("Resposta invalida: sem 'scenes'");
     }
+    // Normaliza spokenLine (aceita 'ttsScript' como fallback caso o modelo volte o nome antigo)
+    parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
+      ...s,
+      spokenLine: (s.spokenLine as string) ?? (s.ttsScript as string) ?? "",
+    }));
     return parsed as Campaign;
   }
 
@@ -419,9 +473,11 @@ export default function UGCCampaign({ onBack }: Props) {
       lines.push(`[PROMPT DE VIDEO — ${videoModelLabel}]`);
       lines.push(scene.videoPrompt);
       lines.push("");
-      lines.push(`[SCRIPT TTS (Kling Avatar)]`);
-      lines.push(scene.ttsScript);
-      lines.push("");
+      if (voiceMode === "in_video" && scene.spokenLine) {
+        lines.push(`[FALA (pt-br)]`);
+        lines.push(scene.spokenLine);
+        lines.push("");
+      }
       lines.push(`[TEXTO ON-SCREEN (CapCut)]`);
       lines.push(scene.onScreenText);
       lines.push("");
@@ -605,11 +661,38 @@ export default function UGCCampaign({ onBack }: Props) {
             </select>
           </Field>
 
-          <Field label="Modelo-alvo de Video" description="O prompt sera otimizado pro formato desse modelo.">
+          <Field
+            label="Modo de Fala"
+            description="Fala no video usa Veo 3.1 com geracao nativa de audio em pt-br, encaixada na duracao de cada cena."
+          >
+            <select
+              value={voiceMode}
+              onChange={(e) => setVoiceMode(e.target.value as "in_video" | "none")}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              {VOICE_MODE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field
+            label="Modelo-alvo de Video"
+            description={
+              voiceMode === "in_video"
+                ? "Travado em Veo 3.1 (unico modelo com fala nativa confiavel)."
+                : "O prompt sera otimizado pro formato desse modelo."
+            }
+          >
             <select
               value={videoModel}
               onChange={(e) => setVideoModel(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+              disabled={voiceMode === "in_video"}
+              className={`w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-purple-500 ${
+                voiceMode === "in_video" ? "opacity-60 cursor-not-allowed" : ""
+              }`}
             >
               {VIDEO_MODELS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -682,6 +765,8 @@ export default function UGCCampaign({ onBack }: Props) {
                     imageModelLabel={imageModelLabel}
                     videoModelLabel={videoModelLabel}
                     videoModel={videoModel}
+                    voiceMode={voiceMode}
+                    sceneDuration={sceneDuration}
                     copiedKey={copiedKey}
                     onCopy={copyToClipboard}
                     onRegenerate={() => handleRegenerateScene(scene.number)}
@@ -868,6 +953,8 @@ function SceneCard({
   imageModelLabel,
   videoModelLabel,
   videoModel,
+  voiceMode,
+  sceneDuration,
   copiedKey,
   onCopy,
   onRegenerate,
@@ -877,6 +964,8 @@ function SceneCard({
   imageModelLabel: string;
   videoModelLabel: string;
   videoModel: string;
+  voiceMode: "in_video" | "none";
+  sceneDuration: number;
   copiedKey: string | null;
   onCopy: (text: string, key: string) => void;
   onRegenerate: () => void;
@@ -885,6 +974,11 @@ function SceneCard({
   const isSeedance = videoModel === "seedance-2";
   const videoLen = scene.videoPrompt.length;
   const overLimit = isSeedance && videoLen > 1536;
+
+  // Word count da fala pra mostrar se encaixa na duracao
+  const wordCount = scene.spokenLine ? scene.spokenLine.trim().split(/\s+/).filter(Boolean).length : 0;
+  const targetWords = Math.round(sceneDuration * WORDS_PER_SECOND);
+  const wordsOk = Math.abs(wordCount - targetWords) <= 2;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
@@ -931,13 +1025,20 @@ function SceneCard({
         }
       />
 
-      <PromptBlock
-        label="Script TTS (Kling Avatar)"
-        text={scene.ttsScript}
-        copyKey={`tts-${scene.number}`}
-        copiedKey={copiedKey}
-        onCopy={onCopy}
-      />
+      {voiceMode === "in_video" && scene.spokenLine && (
+        <PromptBlock
+          label="Fala (pt-br)"
+          text={scene.spokenLine}
+          copyKey={`spoken-${scene.number}`}
+          copiedKey={copiedKey}
+          onCopy={onCopy}
+          extraBadge={
+            <span className={`text-[10px] font-mono ${wordsOk ? "text-green-400" : "text-yellow-400"}`}>
+              {wordCount}/{targetWords} palavras
+            </span>
+          }
+        />
+      )}
 
       <PromptBlock
         label="Texto on-screen (CapCut)"
