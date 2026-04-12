@@ -176,7 +176,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             <FlowEditor ref={editorRef} onNodeSelect={handleNodeSelect} onFlowChange={triggerAutoSave} />
           </ErrorBoundary>
         </div>
-        {activeTab === "app" && <AppView />}
+        <div className={`flex-1 ${activeTab === "app" ? "" : "hidden"}`}>
+          <AppView />
+        </div>
       </div>
       {selectedNode && (
         <NodePanel
