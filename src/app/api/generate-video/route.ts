@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key nao configurada" }, { status: 500 });
   }
 
-  const { prompt, imageUrls, model, generationType, aspectRatio, seed } = body;
+  const { prompt, imageUrls, model, generationType, aspectRatio, seed, duration, resolution, enhancePrompt } = body;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
@@ -33,6 +33,9 @@ export async function POST(request: NextRequest) {
     generationType,
     aspectRatio,
     seed,
+    duration,
+    resolution,
+    enhancePrompt,
   });
 
   if (result.code !== 200 || !result.data) {

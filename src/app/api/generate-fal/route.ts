@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Modelo fal.ai invalido: ${model}` }, { status: 400 });
   }
 
-  const hasImage = Array.isArray(body.imageUrls) && body.imageUrls.length > 0;
-  const endpoint = getFalEndpoint(model, tier || "pro", hasImage);
+  const imageCount = Array.isArray(body.imageUrls) ? body.imageUrls.filter(Boolean).length : 0;
+  const hasImage = imageCount > 0;
+  const endpoint = getFalEndpoint(model, tier || "pro", hasImage, imageCount);
   if (!endpoint) {
     return NextResponse.json({ error: `Endpoint fal.ai nao encontrado: ${model}/${tier}` }, { status: 400 });
   }
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
       videoUrl: body.videoUrl,
       endImageUrl: body.endImageUrl,
       duration: body.duration,
+      veoDuration: body.veoDuration,
+      veoResolution: body.veoResolution,
       aspectRatio: body.aspectRatio,
       generateAudio: body.generateAudio,
       cfgScale: body.cfgScale,

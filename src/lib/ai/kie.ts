@@ -415,23 +415,17 @@ export async function createVeoTask(
   const body: Record<string, unknown> = {
     prompt: input.prompt,
     model: input.model || "veo3_fast",
-    aspect_ratio: input.aspectRatio || "16:9",
+    aspect_ratio: input.aspectRatio || "9:16",
     enableTranslation: true,
   };
 
   if (input.imageUrls && input.imageUrls.length > 0) {
     body.imageUrls = input.imageUrls;
-    // Auto-detect generation type
+    // Auto-detect generation type.
+    // FIRST_AND_LAST_FRAMES_2_VIDEO preserva o sujeito da imagem (vira first frame).
+    // REFERENCE_2_VIDEO trata a foto como "inspiracao de vibe" e inventa pessoas novas — nao usamos por default.
     if (!input.generationType) {
-      if (input.imageUrls.length >= 2) {
-        body.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
-      } else if (input.model === "veo3_fast") {
-        // REFERENCE_2_VIDEO only works with Fast model
-        body.generationType = "REFERENCE_2_VIDEO";
-      } else {
-        // Quality/Lite: use FIRST_AND_LAST_FRAMES with single image
-        body.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
-      }
+      body.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
     } else {
       body.generationType = input.generationType;
     }
@@ -439,6 +433,15 @@ export async function createVeoTask(
     body.generationType = "TEXT_2_VIDEO";
   }
 
+  if (input.duration) {
+    body.duration = input.duration;
+  }
+  if (input.resolution) {
+    body.resolution = input.resolution;
+  }
+  if (input.enhancePrompt !== undefined) {
+    body.enhancePrompt = input.enhancePrompt;
+  }
   if (input.seed != null) {
     body.seeds = input.seed;
   }
