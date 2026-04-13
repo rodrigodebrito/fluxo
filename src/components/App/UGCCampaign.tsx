@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   onBack: () => void;
@@ -19,6 +19,36 @@ interface Scene {
 interface Campaign {
   scenes: Scene[];
   caption: string;
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+interface SavedCampaignSummary {
+  id: string;
+  name: string;
+  productThumbnail: string | null;
+  updatedAt: string;
+}
+
+// Snapshot completo persistido no Supabase. Reidrata o app inteiro ao carregar.
+interface CampaignSnapshot {
+  productName: string;
+  productDescription: string;
+  productUrl: string | null;
+  avatarUrl: string | null;
+  narrativeStyle: string;
+  styleExtra: string;
+  numScenes: number;
+  sceneDuration: number;
+  aspectRatio: string;
+  imageModel: string;
+  videoModel: string;
+  voiceMode: "in_video" | "none";
+  campaign: Campaign;
+  chatHistory: ChatMessage[];
 }
 
 const NARRATIVE_STYLES = [
@@ -206,6 +236,24 @@ Return ONLY valid JSON matching this exact schema. NO markdown code fences, NO p
 - "spokenLine" is empty string "" when voice_mode=none, otherwise the exact pt-br line
 - When voice_mode=in_video, the spokenLine must ALSO appear quoted inside the videoPrompt`;
 
+const REFINE_SYSTEM_PROMPT = `You are the same UGC campaign director. The user already has a generated campaign and wants to REFINE it through chat. The user will write requests in Brazilian Portuguese ("troca a cena 2 pra ficar engracada", "deixa a fala da cena 1 mais curta", "muda a legenda pra algo mais punchy", "adiciona uma cena de unboxing entre a 2 e a 3").
+
+You receive:
+- The current full campaign as JSON
+- The full briefing context (product, voice_mode, target models, duration, etc — the same as the original generation)
+- The user's refinement request in pt-br
+
+You MUST return the COMPLETE updated campaign as STRICT JSON matching the same schema (scenes array + caption). NOT just the diff — the entire campaign with the requested changes applied. Keep scenes the user did NOT mention byte-identical. Renumber scenes if the user added or removed one.
+
+ALL the original rules still apply:
+- imagePrompt and videoPrompt in ENGLISH only
+- spokenLine, onScreenText, caption in pt-br only
+- Zero physical description of people
+- Speech embedding rules unchanged
+- Word count target unchanged
+
+Return ONLY the JSON, no markdown fences, no prose.`;
+
 export default function UGCCampaign({ onBack }: Props) {
   // Produto
   const [productFile, setProductFile] = useState<File | null>(null);
@@ -240,6 +288,34 @@ export default function UGCCampaign({ onBack }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [regeneratingScene, setRegeneratingScene] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // URLs do upload (cacheadas) — ficam disponiveis pra regerar/refinar/persistir sem reupload
+  const [uploadedProductUrl, setUploadedProductUrl] = useState<string | null>(null);
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
+
+  // Persistencia (Supabase)
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [savedName, setSavedName] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedList, setSavedList] = useState<SavedCampaignSummary[]>([]);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+
+  // Chat de refinamento
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+
+  // Carrega lista quando abre o painel de biblioteca
+  useEffect(() => {
+    if (!showLibrary) return;
+    setIsLoadingLibrary(true);
+    fetch("/api/ugc-campaigns")
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) && setSavedList(d))
+      .catch(() => {})
+      .finally(() => setIsLoadingLibrary(false));
+  }, [showLibrary]);
 
   const handleProductSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -375,6 +451,8 @@ export default function UGCCampaign({ onBack }: Props) {
     if (!hasProduct) return;
     setIsGenerating(true);
     setCampaign(null);
+    setChatHistory([]);
+    setSavedId(null);
 
     try {
       setIsUploading(true);
@@ -383,6 +461,8 @@ export default function UGCCampaign({ onBack }: Props) {
       if (hasAvatar) {
         avatarUrl = await uploadIfNeeded(avatarInputMode, avatarFile, avatarDirectUrl);
       }
+      setUploadedProductUrl(productUrl);
+      setUploadedAvatarUrl(avatarUrl);
       setIsUploading(false);
 
       const imageUrls = avatarUrl ? [productUrl, avatarUrl] : [productUrl];
@@ -480,6 +560,200 @@ export default function UGCCampaign({ onBack }: Props) {
     } finally {
       setRegeneratingScene(null);
     }
+  };
+
+  // --- Chat de refinamento ---
+  const handleChatRefine = async () => {
+    const message = chatInput.trim();
+    if (!message || !campaign || isRefining) return;
+
+    setIsRefining(true);
+    const newHistory: ChatMessage[] = [...chatHistory, { role: "user", text: message }];
+    setChatHistory(newHistory);
+    setChatInput("");
+
+    try {
+      const productUrl = uploadedProductUrl || (await uploadIfNeeded(productInputMode, productFile, productDirectUrl));
+      let avatarUrl = uploadedAvatarUrl;
+      if (hasAvatar && !avatarUrl) {
+        avatarUrl = await uploadIfNeeded(avatarInputMode, avatarFile, avatarDirectUrl);
+      }
+      const imageUrls = avatarUrl ? [productUrl, avatarUrl] : [productUrl];
+
+      const refinePrompt = [
+        "BRIEFING (unchanged):",
+        buildUserPrompt(!!avatarUrl),
+        "",
+        "CURRENT CAMPAIGN (json):",
+        JSON.stringify(campaign),
+        "",
+        "PREVIOUS CHAT REFINEMENTS (for context):",
+        chatHistory.length === 0
+          ? "(none — this is the first refinement)"
+          : chatHistory.map((m) => `${m.role.toUpperCase()}: ${m.text}`).join("\n"),
+        "",
+        "USER REFINEMENT REQUEST (pt-br):",
+        message,
+        "",
+        "Apply the request and return the COMPLETE updated campaign as strict JSON. Keep untouched scenes byte-identical.",
+      ].join("\n");
+
+      const response = await fetch("/api/generate-llm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: refinePrompt,
+          systemPrompt: REFINE_SYSTEM_PROMPT,
+          model: "gpt-4.1",
+          imageUrls,
+          temperature: 0.8,
+          cost: 1,
+        }),
+      });
+
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Resposta invalida do servidor");
+      }
+      if (!response.ok) throw new Error(data.error || "Erro ao refinar campanha");
+
+      const updated = parseCampaignJSON(data.text);
+      setCampaign(updated);
+      setChatHistory([
+        ...newHistory,
+        { role: "assistant", text: "Pronto, atualizei a campanha com a sua mudanca." },
+      ]);
+      window.dispatchEvent(new Event("fluxo-credits-update"));
+    } catch (err) {
+      setChatHistory([
+        ...newHistory,
+        { role: "assistant", text: "Erro: " + (err instanceof Error ? err.message : "desconhecido") },
+      ]);
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  // --- Persistencia ---
+  const buildSnapshot = (): CampaignSnapshot | null => {
+    if (!campaign) return null;
+    return {
+      productName,
+      productDescription,
+      productUrl: uploadedProductUrl,
+      avatarUrl: uploadedAvatarUrl,
+      narrativeStyle,
+      styleExtra,
+      numScenes,
+      sceneDuration,
+      aspectRatio,
+      imageModel,
+      videoModel,
+      voiceMode,
+      campaign,
+      chatHistory,
+    };
+  };
+
+  const handleSave = async () => {
+    const snapshot = buildSnapshot();
+    if (!snapshot) return;
+    setIsSaving(true);
+    try {
+      const name = savedName.trim() || productName.trim() || "Campanha sem nome";
+      if (savedId) {
+        const r = await fetch(`/api/ugc-campaigns/${savedId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, data: snapshot, productThumbnail: uploadedProductUrl }),
+        });
+        if (!r.ok) throw new Error("Erro ao atualizar");
+        setSavedName(name);
+      } else {
+        const r = await fetch("/api/ugc-campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, data: snapshot, productThumbnail: uploadedProductUrl }),
+        });
+        if (!r.ok) throw new Error("Erro ao salvar");
+        const created = await r.json();
+        setSavedId(created.id);
+        setSavedName(created.name);
+      }
+    } catch (err) {
+      alert("Erro ao salvar: " + (err instanceof Error ? err.message : "desconhecido"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLoad = async (id: string) => {
+    try {
+      const r = await fetch(`/api/ugc-campaigns/${id}`);
+      if (!r.ok) throw new Error("Erro ao carregar");
+      const loaded = await r.json();
+      const snap: CampaignSnapshot = loaded.data;
+
+      setProductName(snap.productName || "");
+      setProductDescription(snap.productDescription || "");
+      setNarrativeStyle(snap.narrativeStyle || "discovery");
+      setStyleExtra(snap.styleExtra || "");
+      setNumScenes(snap.numScenes || 4);
+      setSceneDuration(snap.sceneDuration || 8);
+      setAspectRatio(snap.aspectRatio || "9:16");
+      setImageModel(snap.imageModel || "nano-banana-pro");
+      setVideoModel(snap.videoModel || "veo-3");
+      setVoiceMode(snap.voiceMode || "in_video");
+      setCampaign(snap.campaign);
+      setChatHistory(snap.chatHistory || []);
+      setUploadedProductUrl(snap.productUrl || null);
+      setUploadedAvatarUrl(snap.avatarUrl || null);
+
+      // Reidrata previews via URL direta (sem reupload)
+      if (snap.productUrl) {
+        setProductInputMode("url");
+        setProductDirectUrl(snap.productUrl);
+        setProductFile(null);
+        setProductPreview(null);
+      }
+      if (snap.avatarUrl) {
+        setAvatarInputMode("url");
+        setAvatarDirectUrl(snap.avatarUrl);
+        setAvatarFile(null);
+        setAvatarPreview(null);
+      }
+
+      setSavedId(loaded.id);
+      setSavedName(loaded.name);
+      setShowLibrary(false);
+    } catch (err) {
+      alert("Erro ao carregar: " + (err instanceof Error ? err.message : "desconhecido"));
+    }
+  };
+
+  const handleDeleteSaved = async (id: string) => {
+    if (!confirm("Excluir esta campanha?")) return;
+    try {
+      const r = await fetch(`/api/ugc-campaigns/${id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error("Erro ao excluir");
+      setSavedList((prev) => prev.filter((c) => c.id !== id));
+      if (savedId === id) setSavedId(null);
+    } catch (err) {
+      alert("Erro: " + (err instanceof Error ? err.message : "desconhecido"));
+    }
+  };
+
+  const handleNewCampaign = () => {
+    if (campaign && !confirm("Limpar a campanha atual? Mudancas nao salvas serao perdidas.")) return;
+    setCampaign(null);
+    setChatHistory([]);
+    setSavedId(null);
+    setSavedName("");
+    setUploadedProductUrl(null);
+    setUploadedAvatarUrl(null);
   };
 
   const copyToClipboard = async (text: string, key: string) => {
@@ -738,8 +1012,17 @@ export default function UGCCampaign({ onBack }: Props) {
             </select>
           </Field>
 
-          {/* Generate button */}
-          <div className="pt-2">
+          {/* Cost preview + Generate button */}
+          <div className="pt-2 space-y-2">
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg px-3 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs text-zinc-400">Custo desta operacao</span>
+              </div>
+              <span className="text-xs font-mono text-purple-300">1 credito (GPT-4.1 Vision)</span>
+            </div>
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !hasProduct}
@@ -754,6 +1037,8 @@ export default function UGCCampaign({ onBack }: Props) {
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   {isUploading ? "Enviando imagens..." : "Gerando campanha com GPT-4.1..."}
                 </span>
+              ) : campaign ? (
+                "Regerar Campanha (1 credito)"
               ) : (
                 "Gerar Campanha (1 credito)"
               )}
@@ -762,25 +1047,119 @@ export default function UGCCampaign({ onBack }: Props) {
         </div>
 
         {/* Right — Result */}
-        <div className="w-1/2 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 shrink-0">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-zinc-300">Campanha</span>
+        <div className="w-1/2 flex flex-col overflow-hidden relative">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0 gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {campaign ? (
+                <input
+                  type="text"
+                  value={savedName}
+                  onChange={(e) => setSavedName(e.target.value)}
+                  placeholder={productName || "Nome da campanha"}
+                  className="text-sm font-medium bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-purple-500 focus:outline-none text-zinc-200 placeholder-zinc-600 px-1 py-0.5 min-w-0 flex-1"
+                />
+              ) : (
+                <span className="text-sm font-medium text-zinc-300">Campanha</span>
+              )}
               {campaign && (
-                <span className="text-xs text-zinc-500">
-                  {campaign.scenes.length} cenas • {totalSeconds}s total
+                <span className="text-[11px] text-zinc-500 shrink-0">
+                  {campaign.scenes.length}c • {totalSeconds}s
                 </span>
               )}
             </div>
-            {campaign && (
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={handleExport}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                onClick={() => setShowLibrary((v) => !v)}
+                className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                title="Minhas campanhas salvas"
               >
-                Exportar .txt
+                Biblioteca
               </button>
-            )}
+              {campaign && (
+                <>
+                  <button
+                    onClick={handleNewCampaign}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                    title="Nova campanha"
+                  >
+                    Nova
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-purple-600/80 hover:bg-purple-500 text-white transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? "Salvando..." : savedId ? "Atualizar" : "Salvar"}
+                  </button>
+                  <button
+                    onClick={handleExport}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                  >
+                    .txt
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Library overlay */}
+          {showLibrary && (
+            <div className="absolute inset-0 bg-zinc-950/95 backdrop-blur-sm z-20 flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+                <h3 className="text-sm font-semibold text-white">Minhas Campanhas</h3>
+                <button
+                  onClick={() => setShowLibrary(false)}
+                  className="text-zinc-400 hover:text-white text-xs"
+                >
+                  Fechar
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {isLoadingLibrary ? (
+                  <p className="text-xs text-zinc-500 text-center py-8">Carregando...</p>
+                ) : savedList.length === 0 ? (
+                  <p className="text-xs text-zinc-500 text-center py-8">
+                    Nenhuma campanha salva ainda. Gere e clique em &quot;Salvar&quot;.
+                  </p>
+                ) : (
+                  savedList.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-lg p-3 hover:border-purple-500/40 transition-colors group"
+                    >
+                      {c.productThumbnail ? (
+                        <img
+                          src={c.productThumbnail}
+                          alt={c.name}
+                          className="w-12 h-12 rounded-md object-cover border border-zinc-800 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-md bg-zinc-800 border border-zinc-700 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-zinc-200 truncate">{c.name}</p>
+                        <p className="text-[10px] text-zinc-500">
+                          {new Date(c.updatedAt).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleLoad(c.id)}
+                        className="px-2.5 py-1 rounded-md text-[11px] bg-purple-600/80 hover:bg-purple-500 text-white"
+                      >
+                        Abrir
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSaved(c.id)}
+                        className="px-2 py-1 rounded-md text-[11px] bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-red-400 hover:border-red-500/40"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {isGenerating ? (
@@ -813,6 +1192,15 @@ export default function UGCCampaign({ onBack }: Props) {
                   caption={campaign.caption}
                   copiedKey={copiedKey}
                   onCopy={copyToClipboard}
+                />
+
+                {/* Chat de refinamento */}
+                <RefineChat
+                  history={chatHistory}
+                  input={chatInput}
+                  setInput={setChatInput}
+                  onSend={handleChatRefine}
+                  isRefining={isRefining}
                 />
               </>
             ) : (
@@ -1125,6 +1513,82 @@ function PromptBlock({
       </div>
       <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3">
         <p className="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function RefineChat({
+  history,
+  input,
+  setInput,
+  onSend,
+  isRefining,
+}: {
+  history: ChatMessage[];
+  input: string;
+  setInput: (s: string) => void;
+  onSend: () => void;
+  isRefining: boolean;
+}) {
+  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
+    }
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <svg className="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <h3 className="text-sm font-semibold text-white">Refinar com chat</h3>
+        <span className="text-[10px] text-zinc-500">1 credito por mensagem</span>
+      </div>
+
+      {history.length > 0 && (
+        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+          {history.map((m, i) => (
+            <div
+              key={i}
+              className={`text-xs leading-relaxed rounded-lg px-3 py-2 ${
+                m.role === "user"
+                  ? "bg-purple-500/10 border border-purple-500/20 text-zinc-200"
+                  : "bg-zinc-950 border border-zinc-800 text-zinc-400"
+              }`}
+            >
+              <span className="text-[10px] uppercase tracking-wide font-semibold mr-2 opacity-60">
+                {m.role === "user" ? "Voce" : "AI"}
+              </span>
+              {m.text}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder='Ex: "troca a cena 2 pra ficar engracada", "deixa a fala da cena 1 mais curta", "muda a legenda pra algo mais punchy"'
+          rows={2}
+          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:border-purple-500"
+          disabled={isRefining}
+        />
+        <button
+          onClick={onSend}
+          disabled={isRefining || !input.trim()}
+          className={`px-4 rounded-lg text-xs font-medium shrink-0 ${
+            isRefining || !input.trim()
+              ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-500 text-white"
+          }`}
+        >
+          {isRefining ? "..." : "Enviar"}
+        </button>
       </div>
     </div>
   );
