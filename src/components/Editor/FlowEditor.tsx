@@ -77,7 +77,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model":
       return { label: "Modelo", model: "nano-banana-pro", isRunning: false, results: [], imageInputCount: 1 };
     case "model-veo3":
-      return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "9:16", enhancePrompt: true };
+      return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "9:16", duration: "8s", resolution: "1080p", enhancePrompt: true };
     case "model-veo-4k":
       return { label: "Veo 3.1 Upscale 4K", model: "veo-4k", isRunning: false, results: [], imageInputCount: 0 };
     case "model-seedance":
