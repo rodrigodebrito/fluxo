@@ -777,6 +777,8 @@ export default function UGCCampaign({ onBack }: Props) {
     if (!scene) return;
     if (previewingScene) return;
 
+    if (!confirm(`Gerar preview da cena ${sceneNumber} com Nano Banana Pro? Custa 18 creditos.`)) return;
+
     setPreviewingScene(sceneNumber);
     try {
       const productUrl = uploadedProductUrl || (await uploadIfNeeded(productInputMode, productFile, productDirectUrl));
@@ -1685,9 +1687,9 @@ function SceneCard({
             onClick={onGeneratePreview}
             disabled={isPreviewing}
             className="text-[11px] font-medium text-purple-400 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Gerar imagem desta cena com Nano Banana Pro"
+            title="Gerar imagem desta cena com Nano Banana Pro (custa 18 creditos)"
           >
-            {isPreviewing ? "Gerando..." : scene.previewUrl ? "Regerar img" : "Ver imagem"}
+            {isPreviewing ? "Gerando..." : scene.previewUrl ? "Regerar img (18 cr)" : "Ver imagem (18 cr)"}
           </button>
         }
       />
