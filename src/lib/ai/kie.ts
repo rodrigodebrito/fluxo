@@ -446,6 +446,7 @@ export async function createVeoTask(
     body.seeds = input.seed;
   }
 
+  console.log("[kie][veo] body enviado:", JSON.stringify(body));
   const response = await fetchWithRetry("https://api.kie.ai/api/v1/veo/generate", {
     method: "POST",
     headers: {
