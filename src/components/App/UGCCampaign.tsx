@@ -14,7 +14,10 @@ interface Scene {
   videoPrompt: string;
   spokenLine: string;
   onScreenText: string;
+  previewUrl?: string | null;
 }
+
+type SceneField = "imagePrompt" | "videoPrompt" | "spokenLine" | "onScreenText";
 
 interface Campaign {
   scenes: Scene[];
@@ -306,6 +309,27 @@ export default function UGCCampaign({ onBack }: Props) {
   const [chatInput, setChatInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
 
+  // Undo stack (em memoria, max 5 snapshots)
+  const [undoStack, setUndoStack] = useState<Campaign[]>([]);
+
+  // Regen por campo: mapa sceneNumber-field -> loading
+  const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
+
+  // Preview de imagem por cena: sceneNumber -> loading
+  const [previewingScene, setPreviewingScene] = useState<number | null>(null);
+
+  // Push o estado atual pra stack antes de aplicar uma mudanca. Max 5.
+  const pushUndo = (current: Campaign) => {
+    setUndoStack((prev) => [...prev, current].slice(-5));
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setCampaign(last);
+  };
+
   // Carrega lista quando abre o painel de biblioteca
   useEffect(() => {
     if (!showLibrary) return;
@@ -452,6 +476,7 @@ export default function UGCCampaign({ onBack }: Props) {
     setIsGenerating(true);
     setCampaign(null);
     setChatHistory([]);
+    setUndoStack([]);
     setSavedId(null);
 
     try {
@@ -503,6 +528,7 @@ export default function UGCCampaign({ onBack }: Props) {
 
   const handleRegenerateScene = async (sceneNumber: number) => {
     if (!campaign) return;
+    pushUndo(campaign);
     setRegeneratingScene(sceneNumber);
 
     try {
@@ -567,6 +593,7 @@ export default function UGCCampaign({ onBack }: Props) {
     const message = chatInput.trim();
     if (!message || !campaign || isRefining) return;
 
+    pushUndo(campaign);
     setIsRefining(true);
     const newHistory: ChatMessage[] = [...chatHistory, { role: "user", text: message }];
     setChatHistory(newHistory);
@@ -634,6 +661,181 @@ export default function UGCCampaign({ onBack }: Props) {
       ]);
     } finally {
       setIsRefining(false);
+    }
+  };
+
+  // --- Regen por campo individual ---
+  const handleRegenerateField = async (sceneNumber: number, field: SceneField) => {
+    if (!campaign) return;
+    const key = `${sceneNumber}-${field}`;
+    if (regeneratingField) return;
+
+    pushUndo(campaign);
+    setRegeneratingField(key);
+
+    try {
+      const productUrl = uploadedProductUrl || (await uploadIfNeeded(productInputMode, productFile, productDirectUrl));
+      let avatarUrl = uploadedAvatarUrl;
+      if (hasAvatar && !avatarUrl) {
+        avatarUrl = await uploadIfNeeded(avatarInputMode, avatarFile, avatarDirectUrl);
+      }
+      const imageUrls = avatarUrl ? [productUrl, avatarUrl] : [productUrl];
+
+      const targetWords = Math.round(sceneDuration * WORDS_PER_SECOND);
+      const fieldInstructions: Record<SceneField, string> = {
+        imagePrompt:
+          "Rewrite ONLY the imagePrompt. ENGLISH only. Zero physical description of people. Apply the image model adaptation rules from the system prompt. Include the UGC iPhone boilerplate.",
+        videoPrompt:
+          voiceMode === "in_video"
+            ? `Rewrite ONLY the videoPrompt. ENGLISH only (except the quoted pt-br spokenLine inside it). Keep the same spokenLine quoted inside. Apply the video model adaptation rules for ${videoModel}.`
+            : `Rewrite ONLY the videoPrompt. ENGLISH only. Visual-only, no dialogue. Apply the video model adaptation rules for ${videoModel}.`,
+        spokenLine:
+          voiceMode === "in_video"
+            ? `Rewrite ONLY the spokenLine in natural Brazilian Portuguese. Target ~${targetWords} words (±2) to fit ${sceneDuration}s of speech. Must flow with the rest of the campaign.`
+            : "This campaign has voice_mode=none. Return empty string for spokenLine.",
+        onScreenText:
+          "Rewrite ONLY the onScreenText in pt-br, max 60 chars, UGC style, scroll-stopping.",
+      };
+
+      const prompt = [
+        "BRIEFING (for context — do NOT regenerate the whole campaign):",
+        buildUserPrompt(!!avatarUrl),
+        "",
+        "CURRENT CAMPAIGN (json, for context only):",
+        JSON.stringify(campaign),
+        "",
+        `TARGET: scene ${sceneNumber}, field "${field}"`,
+        fieldInstructions[field],
+        "",
+        "Return ONLY a strict JSON object: {\"value\": \"<the new field value>\"}",
+        "No markdown fences, no prose, no extra keys.",
+      ].join("\n");
+
+      const response = await fetch("/api/generate-llm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          systemPrompt: UGC_CAMPAIGN_SYSTEM_PROMPT,
+          model: "gpt-4.1",
+          imageUrls,
+          temperature: 0.85,
+          cost: 1,
+        }),
+      });
+
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Resposta invalida do servidor");
+      }
+      if (!response.ok) throw new Error(data.error || "Erro ao regerar campo");
+
+      // Parse {value: "..."}
+      let raw = (data.text as string).trim();
+      if (raw.startsWith("```")) raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+      const first = raw.indexOf("{");
+      const last = raw.lastIndexOf("}");
+      if (first !== -1 && last !== -1) raw = raw.slice(first, last + 1);
+      const parsed = JSON.parse(raw);
+      let newValue: string = parsed.value ?? "";
+      if (typeof newValue !== "string") newValue = String(newValue);
+
+      // Post-processing: quando regenerou spokenLine e voice_mode=in_video, rebuild o quoted block
+      // dentro do videoPrompt pra nao ficar dessincronizado
+      setCampaign({
+        ...campaign,
+        scenes: campaign.scenes.map((s) => {
+          if (s.number !== sceneNumber) return s;
+          const updated = { ...s, [field]: newValue };
+          if (field === "spokenLine" && voiceMode === "in_video" && newValue) {
+            const stripped = s.videoPrompt
+              .replace(/The character[^"]*"[^"]*"\.?/i, "")
+              .trim()
+              .replace(/[.,\s]*$/, "");
+            updated.videoPrompt =
+              (stripped ? stripped + ". " : "") +
+              `The character (same reference) speaks in Brazilian Portuguese, with natural intonation, saying exactly: "${newValue}".`;
+          }
+          return updated;
+        }),
+      });
+      window.dispatchEvent(new Event("fluxo-credits-update"));
+    } catch (err) {
+      alert("Erro: " + (err instanceof Error ? err.message : "desconhecido"));
+    } finally {
+      setRegeneratingField(null);
+    }
+  };
+
+  // --- Preview de imagem via Nano Banana Pro ---
+  const handleGeneratePreview = async (sceneNumber: number) => {
+    if (!campaign) return;
+    const scene = campaign.scenes.find((s) => s.number === sceneNumber);
+    if (!scene) return;
+    if (previewingScene) return;
+
+    setPreviewingScene(sceneNumber);
+    try {
+      const productUrl = uploadedProductUrl || (await uploadIfNeeded(productInputMode, productFile, productDirectUrl));
+      let avatarUrl = uploadedAvatarUrl;
+      if (hasAvatar && !avatarUrl) {
+        avatarUrl = await uploadIfNeeded(avatarInputMode, avatarFile, avatarDirectUrl);
+      }
+      const imageInput = avatarUrl ? [productUrl, avatarUrl] : [productUrl];
+
+      // Nano Banana Pro custa ~18 creditos — nao usamos o imagePrompt do modelo-alvo
+      // diretamente porque ele pode estar formatado pro GPT Image/Flux/etc. Mas no caso
+      // mais comum (nano-banana-pro selecionado) funciona direto.
+      const createResp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: scene.imagePrompt,
+          imageInput,
+          aspectRatio,
+          resolution: "1k",
+          outputFormat: "jpeg",
+        }),
+      });
+      const createJson = await createResp.json();
+      if (!createResp.ok || !createJson.taskId) {
+        throw new Error(createJson.error || "Erro ao criar task");
+      }
+      const taskId = createJson.taskId as string;
+
+      // Poll status ate 60s (intervalos de 2.5s)
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2500));
+        const statusResp = await fetch(`/api/status?taskId=${taskId}&type=image`);
+        const statusJson = await statusResp.json();
+        if (statusJson.state === "success" && Array.isArray(statusJson.resultUrls) && statusJson.resultUrls.length > 0) {
+          const url = statusJson.resultUrls[0];
+          setCampaign((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  scenes: prev.scenes.map((s) =>
+                    s.number === sceneNumber ? { ...s, previewUrl: url } : s
+                  ),
+                }
+              : prev
+          );
+          window.dispatchEvent(new Event("fluxo-credits-update"));
+          return;
+        }
+        if (statusJson.state === "fail") {
+          throw new Error(statusJson.error || "Geracao falhou");
+        }
+      }
+      throw new Error("Timeout ao gerar preview (60s)");
+    } catch (err) {
+      alert("Erro no preview: " + (err instanceof Error ? err.message : "desconhecido"));
+    } finally {
+      setPreviewingScene(null);
     }
   };
 
@@ -709,6 +911,7 @@ export default function UGCCampaign({ onBack }: Props) {
       setVoiceMode(snap.voiceMode || "in_video");
       setCampaign(snap.campaign);
       setChatHistory(snap.chatHistory || []);
+      setUndoStack([]);
       setUploadedProductUrl(snap.productUrl || null);
       setUploadedAvatarUrl(snap.avatarUrl || null);
 
@@ -750,6 +953,7 @@ export default function UGCCampaign({ onBack }: Props) {
     if (campaign && !confirm("Limpar a campanha atual? Mudancas nao salvas serao perdidas.")) return;
     setCampaign(null);
     setChatHistory([]);
+    setUndoStack([]);
     setSavedId(null);
     setSavedName("");
     setUploadedProductUrl(null);
@@ -1078,6 +1282,14 @@ export default function UGCCampaign({ onBack }: Props) {
               {campaign && (
                 <>
                   <button
+                    onClick={handleUndo}
+                    disabled={undoStack.length === 0}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={`Desfazer ultima alteracao (${undoStack.length}/5)`}
+                  >
+                    ↶ Undo {undoStack.length > 0 && `(${undoStack.length})`}
+                  </button>
+                  <button
                     onClick={handleNewCampaign}
                     className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
                     title="Nova campanha"
@@ -1186,6 +1398,10 @@ export default function UGCCampaign({ onBack }: Props) {
                     onCopy={copyToClipboard}
                     onRegenerate={() => handleRegenerateScene(scene.number)}
                     isRegenerating={regeneratingScene === scene.number}
+                    onRegenerateField={(field) => handleRegenerateField(scene.number, field)}
+                    regeneratingField={regeneratingField}
+                    onGeneratePreview={() => handleGeneratePreview(scene.number)}
+                    isPreviewing={previewingScene === scene.number}
                   />
                 ))}
                 <CaptionCard
@@ -1383,6 +1599,10 @@ function SceneCard({
   onCopy,
   onRegenerate,
   isRegenerating,
+  onRegenerateField,
+  regeneratingField,
+  onGeneratePreview,
+  isPreviewing,
 }: {
   scene: Scene;
   imageModelLabel: string;
@@ -1394,15 +1614,20 @@ function SceneCard({
   onCopy: (text: string, key: string) => void;
   onRegenerate: () => void;
   isRegenerating: boolean;
+  onRegenerateField: (field: SceneField) => void;
+  regeneratingField: string | null;
+  onGeneratePreview: () => void;
+  isPreviewing: boolean;
 }) {
   const isSeedance = videoModel === "seedance-2";
   const videoLen = scene.videoPrompt.length;
   const overLimit = isSeedance && videoLen > 1536;
 
-  // Word count da fala pra mostrar se encaixa na duracao
   const wordCount = scene.spokenLine ? scene.spokenLine.trim().split(/\s+/).filter(Boolean).length : 0;
   const targetWords = Math.round(sceneDuration * WORDS_PER_SECOND);
   const wordsOk = Math.abs(wordCount - targetWords) <= 2;
+
+  const isField = (f: SceneField) => regeneratingField === `${scene.number}-${f}`;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
@@ -1424,6 +1649,28 @@ function SceneCard({
         </button>
       </div>
 
+      {/* Preview thumbnail */}
+      {(scene.previewUrl || isPreviewing) && (
+        <div className="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950">
+          {scene.previewUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={scene.previewUrl}
+              alt={`Preview cena ${scene.number}`}
+              className={`w-full max-h-[320px] object-contain ${isPreviewing ? "opacity-40" : ""}`}
+            />
+          )}
+          {isPreviewing && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60">
+              <div className="text-center">
+                <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-[11px] text-zinc-400">Gerando com Nano Banana Pro...</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <PromptBlock
         label="Prompt de Imagem"
         badge={imageModelLabel}
@@ -1431,6 +1678,18 @@ function SceneCard({
         copyKey={`img-${scene.number}`}
         copiedKey={copiedKey}
         onCopy={onCopy}
+        onRegenerate={() => onRegenerateField("imagePrompt")}
+        isRegenerating={isField("imagePrompt")}
+        extraAction={
+          <button
+            onClick={onGeneratePreview}
+            disabled={isPreviewing}
+            className="text-[11px] font-medium text-purple-400 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Gerar imagem desta cena com Nano Banana Pro"
+          >
+            {isPreviewing ? "Gerando..." : scene.previewUrl ? "Regerar img" : "Ver imagem"}
+          </button>
+        }
       />
 
       <PromptBlock
@@ -1440,6 +1699,8 @@ function SceneCard({
         copyKey={`vid-${scene.number}`}
         copiedKey={copiedKey}
         onCopy={onCopy}
+        onRegenerate={() => onRegenerateField("videoPrompt")}
+        isRegenerating={isField("videoPrompt")}
         extraBadge={
           isSeedance ? (
             <span className={`text-[10px] font-mono ${overLimit ? "text-red-400" : "text-green-400"}`}>
@@ -1456,6 +1717,8 @@ function SceneCard({
           copyKey={`spoken-${scene.number}`}
           copiedKey={copiedKey}
           onCopy={onCopy}
+          onRegenerate={() => onRegenerateField("spokenLine")}
+          isRegenerating={isField("spokenLine")}
           extraBadge={
             <span className={`text-[10px] font-mono ${wordsOk ? "text-green-400" : "text-yellow-400"}`}>
               {wordCount}/{targetWords} palavras
@@ -1470,6 +1733,8 @@ function SceneCard({
         copyKey={`osc-${scene.number}`}
         copiedKey={copiedKey}
         onCopy={onCopy}
+        onRegenerate={() => onRegenerateField("onScreenText")}
+        isRegenerating={isField("onScreenText")}
       />
     </div>
   );
@@ -1479,23 +1744,29 @@ function PromptBlock({
   label,
   badge,
   extraBadge,
+  extraAction,
   text,
   copyKey,
   copiedKey,
   onCopy,
+  onRegenerate,
+  isRegenerating,
 }: {
   label: string;
   badge?: string;
   extraBadge?: React.ReactNode;
+  extraAction?: React.ReactNode;
   text: string;
   copyKey: string;
   copiedKey: string | null;
   onCopy: (text: string, key: string) => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-[11px] font-medium text-purple-400 uppercase tracking-wide">{label}</span>
           {badge && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300">
@@ -1504,12 +1775,25 @@ function PromptBlock({
           )}
           {extraBadge}
         </div>
-        <button
-          onClick={() => onCopy(text, copyKey)}
-          className="text-[11px] font-medium text-zinc-400 hover:text-white transition-colors"
-        >
-          {copiedKey === copyKey ? "Copiado!" : "Copiar"}
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          {extraAction}
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+              className="text-[11px] font-medium text-zinc-400 hover:text-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Regerar apenas este campo (1 credito)"
+            >
+              {isRegenerating ? "..." : "↻"}
+            </button>
+          )}
+          <button
+            onClick={() => onCopy(text, copyKey)}
+            className="text-[11px] font-medium text-zinc-400 hover:text-white transition-colors"
+          >
+            {copiedKey === copyKey ? "Copiado!" : "Copiar"}
+          </button>
+        </div>
       </div>
       <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3">
         <p className="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed">{text}</p>
