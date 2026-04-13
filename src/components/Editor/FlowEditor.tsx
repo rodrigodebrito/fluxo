@@ -1471,10 +1471,15 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       Promise.all(promises).then((results) => {
         const allUrls: string[] = [];
+        const allTaskIds: string[] = [];
         const errors: string[] = [];
-        for (const result of results) {
-          if (result.error) errors.push(result.error);
-          allUrls.push(...result.resultUrls);
+        for (let i = 0; i < results.length; i++) {
+          const r = results[i];
+          if (r.error) errors.push(r.error);
+          for (const url of r.resultUrls) {
+            allUrls.push(url);
+            allTaskIds.push(tasks[i].taskId);
+          }
         }
 
         if (errors.length > 0 && allUrls.length === 0) {
@@ -1492,7 +1497,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
             nds.map((n) => {
               if (n.id === modelNodeId) {
                 const prevResults = (n.data.results as string[]) || [];
-                return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls] } };
+                const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
+                return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls], resultTaskIds: [...prevTaskIds, ...allTaskIds] } };
               }
               return n;
             })
