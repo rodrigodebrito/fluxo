@@ -955,7 +955,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     }
 
     const isMultiShot = pipeline.multiShotEnabled && pipeline.multiShots && pipeline.multiShots.length > 0;
-    const isPromptOptional = pipeline.model === "kling-motion" || pipeline.model === "bg-removal" || pipeline.model === "upscale" || pipeline.model === "extract-audio";
+    const isPromptOptional = pipeline.model === "kling-motion" || pipeline.model === "bg-removal" || pipeline.model === "upscale" || pipeline.model === "extract-audio" || pipeline.model === "veo-4k";
     if (!pipeline.prompt && !isMultiShot && !isPromptOptional) {
       showToast("Conecte um no de Prompt com texto ao no de Modelo antes de executar.", "error");
       return;
