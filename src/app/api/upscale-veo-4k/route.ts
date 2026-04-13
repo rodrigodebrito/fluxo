@@ -35,10 +35,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await getVeo4kVideo(apiKey, sourceTaskId, typeof index === "number" ? index : 0);
-    console.log("[upscale-veo-4k] submit:", sourceTaskId, JSON.stringify(result).slice(0, 300));
+    console.log("[upscale-veo-4k] submit sourceTaskId=", sourceTaskId, "response=", JSON.stringify(result));
 
-    if (result.code !== 200) {
-      return NextResponse.json({ error: result.msg || "Erro ao iniciar upscale 4k" }, { status: result.code || 500 });
+    // Kie retorna 422 "4k is processing" como erro NAO-200 mas significa "aceito, ta processando"
+    // Retorna 200 com resultUrls null = aceito, ta processando
+    // Retorna erros reais tipo "No generation found" tambem como nao-200
+    if (result.code !== 200 && !/processing|5-10 minutes|already/i.test(result.msg || "")) {
+      return NextResponse.json({ error: `Kie rejeitou: ${result.msg || "erro desconhecido"} (code ${result.code})` }, { status: 400 });
     }
 
     await chargeCredits(user.id, "veo-4k", finalCost, { status: "pending", metadata: { sourceTaskId } });
