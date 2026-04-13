@@ -518,7 +518,31 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        {/* ── GALERIA removida temporariamente ── */}
+        {/* ── GALERIA ── */}
+        <section id="galeria" className="py-16 md:py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <Reveal>
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Feito no Fluxo AI</h2>
+                <p className="text-base md:text-lg text-zinc-400 max-w-2xl mx-auto">
+                  Resultados reais dos modelos disponiveis na plataforma.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              {GALLERY_IMAGES.map((img, i) => (
+                <GalleryItem key={i} src={img.src} label={img.label} model={img.model} delay={i * 60} />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {GALLERY_VIDEOS.map((v, i) => (
+                <GalleryVideoItem key={i} src={v.src} label={v.label} model={v.model} delay={i * 60} />
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── DOR / PROBLEMA ── */}
         <section className="py-16 md:py-24 px-6">
