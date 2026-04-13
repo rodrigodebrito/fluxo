@@ -992,9 +992,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
         else costPerRun = 60;
       } else if (m === "veo3-beta") {
-        // Fal Veo 3.1 Fast — ~$0.10/s; 8s @ 1080p ~= 80cr
+        // Fal Veo 3.1 Fast: $0.10/s (720/1080p sem audio), $0.15/s (com audio),
+        // $0.30/s (4k sem audio), $0.35/s (4k com audio). ~200cr/$.
         const secs = parseInt(String(pipeline.duration || "8").replace(/\D/g, ""), 10) || 8;
-        costPerRun = secs * 10;
+        const is4k = (pipeline.resolution || "").toLowerCase().includes("4k");
+        const withAudio = pipeline.generateAudio !== false;
+        const perSec = is4k ? (withAudio ? 70 : 60) : (withAudio ? 30 : 20);
+        costPerRun = perSec * secs;
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
         const perSec = isFast ? 33 : 41;
