@@ -42,11 +42,12 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      const { successFlag, response, errorMessage } = result.data;
+      const { successFlag, response, errorMessage, errorCode } = result.data as { successFlag: number; response: { fullResultUrls?: string[]; resultUrls?: string[]; full_result_urls?: string[] } | null; errorMessage: string | null; errorCode: number | string | null };
 
       let state: string;
       if (successFlag === 1) state = "success";
       else if (successFlag === 2 || successFlag === 3) state = "fail";
+      else if (errorCode || errorMessage) state = "fail"; // Kie 500 interno: flag fica 0 mas seta errorCode
       else state = "generating";
 
       // A API pode retornar em fullResultUrls, resultUrls, ou full_result_urls
