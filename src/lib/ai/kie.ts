@@ -433,15 +433,10 @@ export async function createVeoTask(
     body.generationType = "TEXT_2_VIDEO";
   }
 
-  if (input.duration) {
-    body.duration = input.duration;
-  }
-  if (input.resolution) {
-    body.resolution = input.resolution;
-  }
-  if (input.enhancePrompt !== undefined) {
-    body.enhancePrompt = input.enhancePrompt;
-  }
+  // Kie Veo: 1080p e endpoint padrao (4k e separado). Duration default 8s.
+  body.duration = input.duration || "8s";
+  body.resolution = input.resolution && /^\d+p$/i.test(input.resolution) ? input.resolution : "1080p";
+  body.enhancePrompt = input.enhancePrompt ?? true;
   if (input.seed != null) {
     body.seeds = input.seed;
   }

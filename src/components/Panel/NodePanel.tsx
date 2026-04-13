@@ -14,6 +14,7 @@ interface NodePanelProps {
 
 const IMAGE_RESOLUTIONS = ["1K", "2K", "4K"];
 const VIDEO_RESOLUTIONS = ["720p", "1080p"];
+const VEO_KIE_RESOLUTIONS = ["1080p"]; // Kie Veo endpoint padrao so suporta 1080p (4k e endpoint separado)
 const IMAGE_ASPECT_RATIOS = [
   { value: "auto", label: "Default" },
   { value: "1:1", label: "1:1" },
@@ -836,7 +837,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ resolution: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(isVideo ? VIDEO_RESOLUTIONS : IMAGE_RESOLUTIONS).map((r) => (
+              {(model === "veo3" ? VEO_KIE_RESOLUTIONS : isVideo ? VIDEO_RESOLUTIONS : IMAGE_RESOLUTIONS).map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
