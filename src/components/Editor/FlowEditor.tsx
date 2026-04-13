@@ -78,6 +78,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Modelo", model: "nano-banana-pro", isRunning: false, results: [], imageInputCount: 1 };
     case "model-veo3":
       return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "9:16", duration: "8s", resolution: "1080p", enhancePrompt: true };
+    case "model-veo-4k":
+      return { label: "Veo 3.1 Upscale 4K", model: "veo-4k", isRunning: false, results: [], imageInputCount: 0 };
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-kling":
@@ -989,6 +991,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
         else costPerRun = 60;
+      } else if (m === "veo-4k") {
+        costPerRun = 120;
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
         const perSec = isFast ? 33 : 41;
@@ -1067,6 +1071,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
 
       const genOptions = {
         model: pipeline.model,
+        sourceTaskId: pipeline.sourceTaskId,
         resolution: pipeline.resolution,
         aspectRatio: pipeline.aspectRatio,
         seed: pipeline.seed,
@@ -1173,7 +1178,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         return;
       }
 
-      const videoModels = ["veo3", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "wan-i2v", "grok-i2v", "kling-avatar"];
+      const videoModels = ["veo3", "veo-4k", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "wan-i2v", "grok-i2v", "kling-avatar"];
       const pollType = videoModels.includes(pipeline.model) ? "video" : "image";
 
       // Salvar tasks pendentes no localStorage para recuperar após refresh
@@ -1200,11 +1205,16 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       const results = await Promise.all(resultPromises);
 
       const allUrls: string[] = [];
+      const allTaskIds: string[] = [];
       const errors: string[] = [];
 
-      for (const result of results) {
-        if (result.error) errors.push(result.error);
-        allUrls.push(...result.resultUrls);
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r.error) errors.push(r.error);
+        for (const url of r.resultUrls) {
+          allUrls.push(url);
+          allTaskIds.push(taskIds[i]);
+        }
       }
 
       if (errors.length > 0 && allUrls.length === 0) {
@@ -1225,12 +1235,14 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           nds.map((n) => {
             if (n.id === pipeline.modelNodeId) {
               const prevResults = (n.data.results as string[]) || [];
+              const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
               return {
                 ...n,
                 data: {
                   ...n.data,
                   isRunning: false,
                   results: [...prevResults, ...allUrls],
+                  resultTaskIds: [...prevTaskIds, ...allTaskIds],
                 },
               };
             }
@@ -1842,6 +1854,7 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Video models",
     children: [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
+      { type: "model-veo-4k", label: "Veo 3.1 Upscale 4K" },
       { type: "model-seedance", label: "Seedance 2.0" },
       { type: "model-kling", label: "Kling 3" },
       { type: "model-kling-o3-i2v", label: "Kling O3" },

@@ -103,6 +103,8 @@ interface PipelineData {
   llmChain?: LLMChain;
   // Text Iterator — array of complete prompts (one per iterator item)
   iteratorPrompts?: string[];
+  // Veo 4K upscale: taskId do Veo 3.1 upstream (nao e URL, e o taskId original)
+  sourceTaskId?: string;
 }
 
 // Percorre os nós conectados e coleta os dados do pipeline
@@ -365,6 +367,18 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
             imagesByHandle[handleId] = [...(imagesByHandle[handleId] || []), coverUrl];
           }
         }
+        // Veo 4K Upscale: precisa do taskId original do Veo (nao so a URL)
+        if (result.model === "veo-4k" && edge.targetHandle === "video-1") {
+          const srcModel = (sourceNode.data.model as string) || "";
+          if (srcModel !== "veo3") {
+            throw new Error("Veo 4K Upscale aceita so Veo 3.1 como fonte");
+          }
+          const results = (sourceNode.data.results as string[]) || [];
+          const taskIdsList = (sourceNode.data.resultTaskIds as string[]) || [];
+          const coverIndex = results.findIndex((u) => u === coverUrl);
+          const idx = coverIndex >= 0 ? coverIndex : taskIdsList.length - 1;
+          result.sourceTaskId = taskIdsList[idx] || taskIdsList[taskIdsList.length - 1] || "";
+        }
       }
     }
   }
@@ -570,10 +584,28 @@ export async function startGeneration(
     zimageSafety?: boolean;
     zimageStrength?: number;
     zimageSize?: string;
+    sourceTaskId?: string;
       cost?: number;
   }
 ): Promise<string> {
   const publicUrls = await uploadImages(localImageUrls);
+
+  // Veo 4K upscale — async, usa o taskId do Veo 3.1 upstream, reaproveita poll via /api/status?model=veo-4k
+  if (options?.model === "veo-4k") {
+    if (!options.sourceTaskId) {
+      throw new Error("Veo 4K: conecte o output de um nó Veo 3.1 e rode o Veo primeiro");
+    }
+    const response = await fetch("/api/upscale-veo-4k", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceTaskId: options.sourceTaskId, index: 0, cost: options.cost }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar upscale 4k");
+    return data.taskId;
+  }
 
   // Extract Audio — synchronous, returns audioUrl directly (stored in cache like Replicate sync)
   if (options?.model === "extract-audio") {

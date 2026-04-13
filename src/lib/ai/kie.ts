@@ -454,6 +454,33 @@ export async function createVeoTask(
   return safeJson(response);
 }
 
+// === Veo 3.1 4K Upscale ===
+
+interface Veo4kResponse {
+  code: number;
+  msg: string;
+  data: {
+    taskId?: string;
+    resultUrls?: string[] | null;
+    imageUrls?: string[] | null;
+  } | null;
+}
+
+// POST /api/v1/veo/get-4k-video — usado tanto pra submit quanto pra poll.
+// Retorna 200 com resultUrls=null enquanto processa, ou 200 com resultUrls populado quando pronto.
+// Pode retornar 422 "4k is processing..." se chamado durante processamento.
+export async function getVeo4kVideo(apiKey: string, taskId: string, index: number = 0): Promise<Veo4kResponse> {
+  const response = await fetchWithRetry("https://api.kie.ai/api/v1/veo/get-4k-video", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ taskId, index }),
+  });
+  return safeJson<Veo4kResponse>(response);
+}
+
 // === Kling Avatar (TTS + Talking Head) ===
 
 interface CreateAvatarInput {

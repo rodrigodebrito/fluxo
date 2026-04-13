@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i";
 
 export interface ModelInfo {
   id: AIModel;
@@ -41,6 +41,17 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-2", label: "Last Frame", required: false },
     ],
     params: ["veoModel", "aspectRatio", "duration", "resolution", "enhancePrompt", "seed", "runs"],
+  },
+  {
+    id: "veo-4k",
+    name: "Veo 3.1 Upscale 4K",
+    type: "video",
+    description: "Upscale para 4K de um video Veo 3.1 ja gerado (aceita so Veo 3.1)",
+    costPerRun: 120,
+    handles: [
+      { id: "video-1", label: "Veo 3.1 Video*", required: true },
+    ],
+    params: ["runs"],
   },
   {
     id: "seedance",
