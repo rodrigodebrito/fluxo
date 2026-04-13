@@ -19,26 +19,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "taskId é obrigatório" }, { status: 400 });
   }
 
-  // Veo 4K upscale polling — re-posta no mesmo endpoint, 422=processando, 200 com resultUrls=pronto
+  // Veo 4K upscale: NAO re-chamar /get-4k-video no poll (cada POST cria task nova rejeitada no Kie).
+  // O submit ja faz a chamada. O poll aqui so retorna "generating" ate o task aparecer como
+  // pronto via um caminho alternativo (TODO: achar endpoint de status real do Kie 4k).
   if (model === "veo-4k") {
-    try {
-      const result = await getVeo4kVideo(apiKey, taskId, 0);
-      console.log("[veo-4k-status]", taskId, JSON.stringify(result).slice(0, 300));
-      const urls = result.data?.resultUrls || [];
-      if (result.code === 200 && urls.length > 0) {
-        return NextResponse.json({ state: "success", progress: 100, resultUrls: urls, error: null });
-      }
-      // 422 ou 200 com resultUrls null = ainda processando
-      return NextResponse.json({ state: "generating", progress: 50, resultUrls: [], error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao buscar status 4k";
-      // Kie retorna 422 "processing" como erro — trata como generating
-      if (/processing|5-10 minutes|no generation/i.test(message)) {
-        return NextResponse.json({ state: "generating", progress: 50, resultUrls: [], error: null });
-      }
-      console.error("[veo-4k-status] error:", message);
-      return NextResponse.json({ state: "fail", progress: 0, resultUrls: [], error: message });
-    }
+    return NextResponse.json({ state: "generating", progress: 50, resultUrls: [], error: null });
   }
 
   // Veo video tasks (only veo3 uses the special veo endpoint)

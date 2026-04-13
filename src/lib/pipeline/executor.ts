@@ -373,6 +373,10 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
           if (srcModel !== "veo3") {
             throw new Error("Veo 4K Upscale aceita so Veo 3.1 como fonte");
           }
+          const srcVeoModel = (sourceNode.data.veoModel as string) || "veo3";
+          if (srcVeoModel === "veo3_fast") {
+            throw new Error("Veo 4K so funciona com Veo 3.1 Quality (veo3). Mude o veoModel do node Veo de Fast pra Quality e rode o Veo de novo antes do upscale.");
+          }
           const results = (sourceNode.data.results as string[]) || [];
           const taskIdsList = (sourceNode.data.resultTaskIds as string[]) || [];
           const coverIndex = results.findIndex((u) => u === coverUrl);
