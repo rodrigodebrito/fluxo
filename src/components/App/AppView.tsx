@@ -92,7 +92,7 @@ export default function AppView() {
   }
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-zinc-950 p-8">
+    <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-950 p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-white mb-2">Apps</h1>
         <p className="text-sm text-zinc-500 mb-8">Ferramentas de IA para turbinar seus fluxos</p>

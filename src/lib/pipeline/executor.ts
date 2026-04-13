@@ -1011,8 +1011,10 @@ export async function pollTaskStatus(
 
   for (let i = 0; i < maxAttempts; i++) {
     // Check abort before waiting
+    // NOTA: Cancelamento NAO devolve creditos. O provedor (Kie AI, fal, PiAPI)
+    // continua processando a task em background e ja cobrou o credito real.
+    // Devolver credito aqui = usuario ganha credito de graca enquanto a gente paga a conta.
     if (signal?.aborted) {
-      if (model) await refundCredits(model, taskId, cost);
       return { resultUrls: [], error: "Cancelado" };
     }
 
@@ -1025,7 +1027,6 @@ export async function pollTaskStatus(
     });
 
     if (signal?.aborted) {
-      if (model) await refundCredits(model, taskId, cost);
       return { resultUrls: [], error: "Cancelado" };
     }
 
@@ -1073,7 +1074,7 @@ export async function pollTaskStatus(
       }
     } catch (err) {
       if (signal?.aborted) {
-        if (model) await refundCredits(model, taskId, cost);
+        // Cancelamento nao devolve credito (task continua rodando no provedor)
         return { resultUrls: [], error: "Cancelado" };
       }
       consecutiveErrors++;

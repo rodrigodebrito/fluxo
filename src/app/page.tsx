@@ -631,7 +631,7 @@ export default function LandingPage() {
         <section className="py-14 px-6 border-y border-zinc-800/50">
           <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: <CountUp end={9} suffix="+" />, label: "Modelos de IA" },
+              { value: <CountUp end={12} suffix="+" />, label: "Modelos de IA" },
               { value: "4K", label: "Resolucao maxima" },
               { value: <CountUp end={30} suffix="s" />, label: "Pra comecar" },
               { value: <><CountUp end={25} suffix="%" /></>, label: "Mais barato", gradient: true },
@@ -654,7 +654,7 @@ export default function LandingPage() {
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Arsenal completo</p>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">9+ modelos. 1 plataforma.</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">12+ modelos. 1 plataforma.</h2>
                 <p className="text-zinc-500 max-w-lg mx-auto">
                   Os mesmos modelos das grandes agencias — voce paga por uso, nao por assinatura.
                 </p>
@@ -665,11 +665,16 @@ export default function LandingPage() {
               {[
                 { name: "Nano Banana Pro", type: "Imagem", desc: "Imagens ate 4K. Qualidade de estudio.", cost: "18 cred", badge: "bg-purple-500/10 text-purple-400 border-purple-500/20", icon: "🖼️" },
                 { name: "GPT Image 1.5", type: "Imagem", desc: "Motor OpenAI. Texto perfeito em imagens.", cost: "4 cred", badge: "bg-green-500/10 text-green-400 border-green-500/20", icon: "✨" },
-                { name: "Modelo Treinado (LoRA)", type: "Imagem", desc: "Treine seu proprio modelo com suas fotos. Gere imagens personalizadas.", cost: "10 cred", badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: "🧠" },
-                { name: "Veo 3.1", type: "Video", desc: "Google Veo. Videos realistas com audio.", cost: "60 cred", badge: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: "🎬" },
-                { name: "Kling 3.0", type: "Video", desc: "Controle total. Elementos customizados.", cost: "70 cred", badge: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: "🎥" },
-                { name: "Seedance 2.0", type: "Video", desc: "ByteDance. Danca e movimentos naturais.", cost: "30 cred", badge: "bg-pink-500/10 text-pink-400 border-pink-500/20", icon: "💃" },
-                { name: "Avatar TTS", type: "Video", desc: "Foto + texto vira video falando. 21 vozes. Ideal pra UGC.", cost: "40 cred", badge: "bg-rose-500/10 text-rose-400 border-rose-500/20", icon: "🗣️" },
+                { name: "Flux 2 Pro", type: "Imagem", desc: "Black Forest Labs. Realismo fotografico.", cost: "8 cred", badge: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", icon: "⚡" },
+                { name: "Z-Image Turbo", type: "Imagem", desc: "Ultra rapido. Ideal pra iteracao.", cost: "2 cred", badge: "bg-teal-500/10 text-teal-400 border-teal-500/20", icon: "🚀" },
+                { name: "Modelo Treinado (LoRA)", type: "Imagem", desc: "Treine seu proprio modelo com suas fotos.", cost: "10 cred", badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: "🧠" },
+                { name: "Veo 3.1", type: "Video", desc: "Google Veo. Fala nativa em pt-br com audio.", cost: "por segundo", badge: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: "🎬" },
+                { name: "Seedance 2.0", type: "Video", desc: "ByteDance. Fala pt-br nativa, refs @image.", cost: "por segundo", badge: "bg-pink-500/10 text-pink-400 border-pink-500/20", icon: "💃" },
+                { name: "Wan 2.7", type: "Video", desc: "Alibaba. Image-to-video com fala pt-br.", cost: "por segundo", badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", icon: "🌊" },
+                { name: "Grok Imagine", type: "Video", desc: "xAI. Image-to-video com fala nativa.", cost: "por segundo", badge: "bg-zinc-500/10 text-zinc-300 border-zinc-500/20", icon: "🤖" },
+                { name: "Kling 3.0", type: "Video", desc: "Controle total. Elementos customizados.", cost: "por segundo", badge: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: "🎥" },
+                { name: "Kling O3", type: "Video", desc: "Image-to-video. Movimento suave.", cost: "por segundo", badge: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: "🎞️" },
+                { name: "Avatar TTS", type: "Video", desc: "Foto + texto vira video falando. 21 vozes.", cost: "40 cred", badge: "bg-rose-500/10 text-rose-400 border-rose-500/20", icon: "🗣️" },
                 { name: "Any LLM", type: "Texto", desc: "GPT-4o, GPT-4.1, GPT-5. Pre-processe prompts com IA.", cost: "1 cred", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: "💬" },
                 { name: "Video Concat", type: "Ferramenta", desc: "Junte multiplos videos em um so clique.", cost: "0 cred", badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", icon: "🔗" },
               ].map((m, i) => (
@@ -753,7 +758,7 @@ export default function LandingPage() {
                       { label: "Editor visual (nos)", vals: ["✓", "✓", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Imagem 1K", vals: ["18 cred", "24 cred", "40 cred", "—"], highlight: [true, false, false, false] },
                       { label: "Video basico", vals: ["60 cred", "80 cred", "100 cred", "50 cred"], highlight: [true, false, false, false] },
-                      { label: "Modelos disponiveis", vals: ["9+", "5", "1", "1"], highlight: [true, false, false, false] },
+                      { label: "Modelos disponiveis", vals: ["12+", "5", "1", "1"], highlight: [true, false, false, false] },
                       { label: "Avatar TTS (talking head)", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Treinar modelo proprio", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
                       { label: "Concatenar videos", vals: ["✓", "✗", "✗", "✗"], highlight: [true, false, false, false] },
@@ -794,11 +799,12 @@ export default function LandingPage() {
               {[
                 { q: "Preciso saber programar?", a: "Nao. Zero codigo. A interface e 100% visual — voce arrasta blocos e conecta com cliques. Se sabe usar PowerPoint, sabe usar o Fluxo." },
                 { q: "Quanto custa?", a: "Voce compra creditos e gasta como quiser. Uma imagem custa a partir de 4 creditos, um video a partir de 30. Sem surpresas na fatura." },
-                { q: "E se a geracao falhar?", a: "Seus creditos sao devolvidos automaticamente. Erro = reembolso instantaneo. Voce so paga por resultados." },
+                { q: "E se a geracao falhar?", a: "Seus creditos sao devolvidos automaticamente quando a IA falha ou da timeout. Atencao: cancelar uma geracao em andamento NAO devolve creditos, porque o provedor ja cobrou e continua processando." },
                 { q: "Meus creditos expiram?", a: "Nao. Comprou, e seu. Sem prazo, sem fidelidade, sem contrato. Use quando quiser." },
-                { q: "Qual a qualidade dos videos?", a: "Profissional. Usamos Google Veo 3.1, Kling 3.0 e ByteDance Seedance — os mesmos motores das maiores agencias do mundo." },
+                { q: "Qual a qualidade dos videos?", a: "Profissional. Usamos Google Veo 3.1, ByteDance Seedance 2.0, Alibaba Wan 2.7, xAI Grok, Kling 3 e Kling O3 — os mesmos motores das maiores agencias do mundo. Varios deles falam pt-br nativamente." },
                 { q: "Posso treinar meu proprio modelo?", a: "Sim. Suba 5-30 fotos, treine em ~2 minutos e gere imagens personalizadas com seu rosto ou produto. Ideal pra criar conteudo unico." },
                 { q: "O que e o Avatar TTS?", a: "Voce envia uma foto e digita um texto. A IA gera um video da pessoa falando com voz realista. Perfeito pra UGC e conteudo de redes sociais." },
+                { q: "Tem ferramentas prontas alem do canvas?", a: "Sim. A aba Apps traz: UGC Campaign (campanha completa a partir de uma foto de produto), Seedance Cinematic (prompts shot-by-shot), Clone Foto (gera prompt a partir de foto referencia), Resize Tool e Gerador de System Prompt." },
                 { q: "Posso usar pra conteudo comercial?", a: "Sim. Todo conteudo gerado e seu. Use em ads, redes sociais, e-commerce — sem restricao." },
               ].map((faq, i) => (
                 <Reveal key={faq.q} delay={i * 60}>
@@ -860,7 +866,7 @@ export default function LandingPage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-green-500/70" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Reembolso em falhas
+                  Reembolso em falhas da IA
                 </span>
               </div>
             </div>

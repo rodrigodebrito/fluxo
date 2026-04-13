@@ -544,7 +544,7 @@ export default function UGCCampaign({ onBack }: Props) {
   const videoModelLabel = VIDEO_MODELS.find((m) => m.value === videoModel)?.label || videoModel;
 
   return (
-    <div className="flex-1 h-full flex flex-col bg-zinc-950 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col bg-zinc-950 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-800 shrink-0">
         <button onClick={onBack} className="text-zinc-400 hover:text-white transition-colors">

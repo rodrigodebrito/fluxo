@@ -128,6 +128,7 @@ src/
       CloneFoto.tsx          # Gera prompt UGC a partir de foto de referencia (sem descrever pessoa)
       ResizeTool.tsx         # Redimensiona imagens grandes para input dos geradores
       SeedanceCinematic.tsx  # Gera prompts cinematograficos shot-by-shot para Seedance 2.0
+      UGCCampaign.tsx        # Gera campanha UGC completa (imagem + video + fala pt-br) a partir de foto de produto
     Editor/FlowEditor.tsx    # Canvas principal (ReactFlow, toolbar, context menu, undo/redo)
     Gallery/Gallery.tsx      # Galeria fullscreen de resultados
     Header/                  # Header com creditos e usuario
@@ -169,7 +170,7 @@ src/
 5. Faz upload de imagens locais para Supabase Storage
 6. Chama a API route correspondente ao modelo
 7. API route verifica creditos, cobra atomicamente, e chama a API do provider
-8. Polling a cada 3s ate task completar (com refund automatico em caso de falha)
+8. Polling a cada 3s ate task completar (refund automatico em caso de falha, timeout ou erro persistente). **Cancelar nao devolve credito** — a task continua rodando no provedor e ja foi cobrada
 9. Tasks pendentes salvas em localStorage — recupera apos refresh da pagina
 10. Resultado (URLs de imagens/videos) exibido no no do modelo
 
@@ -380,11 +381,12 @@ No painel admin, clicar em qualquer usuario abre modal com historico completo + 
 - LLM chain: AnyLLM pre-processa prompt antes da geracao de imagem/video
 - Router pass-through: resolucao recursiva para encontrar no de origem real
 - Polling automatico com progresso
-- Cancelar geracao em andamento (AbortController)
+- Cancelar geracao em andamento (AbortController) — **sem refund**, porque o provedor continua processando a task no backend
 - Recuperacao automatica de geracoes apos refresh da pagina
 - Suporte a multiplas runs por execucao
 - Custo dinamico calculado em tempo real (por segundo para videos)
-- Refund automatico quando geracao falha no provider
+- Refund automatico quando geracao falha no provider, timeout ou erro persistente (cancelamento pelo usuario NAO devolve credito)
+- Tabs Canvas/App preservam estado ao alternar (form nao reseta)
 
 ### Dashboard
 - Layout estilo Weavy com carousel de templates no topo
@@ -464,6 +466,19 @@ Gera prompts cinematograficos shot-by-shot prontos para colar no Seedance 2.0:
 2. Escolhe duracao (5/8/10/12/15s), aspect ratio e numero de shots
 3. GPT-4.1 Vision analisa as imagens e monta um prompt estruturado com timecodes e movimentos de camera, usando `@image1`, `@image2`, etc.
 4. Enforce do limite de 1536 caracteres do Seedance 2.0 com contador visual (verde/vermelho)
+
+### App "UGC Campaign" (aba Apps)
+Gera uma campanha UGC completa (prompts de imagem + prompts de video + fala pt-br embutida + legenda do post) a partir de uma foto de produto:
+1. Upload do produto (obrigatorio) + avatar (opcional) + briefing (nome, descricao, estilo narrativo, numero de cenas 2-8, duracao 5-15s, aspect ratio)
+2. Dropdowns de modelo-alvo de imagem (Nano Banana Pro, GPT Image 1.5, Flux 2 Pro, Z-Image Turbo, LoRA) e modelo-alvo de video (Seedance 2, Veo 3.1, Kling 3, Kling O3, Wan 2.7, Grok)
+3. Voice mode: "com voz" (fala nativa embutida via Seedance 2/Veo 3.1/Wan 2.7/Grok) ou "sem voz"
+4. GPT-4.1 Vision analisa o produto e devolve N cenas em JSON — cada cena com prompt de imagem, prompt de video, spokenLine pt-br e texto on-screen
+5. Estrutura narrativa forcada: cena 1 = HOOK nos primeiros 2s, cenas do meio = demo/beneficio, cena final = CTA
+6. Regras "zero descricao fisica de pessoa" e "prompts em ingles, falas em pt-br" reforcadas no system prompt + pos-processamento que garante que a spokenLine aparece embutida no videoPrompt no formato correto
+7. Target words por cena = duracao x 2.5 (taxa natural de fala pt-br) com contador visual (verde/amarelo)
+8. Regerar cena individual sem refazer a campanha inteira
+9. Exportar campanha completa como .txt com cabecalhos por secao
+10. Documento completo de instrucoes em `docs/ugc-video-agent-instructions.md` (pode ser colado no GPT custom pra usar fora do app)
 
 ### Kling 3 - Elements + Multi-Shot
 1. Adicione um no "Kling Element" ao canvas
