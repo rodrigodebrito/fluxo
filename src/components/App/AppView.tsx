@@ -6,6 +6,7 @@ import CloneFoto from "./CloneFoto";
 import ResizeTool from "./ResizeTool";
 import SeedanceCinematic from "./SeedanceCinematic";
 import UGCCampaign from "./UGCCampaign";
+import CropTool from "./CropTool";
 
 interface AppCard {
   id: string;
@@ -57,6 +58,16 @@ const APPS: AppCard[] = [
     ),
   },
   {
+    id: "crop-tool",
+    name: "Crop Tool",
+    description: "Cortar imagens em 9:16, 1:1, 4:5, 16:9 ou livre — 100% client-side",
+    icon: (
+      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 2.25v15a2.25 2.25 0 002.25 2.25h12.75M17.25 21.75v-15a2.25 2.25 0 00-2.25-2.25H2.25" />
+      </svg>
+    ),
+  },
+  {
     id: "ugc-campaign",
     name: "UGC Campaign",
     description: "Gere uma campanha UGC completa a partir de uma foto de produto",
@@ -89,6 +100,10 @@ export default function AppView() {
 
   if (activeApp === "ugc-campaign") {
     return <UGCCampaign onBack={() => setActiveApp(null)} />;
+  }
+
+  if (activeApp === "crop-tool") {
+    return <CropTool onBack={() => setActiveApp(null)} />;
   }
 
   return (
