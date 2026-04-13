@@ -373,10 +373,6 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
           if (srcModel !== "veo3") {
             throw new Error("Veo 4K Upscale aceita so Veo 3.1 como fonte");
           }
-          const srcVeoModel = (sourceNode.data.veoModel as string) || "veo3";
-          if (srcVeoModel === "veo3_fast") {
-            throw new Error("Veo 4K so funciona com Veo 3.1 Quality (veo3). Mude o veoModel do node Veo de Fast pra Quality e rode o Veo de novo antes do upscale.");
-          }
           const results = (sourceNode.data.results as string[]) || [];
           const taskIdsList = (sourceNode.data.resultTaskIds as string[]) || [];
           const coverIndex = results.findIndex((u) => u === coverUrl);
@@ -911,8 +907,8 @@ export async function startGeneration(
         imageUrls: publicUrls.length > 0 ? publicUrls : undefined,
         model: options?.veoModel || "veo3_fast",
         aspectRatio: options?.aspectRatio || "9:16",
-        duration: options?.duration || "8s",
-        resolution: options?.resolution && /^\d+p$/i.test(options.resolution) ? options.resolution : "1080p",
+        duration: options?.duration,
+        resolution: options?.resolution && /^\d+p$/i.test(options.resolution) ? options.resolution : undefined,
         enhancePrompt: options?.enhancePrompt ?? true,
         seed: options?.seed ?? undefined,
         cost: options?.cost,
