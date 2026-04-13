@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo3-beta" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i";
 
 export interface ModelInfo {
   id: AIModel;
@@ -41,20 +41,6 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-2", label: "Last Frame", required: false },
     ],
     params: ["veoModel", "aspectRatio", "duration", "resolution", "enhancePrompt", "seed", "runs"],
-  },
-  {
-    id: "veo3-beta",
-    name: "Veo 3.1 Beta",
-    type: "video",
-    description: "Veo 3.1 Fast via fal.ai (image-to-video e first/last frame)",
-    costPerRun: 60,
-    handles: [
-      { id: "prompt", label: "Prompt*", required: true },
-      { id: "negative-prompt", label: "Neg. Prompt", required: false },
-      { id: "image-1", label: "First Frame", required: true },
-      { id: "image-2", label: "Last Frame", required: false },
-    ],
-    params: ["aspectRatio", "duration", "resolution", "generateAudio", "seed", "runs"],
   },
   {
     id: "seedance",

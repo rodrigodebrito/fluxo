@@ -112,7 +112,6 @@ export function getModelCost(model: string): number {
   switch (model) {
     case "nano-banana-pro": return 18;
     case "veo3": return 60;
-    case "veo3-beta": return 160; // fallback (8s 1080p com audio)
     case "seedance": return 165;
     case "kling": return 70;
     case "kling-o3-i2v": return 120;

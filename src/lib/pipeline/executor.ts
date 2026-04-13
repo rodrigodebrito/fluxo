@@ -722,7 +722,7 @@ export async function startGeneration(
   }
 
   // fal.ai models (Kling O3 i2v, O3 edit, O3 ref, Flux 2, utilities)
-  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale", "zimage-t2i", "zimage-i2i", "veo3-beta"];
+  const FAL_MODELS = ["kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "flux-2-pro", "flux-2-edit", "bg-removal", "upscale", "zimage-t2i", "zimage-i2i"];
   if (options?.model && FAL_MODELS.includes(options.model)) {
     // Upload element images for fal.ai
     let falElements: { frontal_image_url: string; reference_image_urls?: string[] }[] | undefined;
@@ -759,9 +759,7 @@ export async function startGeneration(
         endImageUrl: publicUrls[1] || undefined,
         duration: options.model === "kling-o3-i2v" ? (options.klingO3Duration || 5) :
                   options.model === "kling-o1-ref" ? (options.klingO1Duration || 5) : undefined,
-        veoDuration: options.model === "veo3-beta" ? (options.duration || "8s") : undefined,
-        veoResolution: options.model === "veo3-beta" ? (options.resolution || "1080p") : undefined,
-        aspectRatio: options.aspectRatio || (options.model === "veo3-beta" ? "9:16" : "16:9"),
+        aspectRatio: options.aspectRatio || "16:9",
         generateAudio: options.generateAudio ?? false,
         cfgScale: options.cfgScale ?? 0.5,
         keepAudio: options.keepAudio ?? true,

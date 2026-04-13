@@ -56,8 +56,6 @@ export async function POST(request: NextRequest) {
       videoUrl: body.videoUrl,
       endImageUrl: body.endImageUrl,
       duration: body.duration,
-      veoDuration: body.veoDuration,
-      veoResolution: body.veoResolution,
       aspectRatio: body.aspectRatio,
       generateAudio: body.generateAudio,
       cfgScale: body.cfgScale,

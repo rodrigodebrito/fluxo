@@ -34,12 +34,6 @@ const FLUX_ENDPOINTS: Record<string, string> = {
 export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro", hasImage: boolean = true, imageCount: number = hasImage ? 1 : 0): string | null {
   // Check Flux endpoints first
   if (FLUX_ENDPOINTS[model]) return FLUX_ENDPOINTS[model];
-  // Veo 3.1 Beta: picks endpoint by image count
-  if (model === "veo3-beta") {
-    if (imageCount >= 2) return "fal-ai/veo3.1/fast/first-last-frame-to-video";
-    if (imageCount === 1) return "fal-ai/veo3.1/fast/image-to-video";
-    return null;
-  }
   const template = FAL_ENDPOINT_TEMPLATES[model];
   if (!template) return null;
   // Use T2V endpoint when no image is provided
@@ -51,7 +45,7 @@ export function getFalEndpoint(model: string, tier: "std" | "pro" = "pro", hasIm
 }
 
 // Keep a flat lookup for validation
-export const FAL_MODELS = new Set([...Object.keys(FAL_ENDPOINT_TEMPLATES), ...Object.keys(FLUX_ENDPOINTS), "veo3-beta"]);
+export const FAL_MODELS = new Set([...Object.keys(FAL_ENDPOINT_TEMPLATES), ...Object.keys(FLUX_ENDPOINTS)]);
 
 // Retry config (same pattern as kie.ts)
 const MAX_RETRIES = 3;
@@ -256,8 +250,6 @@ interface FalGenerateInput {
   videoUrl?: string;
   endImageUrl?: string;
   duration?: number;
-  veoDuration?: string;
-  veoResolution?: string;
   aspectRatio?: string;
   generateAudio?: boolean;
   cfgScale?: number;
@@ -345,29 +337,6 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     } else {
       if (input.prompt) body.prompt = input.prompt;
       body.duration = String(input.duration || 5);
-    }
-    return body;
-  }
-
-  if (model === "veo3-beta") {
-    // Veo 3.1 Fast via fal.ai — image-to-video (1 img) ou first-last-frame-to-video (2 imgs)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const body: Record<string, any> = {
-      prompt: input.prompt,
-      aspect_ratio: input.aspectRatio || "auto",
-      duration: input.veoDuration || "8s",
-      resolution: input.veoResolution || "1080p",
-      generate_audio: input.generateAudio ?? true,
-    };
-    if (input.negativePrompt) body.negative_prompt = input.negativePrompt;
-    if (input.seed != null) body.seed = input.seed;
-
-    const imgs = (input.imageUrls || []).filter(Boolean);
-    if (imgs.length >= 2) {
-      body.first_frame_url = imgs[0];
-      body.last_frame_url = imgs[1];
-    } else if (imgs.length === 1) {
-      body.image_url = imgs[0];
     }
     return body;
   }

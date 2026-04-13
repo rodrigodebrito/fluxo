@@ -78,8 +78,6 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Modelo", model: "nano-banana-pro", isRunning: false, results: [], imageInputCount: 1 };
     case "model-veo3":
       return { label: "Veo 3.1", model: "veo3", isRunning: false, results: [], imageInputCount: 1, veoModel: "veo3_fast", aspectRatio: "9:16", duration: "8s", resolution: "1080p", enhancePrompt: true };
-    case "model-veo3-beta":
-      return { label: "Veo 3.1 Beta", model: "veo3-beta", isRunning: false, results: [], imageInputCount: 2, aspectRatio: "9:16", duration: "8s", resolution: "1080p", generateAudio: true };
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-kling":
@@ -991,14 +989,6 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
         else costPerRun = 60;
-      } else if (m === "veo3-beta") {
-        // Fal Veo 3.1 Fast: $0.10/s (720/1080p sem audio), $0.15/s (com audio),
-        // $0.30/s (4k sem audio), $0.35/s (4k com audio). ~200cr/$.
-        const secs = parseInt(String(pipeline.duration || "8").replace(/\D/g, ""), 10) || 8;
-        const is4k = (pipeline.resolution || "").toLowerCase().includes("4k");
-        const withAudio = pipeline.generateAudio !== false;
-        const perSec = is4k ? (withAudio ? 70 : 60) : (withAudio ? 30 : 20);
-        costPerRun = perSec * secs;
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
         const perSec = isFast ? 33 : 41;
@@ -1852,7 +1842,6 @@ const MENU_STRUCTURE: MenuItem[] = [
     label: "Video models",
     children: [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
-      { type: "model-veo3-beta", label: "Veo 3.1 Beta (Fal.ai)" },
       { type: "model-seedance", label: "Seedance 2.0" },
       { type: "model-kling", label: "Kling 3" },
       { type: "model-kling-o3-i2v", label: "Kling O3" },
