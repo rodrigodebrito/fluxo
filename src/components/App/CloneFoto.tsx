@@ -16,6 +16,22 @@ const MODE_OPTIONS = [
   { value: "style", label: "Modelar Estilo (variacao criativa)", description: "Captura o vibe/estetica e gera uma variacao criativa" },
 ];
 
+const ULTRA_REALISM_BLOCK = `Ultra photorealistic human skin rendering with visible pores, micro-imperfections, natural skin texture, subtle blemishes, fine lines and realistic subsurface scattering. No plastic or artificial smoothing.
+
+Highly detailed eyes with natural iris complexity, radial patterns, subtle color variation, realistic reflections, moist waterline, and natural sclera tone (no pure white).
+
+Individually defined hair strands with natural irregularity, flyaways, varying thickness, and realistic light interaction. No helmet-like or overly perfect hair.
+
+Physically accurate lighting with soft imperfections, natural shadows, slight exposure inconsistencies, and real-world light behavior. Avoid studio-perfect artificial lighting unless specified.
+
+Micro details preserved: skin grain, tiny facial hairs, pores, eyelashes with irregular spacing, natural lip texture (fine lines, slight dryness).
+
+Camera realism: slight lens imperfections, subtle noise, depth of field consistent with real lenses, minor motion blur if applicable.
+
+Avoid CGI look, avoid over-sharpening, avoid waxy skin, avoid symmetry perfection. Maintain natural human imperfections.
+
+Shot as if captured on a real high-end camera (e.g. 50mm or 85mm lens), with cinematic yet natural color grading. Hyper-real human rendering indistinguishable from a real photograph. Imperfections are mandatory. Skin must NOT look digital.`;
+
 const ASPECT_RATIO_OPTIONS = [
   { value: "9:16", label: "9:16 (Stories)" },
   { value: "4:5", label: "4:5 (Feed)" },
@@ -78,6 +94,7 @@ export default function CloneFoto({ onBack }: Props) {
   const [gender, setGender] = useState("woman");
   const [mode, setMode] = useState("clone");
   const [aspectRatio, setAspectRatio] = useState("9:16");
+  const [ultraRealism, setUltraRealism] = useState(false);
   const [extraDetails, setExtraDetails] = useState("");
   const [result, setResult] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -157,7 +174,17 @@ export default function CloneFoto({ onBack }: Props) {
       try { data = JSON.parse(text); } catch { throw new Error("Resposta invalida do servidor"); }
       if (!response.ok) throw new Error(data.error || "Erro ao gerar prompt");
 
-      setResult(data.text);
+      let finalPrompt = data.text as string;
+      if (ultraRealism) {
+        // Injeta o bloco de ultra realismo antes da linha final "No text, no captions..."
+        const cleanOutputMatch = finalPrompt.match(/\n?No text,[^\n]*$/i);
+        if (cleanOutputMatch) {
+          finalPrompt = finalPrompt.replace(cleanOutputMatch[0], `\n\n${ULTRA_REALISM_BLOCK}${cleanOutputMatch[0]}`);
+        } else {
+          finalPrompt = `${finalPrompt}\n\n${ULTRA_REALISM_BLOCK}`;
+        }
+      }
+      setResult(finalPrompt);
       window.dispatchEvent(new Event("fluxo-credits-update"));
     } catch (err) {
       alert("Erro: " + (err instanceof Error ? err.message : "Erro desconhecido"));
@@ -346,6 +373,26 @@ export default function CloneFoto({ onBack }: Props) {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Ultra Realism toggle */}
+          <div>
+            <button
+              onClick={() => setUltraRealism((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                ultraRealism
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">Ultra Realismo</div>
+                <div className="text-[10px] text-zinc-500">Injeta bloco de foto hiperrealista (poros, olhos, iluminacao, camera real)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${ultraRealism ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${ultraRealism ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
           </div>
 
           {/* Extra Details */}
