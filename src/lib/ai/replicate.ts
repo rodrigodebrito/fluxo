@@ -55,7 +55,8 @@ export async function startTraining(
   destination: string,
   imageZipUrl: string,
   triggerWord: string,
-  webhookUrl?: string
+  webhookUrl?: string,
+  steps?: number
 ): Promise<{ trainingId: string }> {
   const training = await replicate.trainings.create(
     TRAINER_OWNER,
@@ -66,7 +67,7 @@ export async function startTraining(
       input: {
         input_images: imageZipUrl,
         trigger_word: triggerWord,
-        steps: 1000,
+        steps: steps ?? 1500,
         autocaption: true,
         learning_rate: 0.0004,
       },

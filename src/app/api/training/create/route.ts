@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
     const name = (formData.get("name") as string)?.trim();
     const triggerWord = (formData.get("trigger_word") as string)?.trim();
     const files = formData.getAll("images") as File[];
+    const rawSteps = formData.get("steps");
+    let steps: number | undefined;
+    if (typeof rawSteps === "string" && rawSteps.trim() !== "") {
+      const parsed = parseInt(rawSteps, 10);
+      if (!Number.isNaN(parsed) && parsed >= 500 && parsed <= 3000) steps = parsed;
+    }
 
     if (!name || !triggerWord) {
       return NextResponse.json(
@@ -157,7 +163,8 @@ export async function POST(request: NextRequest) {
       replicateModelId,
       imageZipUrl,
       triggerWord,
-      webhookUrl
+      webhookUrl,
+      steps
     );
     console.log(`[training/create] training started: ${trainingId}`);
 

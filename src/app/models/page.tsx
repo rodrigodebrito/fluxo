@@ -53,6 +53,7 @@ export default function ModelsPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [trainingProvider, setTrainingProvider] = useState<"replicate" | "fal-zimage">("replicate");
+  const [trainingSteps, setTrainingSteps] = useState<number>(1500);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchModels = useCallback(async () => {
@@ -119,6 +120,9 @@ export default function ModelsPage() {
       const formData = new FormData();
       formData.append("name", modelName.trim());
       formData.append("trigger_word", triggerWord.trim());
+      if (trainingProvider === "replicate") {
+        formData.append("steps", String(trainingSteps));
+      }
       for (const file of selectedFiles) {
         formData.append("images", file);
       }
@@ -145,6 +149,7 @@ export default function ModelsPage() {
       previews.forEach((p) => URL.revokeObjectURL(p));
       setPreviews([]);
       setTrainingProvider("replicate");
+      setTrainingSteps(1500);
       setShowCreateModal(false);
 
       // Refresh list
@@ -391,6 +396,35 @@ export default function ModelsPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Training Steps (Flux LoRA only) */}
+              {trainingProvider === "replicate" && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-zinc-300">
+                      Qualidade do Treino
+                    </label>
+                    <span className="text-xs text-purple-400 font-mono">{trainingSteps} steps</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1000"
+                    max="2500"
+                    step="100"
+                    value={trainingSteps}
+                    onChange={(e) => setTrainingSteps(parseInt(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
+                    <span>Rapido (1000)</span>
+                    <span>Recomendado (1500)</span>
+                    <span>Maximo (2500)</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Mais steps = identidade mais forte. 1500 e o sweet spot. Acima de 2000 so com 15+ fotos variadas (risco de overfitting).
+                  </p>
+                </div>
+              )}
 
               {/* Model Name */}
               <div>
