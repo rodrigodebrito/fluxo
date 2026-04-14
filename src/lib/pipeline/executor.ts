@@ -83,6 +83,8 @@ interface PipelineData {
   realismEnabled?: boolean;
   realismScale?: number;
   mainLoraScale?: number;
+  customGuidanceScale?: number;
+  customNumInferenceSteps?: number;
   customAspectRatio?: string;
   customNumOutputs?: number;
   // Grok Imagine
@@ -171,11 +173,13 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.trainedModelId = (modelNode.data.trainedModelId as string) || "";
   const extraLoras = (modelNode.data.extraLoras as { id: string; trigger: string }[]) || [];
   result.extraLoraIds = extraLoras.map((l) => l.id).filter((id) => id !== "");
-  result.nsfwEnabled = (modelNode.data.nsfwEnabled as boolean) ?? true;
+  result.nsfwEnabled = (modelNode.data.nsfwEnabled as boolean) ?? false;
   result.nsfwScale = (modelNode.data.nsfwScale as number) ?? 0.6;
-  result.realismEnabled = (modelNode.data.realismEnabled as boolean) ?? true;
+  result.realismEnabled = (modelNode.data.realismEnabled as boolean) ?? false;
   result.realismScale = (modelNode.data.realismScale as number) ?? 0.7;
   result.mainLoraScale = (modelNode.data.mainLoraScale as number) ?? 1;
+  result.customGuidanceScale = (modelNode.data.customGuidanceScale as number) ?? 2.8;
+  result.customNumInferenceSteps = (modelNode.data.customNumInferenceSteps as number) ?? 35;
   result.customAspectRatio = (modelNode.data.customAspectRatio as string) || "1:1";
   result.customNumOutputs = (modelNode.data.customNumOutputs as number) || 1;
   result.grokResolution = (modelNode.data.grokResolution as string) || "480p";
@@ -594,6 +598,8 @@ export async function startGeneration(
     realismEnabled?: boolean;
     realismScale?: number;
     mainLoraScale?: number;
+    customGuidanceScale?: number;
+    customNumInferenceSteps?: number;
     customAspectRatio?: string;
     customNumOutputs?: number;
     avatarTier?: string;
@@ -792,11 +798,13 @@ export async function startGeneration(
       body: JSON.stringify({
         trainedModelId: options.trainedModelId,
         extraLoraIds: options.extraLoraIds || [],
-        nsfwEnabled: options.nsfwEnabled ?? true,
+        nsfwEnabled: options.nsfwEnabled ?? false,
         nsfwScale: options.nsfwScale ?? 0.6,
-        realismEnabled: options.realismEnabled ?? true,
+        realismEnabled: options.realismEnabled ?? false,
         realismScale: options.realismScale ?? 0.7,
         mainLoraScale: options.mainLoraScale ?? 1,
+        guidanceScale: options.customGuidanceScale ?? 2.8,
+        numInferenceSteps: options.customNumInferenceSteps ?? 35,
         prompt,
         aspectRatio: options.customAspectRatio || "1:1",
         numOutputs: options.customNumOutputs || 1,

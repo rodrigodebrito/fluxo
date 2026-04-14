@@ -943,6 +943,104 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </>
         )}
 
+        {/* Guidance Scale (CFG) */}
+        {params.includes("customGuidance") && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-zinc-300">Guidance (CFG)</span>
+              <span className="text-[10px] text-purple-400 font-mono">{((node.data.customGuidanceScale as number) ?? 2.8).toFixed(1)}</span>
+            </div>
+            <input
+              type="range" min="1.5" max="5" step="0.1"
+              value={(node.data.customGuidanceScale as number) ?? 2.8}
+              onChange={(e) => update({ customGuidanceScale: parseFloat(e.target.value) })}
+              className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+            />
+            <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+              <span>Natural (pele real)</span><span>Forçado</span>
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-1">Baixo = pele mais real. Alto = mais fiel ao prompt mas plastifica.</p>
+          </div>
+        )}
+
+        {/* Inference Steps */}
+        {params.includes("customSteps") && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-zinc-300">Steps</span>
+              <span className="text-[10px] text-purple-400 font-mono">{((node.data.customNumInferenceSteps as number) ?? 35)}</span>
+            </div>
+            <input
+              type="range" min="20" max="50" step="1"
+              value={(node.data.customNumInferenceSteps as number) ?? 35}
+              onChange={(e) => update({ customNumInferenceSteps: parseInt(e.target.value) })}
+              className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+            />
+            <div className="flex justify-between text-[9px] text-zinc-600 mt-0.5">
+              <span>Rapido</span><span>Detalhado</span>
+            </div>
+          </div>
+        )}
+
+        {/* NSFW LoRA toggle + scale */}
+        {params.includes("customNsfw") && (
+          <div>
+            <label className="flex items-center justify-between gap-2 cursor-pointer">
+              <span className="text-sm text-zinc-300">NSFW LoRA</span>
+              <input
+                type="checkbox"
+                checked={(node.data.nsfwEnabled as boolean) ?? false}
+                onChange={(e) => update({ nsfwEnabled: e.target.checked })}
+                className="accent-purple-500 nodrag"
+              />
+            </label>
+            {((node.data.nsfwEnabled as boolean) ?? false) && (
+              <div className="mt-1.5 px-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-zinc-400">Forca NSFW</span>
+                  <span className="text-[10px] text-purple-400 font-mono">{((node.data.nsfwScale as number) ?? 0.6).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range" min="0" max="1.2" step="0.1"
+                  value={(node.data.nsfwScale as number) ?? 0.6}
+                  onChange={(e) => update({ nsfwScale: parseFloat(e.target.value) })}
+                  className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Super Realism LoRA toggle + scale */}
+        {params.includes("customRealism") && (
+          <div>
+            <label className="flex items-center justify-between gap-2 cursor-pointer">
+              <span className="text-sm text-zinc-300">Super Realism LoRA</span>
+              <input
+                type="checkbox"
+                checked={(node.data.realismEnabled as boolean) ?? false}
+                onChange={(e) => update({ realismEnabled: e.target.checked })}
+                className="accent-purple-500 nodrag"
+              />
+            </label>
+            {((node.data.realismEnabled as boolean) ?? false) && (
+              <div className="mt-1.5 px-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-zinc-400">Forca Realism</span>
+                  <span className="text-[10px] text-purple-400 font-mono">{((node.data.realismScale as number) ?? 0.7).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range" min="0" max="1.2" step="0.1"
+                  value={(node.data.realismScale as number) ?? 0.7}
+                  onChange={(e) => update({ realismScale: parseFloat(e.target.value) })}
+                  className="w-full h-1.5 rounded-full appearance-none bg-zinc-700 accent-purple-500 nodrag"
+                />
+                <p className="text-[9px] text-zinc-600 mt-1">Dica: as vezes empurra pra look ceroso. Testa desligado.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Custom Aspect Ratio */}
         {params.includes("customAspectRatio") && (
           <div>

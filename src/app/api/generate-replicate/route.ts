@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled, nsfwScale, realismEnabled, realismScale, mainLoraScale } = body;
+  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled, nsfwScale, realismEnabled, realismScale, mainLoraScale, guidanceScale, numInferenceSteps } = body;
 
   if (!trainedModelId) {
     return NextResponse.json(
@@ -125,10 +125,12 @@ export async function POST(request: NextRequest) {
       prompt,
       aspectRatio: aspectRatio || "1:1",
       numOutputs: numOutputs || 1,
-      nsfwEnabled: nsfwEnabled ?? true,
+      nsfwEnabled: nsfwEnabled ?? false,
       nsfwScale: nsfwScale ?? 0.6,
-      realismEnabled: realismEnabled ?? true,
+      realismEnabled: realismEnabled ?? false,
       realismScale: realismScale ?? 0.7,
+      guidanceScale: typeof guidanceScale === "number" ? guidanceScale : undefined,
+      numInferenceSteps: typeof numInferenceSteps === "number" ? numInferenceSteps : undefined,
     });
 
     console.log("[generate-replicate] imageUrls:", imageUrls);

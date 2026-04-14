@@ -117,6 +117,7 @@ export interface ReplicateGenerateInput {
   aspectRatio?: string;
   numOutputs?: number;
   guidanceScale?: number;
+  numInferenceSteps?: number;
   nsfwEnabled?: boolean;
   nsfwScale?: number;
   realismEnabled?: boolean;
@@ -142,7 +143,8 @@ export async function generateWithTrainedModel(
     lora_scales: loraScales,
     num_outputs: input.numOutputs ?? 1,
     aspect_ratio: input.aspectRatio ?? "1:1",
-    guidance_scale: input.guidanceScale ?? 3.5,
+    guidance_scale: input.guidanceScale ?? 2.8,
+    num_inference_steps: input.numInferenceSteps ?? 35,
     output_format: "png",
     disable_safety_checker: true,
   };

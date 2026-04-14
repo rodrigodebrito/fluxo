@@ -107,7 +107,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-extract-audio":
       return { label: "Extract Audio", model: "extract-audio", isRunning: false, results: [], imageInputCount: 0, audioFormat: "mp3" };
     case "model-custom":
-      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: true, nsfwScale: 0.6, realismEnabled: true, realismScale: 0.7, mainLoraScale: 1, customAspectRatio: "1:1", customNumOutputs: 1 };
+      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: false, nsfwScale: 0.6, realismEnabled: false, realismScale: 0.7, mainLoraScale: 1, customGuidanceScale: 2.8, customNumInferenceSteps: 35, customAspectRatio: "1:1", customNumOutputs: 1 };
     case "model-wan-i2v":
       return { label: "Wan 2.7 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, wanResolution: "720p", wanDuration: 5, promptExtend: true };
     case "model-kling-avatar":
@@ -1125,6 +1125,8 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         realismEnabled: pipeline.realismEnabled,
         realismScale: pipeline.realismScale,
         mainLoraScale: pipeline.mainLoraScale,
+        customGuidanceScale: pipeline.customGuidanceScale,
+        customNumInferenceSteps: pipeline.customNumInferenceSteps,
         customAspectRatio: pipeline.customAspectRatio,
         customNumOutputs: pipeline.customNumOutputs,
         avatarTier: pipeline.avatarTier,

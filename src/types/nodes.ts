@@ -227,7 +227,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
     ],
-    params: ["trainedModel", "customAspectRatio", "customNumOutputs", "runs"],
+    params: ["trainedModel", "customGuidance", "customSteps", "customNsfw", "customRealism", "customAspectRatio", "customNumOutputs", "runs"],
   },
   {
     id: "wan-i2v",
