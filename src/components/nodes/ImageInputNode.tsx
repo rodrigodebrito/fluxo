@@ -145,14 +145,14 @@ export default function ImageInputNode({ id, data }: NodeProps) {
             {/\.(mp4|webm|mov|avi)$/i.test(images[safeIndex]?.name || "") ? (
               <video
                 src={images[safeIndex]?.url}
-                className="w-full h-[130px] object-cover rounded-md"
+                className="w-full h-auto rounded-md block"
                 muted
               />
             ) : (
               <img
                 src={images[safeIndex]?.thumbUrl || images[safeIndex]?.url}
                 alt={images[safeIndex]?.name}
-                className="w-full h-[130px] object-cover rounded-md"
+                className="w-full h-auto rounded-md block"
                 loading="lazy"
                 decoding="async"
               />

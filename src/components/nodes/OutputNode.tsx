@@ -55,7 +55,7 @@ export default function OutputNode({ id, data }: NodeProps) {
               <video
                 src={resultUrl}
                 controls
-                className="w-full h-40 object-cover rounded-lg bg-black"
+                className="w-full h-auto rounded-lg bg-black block"
               />
             ) : resultType === "audio" ? (
               <div className="flex flex-col items-center justify-center h-40 bg-zinc-800 rounded-lg">
@@ -68,7 +68,7 @@ export default function OutputNode({ id, data }: NodeProps) {
               <img
                 src={resultUrl}
                 alt="Resultado"
-                className="w-full h-40 object-cover rounded-lg"
+                className="w-full h-auto rounded-lg block"
                 loading="lazy"
                 decoding="async"
               />

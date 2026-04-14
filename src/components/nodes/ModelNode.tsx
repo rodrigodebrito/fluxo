@@ -2,7 +2,7 @@
 
 import { Handle, Position, type NodeProps, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import { AVAILABLE_MODELS } from "@/types/nodes";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Gallery from "@/components/Gallery/Gallery";
 
 // Cache global de thumbnails — evita recriar ao re-render
@@ -312,7 +312,7 @@ export default function ModelNode({ id, data }: NodeProps) {
             ) : isVideo ? (
               <video
                 src={results[safeIndex]}
-                className="w-full rounded-md max-h-[180px] object-contain bg-black"
+                className="w-full h-auto rounded-md bg-black block"
                 controls
                 muted
                 loop
@@ -325,7 +325,7 @@ export default function ModelNode({ id, data }: NodeProps) {
               <img
                 src={thumbUrl || results[safeIndex]}
                 alt={`Resultado ${safeIndex + 1}`}
-                className="w-full rounded-md max-h-[180px] object-cover"
+                className="w-full h-auto rounded-md block"
                 loading="lazy"
                 decoding="async"
               />
