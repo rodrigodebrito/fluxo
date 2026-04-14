@@ -126,7 +126,7 @@ export function getModelCost(model: string): number {
     case "bg-removal": return 1;
     case "upscale": return 2;
     case "extract-audio": return 1;
-    case "custom-model": return 10;
+    case "custom-model": return 18;
     case "wan-i2v": return 80;
     case "kling-avatar": return 40; // fallback, real cost is per-second
     case "grok-i2v": return 10;

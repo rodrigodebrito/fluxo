@@ -223,7 +223,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "Modelo Treinado",
     type: "image",
     description: "Gere imagens com seu modelo personalizado (LoRA via Replicate)",
-    costPerRun: 10,
+    costPerRun: 18,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
     ],

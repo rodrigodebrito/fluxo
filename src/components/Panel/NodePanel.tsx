@@ -409,7 +409,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     costPerRun = Math.ceil(grokPerSec * grokDuration);
   }
   if (model === "custom-model") {
-    costPerRun = 10 * ((node.data.customNumOutputs as number) || 1);
+    costPerRun = 18 * ((node.data.customNumOutputs as number) || 1);
   }
   if (model === "zimage-t2i" || model === "zimage-i2i") {
     // $0.005/MP ~ 1MP padrao = 2 cred

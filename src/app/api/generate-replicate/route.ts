@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
-  const finalCost = cost || 10;
+  const finalCost = cost || 18;
   const { hasCredits } = await verifyCredits(user.id, "custom-model", finalCost);
   if (!hasCredits) return insufficientCreditsResponse(finalCost);
 
