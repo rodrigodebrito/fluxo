@@ -89,12 +89,63 @@ export default function ModelsPage() {
     return () => clearInterval(interval);
   }, [models, fetchModels]);
 
-  const handleFilesSelected = (files: FileList | null) => {
+  // Redimensiona imagem pra max 1024px (resolucao que o trainer usa internamente)
+  // Isso evita estourar o limite de body do Vercel (~4.5MB por request)
+  const resizeImage = (file: File, maxSize = 1024): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("canvas ctx null")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { reject(new Error("toBlob null")); return; }
+            const resized = new File([blob], file.name.replace(/\.(png|webp)$/i, ".jpg"), {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(resized);
+          },
+          "image/jpeg",
+          0.92
+        );
+      };
+      img.onerror = () => reject(new Error("image load failed"));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFilesSelected = async (files: FileList | null) => {
     if (!files) return;
-    const newFiles = Array.from(files).filter((f) =>
+    const rawFiles = Array.from(files).filter((f) =>
       ["image/jpeg", "image/png", "image/webp"].includes(f.type)
     );
-    const combined = [...selectedFiles, ...newFiles].slice(0, 30);
+
+    // Redimensiona todas pra 1024px max antes de guardar
+    const resized: File[] = [];
+    for (const f of rawFiles) {
+      try {
+        resized.push(await resizeImage(f, 1024));
+      } catch {
+        resized.push(f); // fallback: usa original se der ruim
+      }
+    }
+
+    const combined = [...selectedFiles, ...resized].slice(0, 30);
     setSelectedFiles(combined);
 
     // Generate previews
