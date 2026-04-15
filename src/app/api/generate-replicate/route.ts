@@ -10,6 +10,8 @@ import {
   chargeCredits,
   checkRateLimit,
   rateLimitResponse,
+  canTrainModels,
+  trainingForbiddenResponse,
 } from "@/lib/auth-guard";
 
 async function resolveWeightsUrl(
@@ -39,6 +41,8 @@ async function resolveWeightsUrl(
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
+
+  if (!(await canTrainModels(user.id))) return trainingForbiddenResponse();
 
   const rl = checkRateLimit(user.id, "generation");
   if (!rl.allowed) return rateLimitResponse(rl.resetIn);

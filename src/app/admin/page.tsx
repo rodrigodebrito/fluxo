@@ -10,6 +10,7 @@ interface UserProfile {
   credits: number;
   role: string;
   plan: string;
+  can_train_models: boolean;
   created_at: string;
 }
 
@@ -319,6 +320,26 @@ export default function AdminPage() {
       setCreditAmounts((prev) => ({ ...prev, [userId]: "" }));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro");
+    }
+  };
+
+  const handleToggleTraining = async (userId: string, current: boolean) => {
+    const next = !current;
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, can_train_models: next } : u)));
+    try {
+      const res = await fetch("/api/admin/toggle-training", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, enabled: next }),
+      });
+      if (!res.ok) {
+        setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, can_train_models: current } : u)));
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Erro ao atualizar permissao");
+      }
+    } catch {
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, can_train_models: current } : u)));
+      alert("Erro ao atualizar permissao");
     }
   };
 
@@ -661,6 +682,17 @@ export default function AdminPage() {
                             title="Ver historico de creditos"
                           >
                             Historico
+                          </button>
+                          <button
+                            onClick={() => handleToggleTraining(user.id, user.can_train_models)}
+                            className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors border ${
+                              user.can_train_models
+                                ? "bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border-purple-500/30"
+                                : "bg-zinc-800 hover:bg-zinc-700 text-zinc-500 border-zinc-700"
+                            }`}
+                            title={user.can_train_models ? "Revogar permissao de LoRA" : "Liberar treino e uso de LoRA"}
+                          >
+                            {user.can_train_models ? "LoRA ON" : "LoRA OFF"}
                           </button>
                           <input
                             type="number"

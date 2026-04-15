@@ -55,7 +55,7 @@ export default function ModelsPage() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [trainingProvider, setTrainingProvider] = useState<"replicate" | "fal-zimage">("replicate");
   const [trainingSteps, setTrainingSteps] = useState<number>(1500);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [canTrain, setCanTrain] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,10 +64,10 @@ export default function ModelsPage() {
       if (!data.user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, can_train_models")
         .eq("id", data.user.id)
         .single();
-      setIsAdmin(profile?.role === "admin");
+      setCanTrain(profile?.role === "admin" || profile?.can_train_models === true);
     });
   }, []);
 
@@ -293,7 +293,7 @@ export default function ModelsPage() {
               Treine modelos com suas fotos para gerar imagens consistentes
             </p>
           </div>
-          {isAdmin ? (
+          {canTrain ? (
             <button
               onClick={() => setShowCreateModal(true)}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
@@ -305,7 +305,7 @@ export default function ModelsPage() {
             </button>
           ) : (
             <div className="px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-500">
-              Treinamento restrito a administradores
+              Treinamento de modelos nao liberado para sua conta
             </div>
           )}
         </div>
@@ -332,7 +332,7 @@ export default function ModelsPage() {
             <p className="text-zinc-600 text-xs mb-6 text-center max-w-md">
               Treine um modelo com 10-20 fotos de uma pessoa para gerar imagens consistentes em qualquer cenario
             </p>
-            {isAdmin && (
+            {canTrain && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"

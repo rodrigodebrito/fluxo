@@ -8,6 +8,8 @@ import {
   rateLimitResponse,
   verifyCredits,
   chargeCredits,
+  canTrainModels,
+  trainingForbiddenResponse,
 } from "@/lib/auth-guard";
 import { submitFalTask } from "@/lib/ai/fal";
 
@@ -18,19 +20,7 @@ export async function POST(request: NextRequest) {
   const user = await getAuthUser();
   if (!user) return unauthorizedResponse();
 
-  // Apenas admin pode treinar modelos por enquanto
-  const serviceCheck = await createServiceClient();
-  const { data: profileCheck } = await serviceCheck
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profileCheck?.role !== "admin") {
-    return NextResponse.json(
-      { error: "Treinamento de modelos esta restrito a administradores no momento" },
-      { status: 403 }
-    );
-  }
+  if (!(await canTrainModels(user.id))) return trainingForbiddenResponse();
 
   const rl = checkRateLimit(user.id, "generation");
   if (!rl.allowed) return rateLimitResponse(rl.resetIn);

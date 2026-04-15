@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkCredits, debitCredits, getModelCost } from "@/lib/credits";
 import { NextResponse } from "next/server";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -7,6 +7,25 @@ export async function getAuthUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return user;
+}
+
+// Retorna true se o usuario pode treinar/usar LoRAs (admin sempre pode, alem da flag)
+export async function canTrainModels(userId: string): Promise<boolean> {
+  const service = await createServiceClient();
+  const { data: profile } = await service
+    .from("profiles")
+    .select("role, can_train_models")
+    .eq("id", userId)
+    .single();
+  if (!profile) return false;
+  return profile.role === "admin" || profile.can_train_models === true;
+}
+
+export function trainingForbiddenResponse() {
+  return NextResponse.json(
+    { error: "Seu usuario nao tem permissao para usar modelos treinados. Fale com o administrador." },
+    { status: 403 }
+  );
 }
 
 export function unauthorizedResponse() {
