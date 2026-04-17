@@ -292,7 +292,7 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     if (input.multiShotEnabled && input.multiShots && input.multiShots.length > 0) {
       body.multi_prompt = input.multiShots.map((s) => ({
         prompt: s.prompt,
-        duration: s.duration,
+        duration: String(s.duration),
       }));
       body.shot_type = "customize";
     } else {
@@ -331,7 +331,7 @@ export function buildFalInput(input: FalGenerateInput): Record<string, any> {
     if (input.multiShotEnabled && input.multiShots && input.multiShots.length > 0) {
       body.multi_prompt = input.multiShots.map((s) => ({
         prompt: s.prompt,
-        duration: s.duration,
+        duration: String(s.duration),
       }));
       body.shot_type = "customize";
     } else {
