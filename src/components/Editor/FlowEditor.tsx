@@ -81,23 +81,23 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-veo-4k":
       return { label: "Veo 3.1 Upscale 4K", model: "veo-4k", isRunning: false, results: [], imageInputCount: 0 };
     case "model-seedance":
-      return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "16:9", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
+      return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "9:16", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-kling":
-      return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "16:9", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
+      return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "9:16", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":
       return { label: "Kling O3", model: "kling-o3-i2v", isRunning: false, results: [], imageInputCount: 2, klingO3Duration: 5, generateAudio: false, falTier: "pro", multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-edit":
       return { label: "Kling O3 Edit Video", model: "kling-o3-edit", isRunning: false, results: [], imageInputCount: 1, keepAudio: true, falTier: "pro", elementCount: 0 };
     case "model-kling-o1-ref":
-      return { label: "Kling O3 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 2, aspectRatio: "16:9", klingO1Duration: 5, generateAudio: false, falTier: "pro", elementCount: 0, multiShotEnabled: false, multiShots: [] };
+      return { label: "Kling O3 Reference", model: "kling-o1-ref", isRunning: false, results: [], imageInputCount: 2, aspectRatio: "9:16", klingO1Duration: 5, generateAudio: false, falTier: "pro", elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-motion":
       return { label: "Kling Motion", model: "kling-motion", isRunning: false, results: [], imageInputCount: 1, motionVersion: "2.6", motionMode: "720p", characterOrientation: "video" };
     case "model-gpt-image-txt":
-      return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium", gptBackground: "opaque" };
+      return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "9:16", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
-      return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "1:1", gptQuality: "medium" };
+      return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "9:16", gptQuality: "medium" };
     case "model-flux-2-pro":
-      return { label: "Flux 2 Pro", model: "flux-2-pro", isRunning: false, results: [], imageInputCount: 0, fluxImageSize: "landscape_4_3", seed: null };
+      return { label: "Flux 2 Pro", model: "flux-2-pro", isRunning: false, results: [], imageInputCount: 0, fluxImageSize: "portrait_9_16", seed: null };
     case "model-flux-2-edit":
       return { label: "Flux 2 Edit", model: "flux-2-edit", isRunning: false, results: [], imageInputCount: 1, fluxImageSize: "auto", seed: null };
     case "model-bg-removal":
@@ -107,19 +107,19 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-extract-audio":
       return { label: "Extract Audio", model: "extract-audio", isRunning: false, results: [], imageInputCount: 0, audioFormat: "mp3" };
     case "model-custom":
-      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: false, nsfwScale: 0.6, realismEnabled: false, realismScale: 0.7, mainLoraScale: 1, customGuidanceScale: 2.8, customNumInferenceSteps: 35, customAspectRatio: "1:1", customNumOutputs: 1 };
+      return { label: "Modelo Treinado", model: "custom-model", isRunning: false, results: [], imageInputCount: 0, trainedModelId: "", trainedModelTrigger: "", extraLoras: [], nsfwEnabled: false, nsfwScale: 0.6, realismEnabled: false, realismScale: 0.7, mainLoraScale: 1, customGuidanceScale: 2.8, customNumInferenceSteps: 35, customAspectRatio: "9:16", customNumOutputs: 1 };
     case "model-wan-i2v":
       return { label: "Wan 2.7 I2V", model: "wan-i2v", isRunning: false, results: [], imageInputCount: 1, wanResolution: "720p", wanDuration: 5, promptExtend: true };
     case "model-kling-avatar":
       return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
     case "model-grok-i2v":
-      return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "16:9" };
+      return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "9:16" };
     case "model-zimage-t2i":
-      return { label: "Z-Image Turbo", model: "zimage-t2i", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, seed: null };
+      return { label: "Z-Image Turbo", model: "zimage-t2i", isRunning: false, results: [], imageInputCount: 0, zimageSize: "portrait_9_16", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, seed: null };
     case "model-zimage-i2i":
       return { label: "Z-Image I2I", model: "zimage-i2i", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, seed: null };
     case "model-zimage-lora":
-      return { label: "Z-Image LoRA", model: "zimage-lora", isRunning: false, results: [], imageInputCount: 0, zimageSize: "landscape_4_3", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
+      return { label: "Z-Image LoRA", model: "zimage-lora", isRunning: false, results: [], imageInputCount: 0, zimageSize: "portrait_9_16", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
     case "model-zimage-i2i-lora":
       return { label: "Z-Image I2I + LoRA", model: "zimage-i2i-lora", isRunning: false, results: [], imageInputCount: 1, zimageSize: "auto", zimageSteps: 8, zimageStrength: 0.6, zimageAcceleration: "regular", zimageSafety: false, zimageLoras: [], seed: null };
     case "audioInput":

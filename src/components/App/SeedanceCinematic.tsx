@@ -76,8 +76,14 @@ Seedance 2.0 has a HARD LIMIT of 1536 characters for the text prompt. Your outpu
 ## Mood keywords (adapt camera/pacing):
 Epic=crane+wide+dramatic | Intense=close-ups+shaky+harsh | Calm=slow+soft+breathing | Playful=dynamic+quick+bright | Dark=shadows+slow+negative space | Dreamy=soft focus+ethereal | Raw=handheld+available light | Cinematic=dolly+motivated light | Romantic=warm+golden | Horror=dutch angles+creeping
 
+## Language Rules:
+- ALL prompt text, directions, camera notes, mood, shot descriptions, actions and environment MUST be in English
+- EXCEPTION: spoken dialogue / falas between characters MUST stay in Brazilian Portuguese (pt-BR) EXACTLY as the user wrote in the brief. Keep quotes intact, natural brazilian informal tone, no translation
+- Preserve pt-BR dialogue verbatim inside the English prompt using double quotes, prefixed with "(pt-BR):" so the model knows the spoken language. Example: she says (pt-BR): "trocou a senha de novo?"
+- If the brief contains no dialogue, the whole prompt is English
+
 ## Output Rules:
-- English only, output ONLY the prompt text
+- Output ONLY the prompt text (English with pt-BR dialogue preserved verbatim)
 - NO markdown, NO headers, NO explanations, NO commentary
 - MUST be under 1500 characters — count carefully
 - Dense, vivid, every word matters`;
