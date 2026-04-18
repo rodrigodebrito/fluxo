@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora" | "seedream-edit";
 
 export interface ModelInfo {
   id: AIModel;
@@ -149,6 +149,21 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["gptQuality", "aspectRatio", "runs"],
+  },
+  {
+    id: "seedream-edit",
+    name: "Seedream 4.5 Edit",
+    type: "image",
+    description: "Edicao multi-imagem (ate 4 refs) via Kie AI",
+    costPerRun: 8,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "Image 1*", required: true },
+      { id: "image-2", label: "Image 2", required: false },
+      { id: "image-3", label: "Image 3", required: false },
+      { id: "image-4", label: "Image 4", required: false },
+    ],
+    params: ["seedreamQuality", "aspectRatio", "runs"],
   },
   {
     id: "kling-motion",

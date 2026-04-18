@@ -51,6 +51,8 @@ interface PipelineData {
   // GPT Image
   gptQuality?: string;
   gptBackground?: string;
+  // Seedream 4.5 Edit
+  seedreamQuality?: "basic" | "high";
   // Seedance 1.5 Pro
   fixedLens?: boolean;
   // fal.ai models
@@ -155,6 +157,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.klingDuration = (modelNode.data.klingDuration as number) || 5;
   result.gptQuality = (modelNode.data.gptQuality as string) || "medium";
   result.gptBackground = (modelNode.data.gptBackground as string) || "opaque";
+  result.seedreamQuality = (modelNode.data.seedreamQuality as "basic" | "high") || "basic";
   result.fixedLens = (modelNode.data.fixedLens as boolean) ?? false;
   result.cfgScale = (modelNode.data.cfgScale as number) ?? 0.5;
   result.keepAudio = (modelNode.data.keepAudio as boolean) ?? true;
@@ -575,6 +578,7 @@ export async function startGeneration(
     referenceImageUrls?: string[];
     gptQuality?: string;
     gptBackground?: string;
+    seedreamQuality?: "basic" | "high";
     fixedLens?: boolean;
     videoUrl?: string;
     cfgScale?: number;
@@ -688,6 +692,29 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(gptText); } catch { throw new Error(`Resposta invalida do servidor: ${gptText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image");
+    return data.taskId;
+  }
+
+  // Seedream 4.5 Edit (Kie AI) — multi-image edit, ate 4 imagens
+  if (options?.model === "seedream-edit") {
+    if (publicUrls.length === 0) {
+      throw new Error("Seedream 4.5 Edit precisa de pelo menos 1 imagem de entrada");
+    }
+    const response = await fetch("/api/generate-seedream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        imageUrls: publicUrls.slice(0, 4),
+        aspectRatio: options?.aspectRatio || "9:16",
+        quality: options?.seedreamQuality || "basic",
+        cost: options?.cost,
+      }),
+    });
+    const seedreamText = await response.text();
+    let data;
+    try { data = JSON.parse(seedreamText); } catch { throw new Error(`Resposta invalida do servidor: ${seedreamText.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedream");
     return data.taskId;
   }
 

@@ -121,6 +121,7 @@ export function getModelCost(model: string): number {
     case "kling-motion": return 50;
     case "gpt-image-txt": return 4;
     case "gpt-image-img": return 4;
+    case "seedream-edit": return 8;
     case "flux-2-pro": return 6;
     case "flux-2-edit": return 6;
     case "bg-removal": return 1;

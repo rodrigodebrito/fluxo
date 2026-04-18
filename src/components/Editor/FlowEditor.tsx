@@ -96,6 +96,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "GPT Image 1.5", model: "gpt-image-txt", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "9:16", gptQuality: "medium", gptBackground: "opaque" };
     case "model-gpt-image-img":
       return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "9:16", gptQuality: "medium" };
+    case "model-seedream-edit":
+      return { label: "Seedream 4.5 Edit", model: "seedream-edit", isRunning: false, results: [], imageInputCount: 4, aspectRatio: "9:16", seedreamQuality: "basic" };
     case "model-flux-2-pro":
       return { label: "Flux 2 Pro", model: "flux-2-pro", isRunning: false, results: [], imageInputCount: 0, fluxImageSize: "portrait_9_16", seed: null };
     case "model-flux-2-edit":
@@ -993,6 +995,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       const m = pipeline.model;
       if (m === "nano-banana-pro") costPerRun = pipeline.resolution === "4K" ? 24 : 18;
       else if (m === "gpt-image-txt" || m === "gpt-image-img") costPerRun = pipeline.gptQuality === "high" ? 22 : 4;
+      else if (m === "seedream-edit") costPerRun = 8;
       else if (m === "veo3") {
         if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
         else if (pipeline.veoModel === "veo3") costPerRun = 250;
@@ -1870,6 +1873,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model", label: "Nano Banana Pro" },
       { type: "model-gpt-image-txt", label: "GPT Image 1.5" },
       { type: "model-gpt-image-img", label: "GPT Image 1.5 Edit" },
+      { type: "model-seedream-edit", label: "Seedream 4.5 Edit" },
       { type: "model-flux-2-pro", label: "Flux 2 Pro" },
       { type: "model-flux-2-edit", label: "Flux 2 Edit" },
       { type: "model-bg-removal", label: "BG Removal" },

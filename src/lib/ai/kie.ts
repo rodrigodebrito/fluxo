@@ -291,6 +291,39 @@ export async function createGptImageTask(
   return safeJson(response);
 }
 
+// === Seedream 4.5 Edit ===
+
+interface CreateSeedreamEditInput {
+  prompt: string;
+  imageUrls: string[];
+  aspectRatio?: string;
+  quality?: "basic" | "high";
+}
+
+export async function createSeedreamEditTask(
+  apiKey: string,
+  input: CreateSeedreamEditInput
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    prompt: input.prompt,
+    image_urls: input.imageUrls,
+    aspect_ratio: input.aspectRatio || "9:16",
+    quality: input.quality || "basic",
+    nsfw_checker: false,
+  };
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "seedream/4.5-edit", input: inputBody }),
+  });
+
+  return safeJson(response);
+}
+
 // === Kling 3.0 Video ===
 
 interface CreateKlingInput {

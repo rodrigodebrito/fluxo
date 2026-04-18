@@ -53,6 +53,20 @@ const GPT_QUALITIES = [
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
 ];
+const SEEDREAM_QUALITIES = [
+  { value: "basic", label: "Basic (2K)" },
+  { value: "high", label: "High (4K)" },
+];
+const SEEDREAM_ASPECT_RATIOS = [
+  { value: "9:16", label: "9:16" },
+  { value: "16:9", label: "16:9" },
+  { value: "1:1", label: "1:1" },
+  { value: "2:3", label: "2:3" },
+  { value: "3:2", label: "3:2" },
+  { value: "3:4", label: "3:4" },
+  { value: "4:3", label: "4:3" },
+  { value: "21:9", label: "21:9" },
+];
 const GPT_BACKGROUNDS = [
   { value: "opaque", label: "Opaque" },
   { value: "transparent", label: "Transparent" },
@@ -289,10 +303,14 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const isKling = model === "kling" || model === "kling-o3-i2v" || model === "kling-o3-edit" || model === "kling-o1-ref";
   const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img";
   const isMotion = model === "kling-motion";
+  const isSeedream = model === "seedream-edit";
 
   // GPT Image-specific
   const gptQuality = (node.data.gptQuality as string) || "medium";
   const gptBackground = (node.data.gptBackground as string) || "opaque";
+
+  // Seedream-specific
+  const seedreamQuality = (node.data.seedreamQuality as string) || "basic";
 
   // Flux 2
   const isFlux = model === "flux-2-pro" || model === "flux-2-edit";
@@ -816,6 +834,25 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
+        {/* Seedream 4.5 Quality */}
+        {params.includes("seedreamQuality") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Quality</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Basic = 2K, High = 4K (mesmo preco)">i</span>
+            </div>
+            <select
+              value={seedreamQuality}
+              onChange={(e) => update({ seedreamQuality: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              {SEEDREAM_QUALITIES.map((q) => (
+                <option key={q.value} value={q.value}>{q.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* GPT Image Background (text-to-image only) */}
         {params.includes("gptBackground") && (
           <div>
@@ -1217,7 +1254,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ aspectRatio: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(isGptImage ? GPT_ASPECT_RATIOS : (isKling || isMotion) ? KLING_ASPECT_RATIOS : isSeedance ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
+              {(isSeedream ? SEEDREAM_ASPECT_RATIOS : isGptImage ? GPT_ASPECT_RATIOS : (isKling || isMotion) ? KLING_ASPECT_RATIOS : isSeedance ? SD_ASPECT_RATIOS : isVideo ? VIDEO_ASPECT_RATIOS : IMAGE_ASPECT_RATIOS).map((ar) => (
                 <option key={ar.value} value={ar.value}>{ar.label}</option>
               ))}
             </select>
