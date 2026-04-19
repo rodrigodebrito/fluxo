@@ -73,11 +73,20 @@ export default function VideoInputNode({ id, data }: NodeProps) {
           <div className="relative group">
             <video
               src={videoUrl}
-              className="w-full h-[130px] object-cover rounded-md bg-black"
-              muted
+              className="w-full h-auto rounded-md block bg-black"
               loop
-              onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
-              onMouseLeave={(e) => { (e.target as HTMLVideoElement).pause(); (e.target as HTMLVideoElement).currentTime = 0; }}
+              playsInline
+              onMouseEnter={(e) => {
+                const v = e.target as HTMLVideoElement;
+                v.muted = false;
+                v.play();
+              }}
+              onMouseLeave={(e) => {
+                const v = e.target as HTMLVideoElement;
+                v.pause();
+                v.currentTime = 0;
+                v.muted = true;
+              }}
               onLoadedMetadata={(e) => {
                 const dur = Math.round((e.target as HTMLVideoElement).duration);
                 if (dur > 0) updateNodeData(id, { videoDuration: dur });
