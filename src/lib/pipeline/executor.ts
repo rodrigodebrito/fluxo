@@ -1107,19 +1107,18 @@ async function saveGeneration(model: string, prompt: string, resultUrls: string[
 }
 
 // Solicita reembolso de creditos quando geracao falha
-async function refundCredits(model: string, taskId: string, cost?: number) {
+async function refundCredits(model: string, taskId: string, cost?: number, reason?: string) {
   try {
     await fetch("/api/credits/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model, taskId, cost }),
     });
-    // Notificar componente de creditos pra atualizar
     window.dispatchEvent(new Event("fluxo-credits-update"));
-    // Toast de refund
     const { showToast } = await import("@/components/Toast");
-    showToast(`Creditos devolvidos (${model})`, "info");
-    console.log(`[refund] Creditos devolvidos para modelo ${model}, task ${taskId}`);
+    const reasonTxt = (reason || "erro desconhecido").toString().slice(0, 200);
+    showToast(`Falha no ${model}: ${reasonTxt} — créditos devolvidos`, "error");
+    console.log(`[refund] ${model} task ${taskId} — ${reasonTxt}`);
   } catch (err) {
     console.error("[refund] Falha ao devolver creditos:", err);
   }
@@ -1202,9 +1201,9 @@ export async function pollTaskStatus(
       }
 
       if (data.state === "fail") {
-        // Devolver creditos quando geracao falha
-        if (model) await refundCredits(model, taskId, cost);
-        return { resultUrls: [], error: data.error || "Geração falhou" };
+        const errMsg = data.error || "Geração falhou (sem mensagem do provedor)";
+        if (model) await refundCredits(model, taskId, cost, errMsg);
+        return { resultUrls: [], error: errMsg };
       }
     } catch (err) {
       if (signal?.aborted) {
@@ -1213,13 +1212,12 @@ export async function pollTaskStatus(
       }
       consecutiveErrors++;
       if (consecutiveErrors < 3) { console.warn(`Poll exception (${consecutiveErrors}/3), retrying...`, err); continue; }
-      // Devolver creditos em erro persistente
-      if (model) await refundCredits(model, taskId, cost);
+      const errMsg = err instanceof Error ? err.message : "erro persistente no polling";
+      if (model) await refundCredits(model, taskId, cost, errMsg);
       throw err;
     }
   }
 
-  // Timeout: devolver creditos
-  if (model) await refundCredits(model, taskId, cost);
+  if (model) await refundCredits(model, taskId, cost, "timeout no polling (9 min)");
   throw new Error("Timeout: geração demorou muito");
 }

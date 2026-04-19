@@ -1243,8 +1243,13 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         }
       }
 
-      if (errors.length > 0 && allUrls.length === 0) {
-        showToast("Erro na geracao: " + errors[0], "error");
+      // Full failure: nothing generated
+      if (allUrls.length === 0) {
+        const msg = errors.length > 0
+          ? `Erro na geração: ${errors[0]}`
+          : `Nenhum resultado gerado (provedor retornou vazio)`;
+        // Refund toast ja mostra o motivo; so reforca aqui se nao houve refund (errors vazio)
+        if (errors.length === 0) showToast(msg, "error");
         setNodes((nds) =>
           nds.map((n) =>
             n.id === pipeline.modelNodeId
@@ -1255,27 +1260,29 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         return;
       }
 
-      if (allUrls.length > 0) {
-        showToast(`Geracao concluida! ${allUrls.length} resultado(s)`, "success");
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.id === pipeline.modelNodeId) {
-              const prevResults = (n.data.results as string[]) || [];
-              const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
-              return {
-                ...n,
-                data: {
-                  ...n.data,
-                  isRunning: false,
-                  results: [...prevResults, ...allUrls],
-                  resultTaskIds: [...prevTaskIds, ...allTaskIds],
-                },
-              };
-            }
-            return n;
-          })
-        );
+      // Partial: algumas falharam, outras sucederam — mostrar ambos
+      if (errors.length > 0) {
+        showToast(`${errors.length} de ${results.length} falharam — ${errors[0]}`, "error");
       }
+      showToast(`${allUrls.length} resultado(s) gerado(s)`, "success");
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === pipeline.modelNodeId) {
+            const prevResults = (n.data.results as string[]) || [];
+            const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                isRunning: false,
+                results: [...prevResults, ...allUrls],
+                resultTaskIds: [...prevTaskIds, ...allTaskIds],
+              },
+            };
+          }
+          return n;
+        })
+      );
     } catch (err) {
       if (ac.signal.aborted) {
         // Cancelado pelo usuário — silencioso
@@ -1508,8 +1515,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           }
         }
 
-        if (errors.length > 0 && allUrls.length === 0) {
-          showToast("Erro na geracao recuperada: " + errors[0], "error");
+        if (allUrls.length === 0) {
+          if (errors.length === 0) {
+            showToast("Nenhum resultado recuperado (provedor retornou vazio)", "error");
+          }
           setNodes((nds) =>
             nds.map((n) =>
               n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
@@ -1518,25 +1527,20 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           return;
         }
 
-        if (allUrls.length > 0) {
-          setNodes((nds) =>
-            nds.map((n) => {
-              if (n.id === modelNodeId) {
-                const prevResults = (n.data.results as string[]) || [];
-                const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
-                return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls], resultTaskIds: [...prevTaskIds, ...allTaskIds] } };
-              }
-              return n;
-            })
-          );
-          window.dispatchEvent(new Event("fluxo-credits-update"));
-        } else {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.id === modelNodeId ? { ...n, data: { ...n.data, isRunning: false } } : n
-            )
-          );
+        if (errors.length > 0) {
+          showToast(`${errors.length} de ${results.length} falharam na recuperação — ${errors[0]}`, "error");
         }
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id === modelNodeId) {
+              const prevResults = (n.data.results as string[]) || [];
+              const prevTaskIds = (n.data.resultTaskIds as string[]) || [];
+              return { ...n, data: { ...n.data, isRunning: false, results: [...prevResults, ...allUrls], resultTaskIds: [...prevTaskIds, ...allTaskIds] } };
+            }
+            return n;
+          })
+        );
+        window.dispatchEvent(new Event("fluxo-credits-update"));
       }).catch((err) => {
         if (!ac.signal.aborted) {
           console.error("[recovery] Erro ao recuperar geração:", err);
