@@ -1,4 +1,5 @@
 import { type Node, type Edge } from "@xyflow/react";
+import { AVAILABLE_MODELS } from "@/types/nodes";
 
 // Cache for Replicate results (sync generation, no polling needed)
 // Uses window global to ensure same instance across dynamic imports
@@ -206,7 +207,13 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.seed = randomSeed ? null : (modelNode.data.seed as number | null);
 
   // Coletar imagens na ordem dos handles (image-1, image-2, ...)
-  const imageInputCount = (modelNode.data.imageInputCount as number) || 1;
+  // Modelos com handles fixos (Kling 3, Seedance, Veo3) expoem image-1/image-2 independente
+  // de imageInputCount. Usar o maior entre o count dinamico e o numero de handles fixos pra
+  // nao perder o last frame / end frame.
+  const dynamicImageCount = (modelNode.data.imageInputCount as number) || 1;
+  const modelInfo = AVAILABLE_MODELS.find((m) => m.id === result.model);
+  const fixedImageHandles = modelInfo?.handles.filter((h) => /^image-\d+$/.test(h.id)).length || 0;
+  const imageInputCount = Math.max(dynamicImageCount, fixedImageHandles);
   const imagesByHandle: Record<string, string[]> = {};
 
   let negativePrompt = "";
