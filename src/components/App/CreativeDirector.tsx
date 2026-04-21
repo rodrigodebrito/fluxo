@@ -28,8 +28,20 @@ const WELCOME_MESSAGE: ChatMessage = {
 Pode mandar varios frames de uma vez pra eu comparar consistencia entre eles (P3 scale lock).`,
 };
 
+const STORAGE_KEY = "fluxo-creative-director-chat";
+
 export default function CreativeDirector({ onBack }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window === "undefined") return [WELCOME_MESSAGE];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as ChatMessage[];
+      }
+    } catch {}
+    return [WELCOME_MESSAGE];
+  });
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -43,6 +55,12 @@ export default function CreativeDirector({ onBack }: Props) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isSending]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {}
+  }, [messages]);
 
   const uploadFiles = async (files: FileList | File[]) => {
     const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
@@ -149,9 +167,13 @@ export default function CreativeDirector({ onBack }: Props) {
   };
 
   const reset = () => {
+    if (messages.length > 1 && !confirm("Comecar uma nova conversa? A conversa atual sera apagada.")) return;
     setMessages([WELCOME_MESSAGE]);
     setPendingImages([]);
     setError("");
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
     inputRef.current?.focus();
   };
 
