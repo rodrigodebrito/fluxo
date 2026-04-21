@@ -296,6 +296,37 @@ export async function POST(request: NextRequest) {
     const selectedModel = model || "gpt-5";
     const isReasoningModel = /^o\d|^gpt-5/.test(selectedModel);
 
+    // Pre-fetch all image URLs as base64 data URLs so OpenAI doesn't have to
+    // reach Supabase (avoids timeout errors when storage is slow or geographically far)
+    const allUrls = Array.from(
+      new Set(
+        messages
+          .filter((m) => m.role === "user" && m.imageUrls && m.imageUrls.length > 0)
+          .flatMap((m) => m.imageUrls || [])
+      )
+    );
+
+    const urlToDataUrl = new Map<string, string>();
+    await Promise.all(
+      allUrls.map(async (url) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 25000);
+        try {
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const contentType = res.headers.get("content-type") || "image/jpeg";
+          const buffer = Buffer.from(await res.arrayBuffer());
+          const base64 = buffer.toString("base64");
+          urlToDataUrl.set(url, `data:${contentType};base64,${base64}`);
+        } catch {
+          // Fallback to original URL if fetch fails — OpenAI can try itself
+          urlToDataUrl.set(url, url);
+        } finally {
+          clearTimeout(timeout);
+        }
+      })
+    );
+
     const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: "system", content: CREATIVE_DIRECTOR_SYSTEM_PROMPT },
       ...messages
@@ -307,7 +338,7 @@ export async function POST(request: NextRequest) {
               { type: "text", text: m.content || "" },
               ...m.imageUrls.map((url) => ({
                 type: "image_url" as const,
-                image_url: { url },
+                image_url: { url: urlToDataUrl.get(url) || url },
               })),
             ];
             return { role: "user" as const, content: parts };
