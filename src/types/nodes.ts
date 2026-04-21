@@ -40,7 +40,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
-    params: ["veoModel", "aspectRatio", "duration", "resolution", "enhancePrompt", "seed", "runs"],
+    params: ["veoModel", "aspectRatio", "duration", "resolution", "enhancePrompt", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "seed", "runs"],
   },
   {
     id: "veo-4k",
@@ -67,7 +67,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "video-1", label: "Video Ref", required: false },
       { id: "audio-1", label: "Audio", required: false },
     ],
-    params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "seed", "runs"],
+    params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "seed", "runs"],
     dynamicReferences: true, // suporta reference_image_urls (até 9)
   },
   {
@@ -82,7 +82,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "First Frame", required: false },
       { id: "image-2", label: "Last Frame", required: false },
     ],
-    params: ["klingMode", "multiShots", "klingDuration", "aspectRatio", "generateAudio", "runs"],
+    params: ["klingMode", "multiShots", "klingDuration", "aspectRatio", "generateAudio", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "runs"],
     dynamicElements: true, // suporta element handles dinamicos
   },
   {
@@ -96,7 +96,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Start Frame", required: false },
       { id: "image-2", label: "End Frame", required: false },
     ],
-    params: ["falTier", "multiShots", "klingO3Duration", "aspectRatio", "generateAudio", "runs"],
+    params: ["falTier", "multiShots", "klingO3Duration", "aspectRatio", "generateAudio", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "runs"],
   },
   {
     id: "kling-o3-edit",
@@ -124,7 +124,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Start Frame", required: false },
       { id: "image-2", label: "End Frame", required: false },
     ],
-    params: ["falTier", "multiShots", "klingO1Duration", "aspectRatio", "generateAudio", "runs"],
+    params: ["falTier", "multiShots", "klingO1Duration", "aspectRatio", "generateAudio", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "runs"],
     dynamicElements: true,
   },
   {
@@ -258,7 +258,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "video-1", label: "Extend Video", required: false },
       { id: "audio-1", label: "Audio", required: false },
     ],
-    params: ["wanResolution", "wanDuration", "promptExtend", "seed", "runs"],
+    params: ["wanResolution", "wanDuration", "promptExtend", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "seed", "runs"],
   },
   {
     id: "kling-avatar",
@@ -283,7 +283,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "prompt", label: "Prompt", required: false },
       { id: "image-1", label: "Image*", required: true },
     ],
-    params: ["grokResolution", "grokDuration", "grokMode", "aspectRatio", "runs"],
+    params: ["grokResolution", "grokDuration", "grokMode", "aspectRatio", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "runs"],
   },
   {
     id: "zimage-t2i",

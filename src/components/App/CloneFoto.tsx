@@ -32,6 +32,21 @@ Avoid CGI look, avoid over-sharpening, avoid waxy skin, avoid symmetry perfectio
 
 Shot as if captured on a real high-end camera (e.g. 50mm or 85mm lens), with cinematic yet natural color grading. Hyper-real human rendering indistinguishable from a real photograph. Imperfections are mandatory. Skin must NOT look digital.`;
 
+const buildUltraCinematicBlock = (gender: string) => {
+  const subject = gender === "man" ? "man" : "woman";
+  return `Ultra-realistic, true-to-life cinematic photography of reference ${subject} model captured as if shot on a full-frame professional DSLR with a 35mm prime lens at f/1.8, using natural midday sunlight filtered through the atmosphere, creating physically-accurate soft highlights and deep realistic shadows. The image exhibits authentic optical depth of field with natural lens falloff, subtle background bokeh, and gentle edge softness, while the main subject remains razor-sharp. Surfaces show real-world micro-texture including skin pores, fabric weave, dust, fingerprints, smudges, scratches, and slight wear — nothing looks airbrushed or artificially clean. Lighting behaves realistically with light wrap, bounce light, and soft ambient occlusion, producing dimensional depth and grounded presence. Color grading is neutral and photographic with true whites, natural skin tones, and slight warm daylight bias, avoiding oversaturation or artificial HDR. There is fine cinematic film grain and sensor noise in the shadows, preserving organic realism. Highlights roll off smoothly with no clipping, and blacks retain detail instead of crushing. The image looks like a high-end still frame from a real cinematic camera, not an illustration, render, or digital painting — it should be visually indistinguishable from real life photography.`;
+};
+
+const SELFIE_UGC_RAW_BLOCK = `Ultra-realistic smartphone selfie captured as if filmed on a real iPhone Pro front camera in 8K resolution. Phone held slightly angled in front of the face in a natural casual influencer pose, fingers and phone edges visible in the frame. Skin shows real-world micro-detail including pores, faint blemishes, subtle redness, and natural oiliness — nothing airbrushed or plasticky. Lips have realistic texture and light reflections. Fabric of clothing shows visible fibers, folds, and natural wrinkles. Shallow depth of field from phone front camera. Raw unfiltered UGC influencer style, like a real selfie posted to TikTok or Instagram Stories, with natural phone camera sharpness, slight digital noise, and zero artificial beauty retouching — indistinguishable from a real photo taken by a real person.`;
+
+const PRODUCT_DEMO_BLOCK = `UGC beauty influencer product demo pose. Subject framed from the waist up, facing forward, making direct eye contact with the camera with a calm, confident, slightly conversational expression as if speaking to an audience. The product is held delicately between the fingers of one hand and presented toward the camera, with the other hand posed underneath it in a classic beauty-influencer product framing gesture. Natural fingernails, skin creases, and subtle hand imperfections visible. Focus is crisp on both the subject's eyes and the product, giving the product hero-level presence without sacrificing face visibility.`;
+
+const FMCG_BEVERAGE_BLOCK = `High-end FMCG / beverage commercial aesthetic. Pure white seamless studio background with soft diffused overhead lighting, zero clutter, absolute product focus. Shot style references premium ad agencies (Frooti, Magic Moments, Maaza): ultra-crisp macro details, glossy reflections, natural condensation droplets on cold surfaces, splash and liquid dynamics, high-speed photography feel with frozen motion. Cinematic composition with natural soft shadows under the product, subtle ground bounce light, and photographic color grading with true whites and saturated but natural product colors. Shot on phantom flex camera aesthetic, ultra slow motion sensibility, luxury brand beverage ad mood. Zero harsh studio light, zero CGI plastic look, zero artificial HDR — every surface shows real optical micro-texture. Premium product hero framing as if pulled from a real television commercial.`;
+
+const FASHION_LUXURY_BLOCK = `High-end editorial fashion campaign aesthetic. Clean white infinity studio background with smooth luxury pacing, stable lighting continuity, and editorial tone. Shot style references flagship fashion houses (Lacoste, Calvin Klein): minimal motion blur, calm composed subject presence, elegant pose architecture, brand-accurate wardrobe treatment with crisp fabric texture (weave, folds, stitching visible). Photographic color grading stays neutral and muted with controlled highlights and deep controlled blacks, no oversaturation. Logo and monogram elements must remain sharp, centered, undistorted. Depth of field is shallow on the subject with the background melting into seamless white. Shot on full-frame cinema camera aesthetic, editorial still quality, luxury print-campaign mood. Zero frenetic motion, zero fabric glitches, zero logo warping — everything reads as a high-production Paris or Milan studio shoot.`;
+
+const CINEMATIC_MASCOT_BLOCK = `Ultra-cinematic epic mascot / energy-drink ad aesthetic. 4K film-quality rendering with dramatic volumetric lighting, cinematic depth of field, atmospheric fog, global illumination, and epic environmental scale. Shot style references Hollywood brand films (Monster, Red Bull "Gives You Wings"): hero character framing with low-angle power shots, natural desaturated color palette with controlled contrast, realistic fur / fabric / skin physics, motion particles in the air, subtle camera shake for weight and presence. Environment is minimal but monumental — icy frozen landscape, rocky cliff under overcast sky, or studio-minimal white void with volumetric light rays — always singular and consistent across the frame. Shot on ARRI Alexa aesthetic, film still quality, neutral cinematic grading. Zero cartoon look, zero over-sharpening, zero flat lighting — every element has real physical weight and cinematic gravitas.`;
+
 const ASPECT_RATIO_OPTIONS = [
   { value: "9:16", label: "9:16 (Stories)" },
   { value: "4:5", label: "4:5 (Feed)" },
@@ -95,6 +110,12 @@ export default function CloneFoto({ onBack }: Props) {
   const [mode, setMode] = useState("clone");
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [ultraRealism, setUltraRealism] = useState(false);
+  const [ultraCinematic, setUltraCinematic] = useState(false);
+  const [selfieUgcRaw, setSelfieUgcRaw] = useState(false);
+  const [productDemo, setProductDemo] = useState(false);
+  const [fmcgBeverage, setFmcgBeverage] = useState(false);
+  const [fashionLuxury, setFashionLuxury] = useState(false);
+  const [cinematicMascot, setCinematicMascot] = useState(false);
   const [extraDetails, setExtraDetails] = useState("");
   const [result, setResult] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -175,13 +196,21 @@ export default function CloneFoto({ onBack }: Props) {
       if (!response.ok) throw new Error(data.error || "Erro ao gerar prompt");
 
       let finalPrompt = data.text as string;
-      if (ultraRealism) {
-        // Injeta o bloco de ultra realismo antes da linha final "No text, no captions..."
+      const injectionBlocks: string[] = [];
+      if (ultraRealism) injectionBlocks.push(ULTRA_REALISM_BLOCK);
+      if (ultraCinematic) injectionBlocks.push(buildUltraCinematicBlock(gender));
+      if (selfieUgcRaw) injectionBlocks.push(SELFIE_UGC_RAW_BLOCK);
+      if (productDemo) injectionBlocks.push(PRODUCT_DEMO_BLOCK);
+      if (fmcgBeverage) injectionBlocks.push(FMCG_BEVERAGE_BLOCK);
+      if (fashionLuxury) injectionBlocks.push(FASHION_LUXURY_BLOCK);
+      if (cinematicMascot) injectionBlocks.push(CINEMATIC_MASCOT_BLOCK);
+      if (injectionBlocks.length > 0) {
+        const combined = injectionBlocks.join("\n\n");
         const cleanOutputMatch = finalPrompt.match(/\n?No text,[^\n]*$/i);
         if (cleanOutputMatch) {
-          finalPrompt = finalPrompt.replace(cleanOutputMatch[0], `\n\n${ULTRA_REALISM_BLOCK}${cleanOutputMatch[0]}`);
+          finalPrompt = finalPrompt.replace(cleanOutputMatch[0], `\n\n${combined}${cleanOutputMatch[0]}`);
         } else {
-          finalPrompt = `${finalPrompt}\n\n${ULTRA_REALISM_BLOCK}`;
+          finalPrompt = `${finalPrompt}\n\n${combined}`;
         }
       }
       setResult(finalPrompt);
@@ -391,6 +420,126 @@ export default function CloneFoto({ onBack }: Props) {
               </div>
               <div className={`relative w-10 h-5 rounded-full transition-colors ${ultraRealism ? "bg-purple-600" : "bg-zinc-700"}`}>
                 <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${ultraRealism ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Ultra Cinematic toggle */}
+          <div>
+            <button
+              onClick={() => setUltraCinematic((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                ultraCinematic
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">Ultra Cinematic</div>
+                <div className="text-[10px] text-zinc-500">Injeta bloco cinematografico (35mm f/1.8, grain, luz natural, still de cinema)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${ultraCinematic ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${ultraCinematic ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Selfie UGC Raw toggle */}
+          <div>
+            <button
+              onClick={() => setSelfieUgcRaw((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                selfieUgcRaw
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">Selfie UGC Raw</div>
+                <div className="text-[10px] text-zinc-500">iPhone front cam, pose influencer, TikTok/IG Stories crua sem retouch</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${selfieUgcRaw ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${selfieUgcRaw ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* UGC Product Demo toggle */}
+          <div>
+            <button
+              onClick={() => setProductDemo((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                productDemo
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">UGC Product Demo</div>
+                <div className="text-[10px] text-zinc-500">Pose influencer review de produto (waist up, olhar camera, produto nas maos)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${productDemo ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${productDemo ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* FMCG / Beverage Studio White toggle */}
+          <div>
+            <button
+              onClick={() => setFmcgBeverage((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                fmcgBeverage
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">FMCG / Beverage Studio White</div>
+                <div className="text-[10px] text-zinc-500">Studio branco premium, condensation, splash, phantom flex slow-mo (Frooti / Magic Moments)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${fmcgBeverage ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${fmcgBeverage ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Fashion Luxury Editorial toggle */}
+          <div>
+            <button
+              onClick={() => setFashionLuxury((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                fashionLuxury
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">Fashion Luxury Editorial</div>
+                <div className="text-[10px] text-zinc-500">White infinity studio, smooth luxury pacing, logo preservation (Lacoste / Calvin Klein)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${fashionLuxury ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${fashionLuxury ? "left-5" : "left-0.5"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Cinematic Mascot Epic toggle */}
+          <div>
+            <button
+              onClick={() => setCinematicMascot((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${
+                cinematicMascot
+                  ? "bg-purple-600/10 border-purple-500/50"
+                  : "bg-zinc-800 border-zinc-700 hover:border-zinc-600"
+              }`}
+            >
+              <div className="text-left">
+                <div className="text-sm font-medium text-purple-400">Cinematic Mascot Epic</div>
+                <div className="text-[10px] text-zinc-500">4K cinema, volumetric fog, epic scale, fur physics (Monster / Red Bull)</div>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors ${cinematicMascot ? "bg-purple-600" : "bg-zinc-700"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${cinematicMascot ? "left-5" : "left-0.5"}`} />
               </div>
             </button>
           </div>

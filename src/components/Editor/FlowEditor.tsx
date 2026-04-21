@@ -1452,11 +1452,32 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
     };
     window.addEventListener("fluxo-run-llm", llmHandler);
 
+    // Apply Master Motion Block to all video model nodes
+    const applyMotionBlockHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const text = (detail?.text as string) || "";
+      if (!text.trim()) return;
+      const videoModelIds = new Set<string>(AVAILABLE_MODELS.filter((m) => m.type === "video").map((m) => m.id as string));
+      let count = 0;
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.type !== "model") return n;
+          const nodeModel = n.data.model as string;
+          if (!videoModelIds.has(nodeModel)) return n;
+          count++;
+          return { ...n, data: { ...n.data, masterMotionBlock: text } };
+        })
+      );
+      showToast(`Master Motion Block aplicado a ${count} nodes de video`, "success");
+    };
+    window.addEventListener("fluxo-apply-motion-block", applyMotionBlockHandler);
+
     return () => {
       window.removeEventListener("fluxo-run-pipeline", handler);
       window.removeEventListener("fluxo-cancel-pipeline", cancelHandler);
       window.removeEventListener("fluxo-duplicate-node", duplicateHandler);
       window.removeEventListener("fluxo-run-llm", llmHandler);
+      window.removeEventListener("fluxo-apply-motion-block", applyMotionBlockHandler);
     };
   }, [executePipeline, cancelPipeline, setNodes]);
 

@@ -428,6 +428,34 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
     }
   }
 
+  // Master Motion Block — free-form block injected in every clip's prompt
+  const masterMotionBlock = ((modelNode.data.masterMotionBlock as string) || "").trim();
+  if (masterMotionBlock) {
+    result.prompt = result.prompt ? `${result.prompt}\n${masterMotionBlock}` : masterMotionBlock;
+    if (result.iteratorPrompts) {
+      result.iteratorPrompts = result.iteratorPrompts.map((p) => `${p}\n${masterMotionBlock}`);
+    }
+  }
+
+  // Motion macros — inject keyword blocks when toggles are enabled
+  const motionBoosts: string[] = [];
+  if (modelNode.data.physicsKeywords) {
+    motionBoosts.push("natural physics, cinematic timing, realistic motion weight, subtle camera shake");
+  }
+  if (modelNode.data.microMovements) {
+    motionBoosts.push("eye tracking, natural breathing, slight hair movement, subtle head tilt");
+  }
+  if (modelNode.data.premiumBoost) {
+    motionBoosts.push("high-end commercial advertisement, shot on phantom flex camera, ultra slow motion, luxury brand aesthetic");
+  }
+  if (motionBoosts.length > 0) {
+    const boostLine = motionBoosts.join(", ");
+    result.prompt = result.prompt ? `${result.prompt}\n${boostLine}` : boostLine;
+    if (result.iteratorPrompts) {
+      result.iteratorPrompts = result.iteratorPrompts.map((p) => `${p}\n${boostLine}`);
+    }
+  }
+
   // Ordenar imagens por handle (image-1 primeiro, image-2 depois, etc.)
   for (let i = 1; i <= imageInputCount; i++) {
     const handleImages = imagesByHandle[`image-${i}`] || [];

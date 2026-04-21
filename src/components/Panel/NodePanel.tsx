@@ -359,6 +359,14 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const avatarVoice = (node.data.avatarVoice as string) || "Lily";
   const avatarSpeed = (node.data.avatarSpeed as number) ?? 1.0;
 
+  // Master Motion Block — injected in every clip's prompt
+  const masterMotionBlock = (node.data.masterMotionBlock as string) ?? "";
+
+  // Motion macros (Physics / Micro-movements / Premium Boost)
+  const physicsKeywords = (node.data.physicsKeywords as boolean) ?? false;
+  const microMovements = (node.data.microMovements as boolean) ?? false;
+  const premiumBoost = (node.data.premiumBoost as boolean) ?? false;
+
   // Multi-Shot
   const multiShotEnabled = (node.data.multiShotEnabled as boolean) ?? false;
   const multiShots = (node.data.multiShots as { prompt: string; duration: number }[]) || [];
@@ -1600,6 +1608,76 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
             />
             <span className="text-sm text-zinc-300">Web Search</span>
             <span className="text-zinc-500 text-xs cursor-help" title="Busca online para enriquecer o conteudo">i</span>
+          </label>
+        )}
+
+        {/* Master Motion Block */}
+        {params.includes("masterMotionBlock") && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-zinc-300">🎬 Master Motion Block</span>
+                <span className="text-zinc-500 text-xs cursor-help" title="Bloco de estilo de movimento injetado em TODOS os clips. Ex: cinematic motion, smooth camera, realistic physics, 4K HDR">i</span>
+              </div>
+              {masterMotionBlock.trim() && (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("fluxo-apply-motion-block", { detail: { text: masterMotionBlock } }))}
+                  className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-purple-400 hover:text-purple-300 hover:border-purple-500/50 transition-colors"
+                  title="Copia este bloco para todos os outros nodes de video do canvas"
+                >
+                  Aplicar a todos
+                </button>
+              )}
+            </div>
+            <textarea
+              value={masterMotionBlock}
+              onChange={(e) => update({ masterMotionBlock: e.target.value })}
+              placeholder="Ex: cinematic motion, smooth camera movement, realistic physics, volumetric lighting, film quality, natural animation"
+              rows={3}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-300 placeholder-zinc-600 resize-y focus:outline-none focus:border-purple-500"
+            />
+          </div>
+        )}
+
+        {/* Physics Keywords macro */}
+        {params.includes("physicsKeywords") && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={physicsKeywords}
+              onChange={(e) => update({ physicsKeywords: e.target.checked })}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+            />
+            <span className="text-sm text-zinc-300">⚛ Physics Keywords</span>
+            <span className="text-zinc-500 text-xs cursor-help" title="Injeta: natural physics, cinematic timing, realistic motion weight, camera shake subtle">i</span>
+          </label>
+        )}
+
+        {/* Micro Movements macro */}
+        {params.includes("microMovements") && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={microMovements}
+              onChange={(e) => update({ microMovements: e.target.checked })}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+            />
+            <span className="text-sm text-zinc-300">✨ Micro Movements</span>
+            <span className="text-zinc-500 text-xs cursor-help" title="Injeta: eye tracking, breathing, slight hair movement, subtle head tilt">i</span>
+          </label>
+        )}
+
+        {/* Premium Boost macro */}
+        {params.includes("premiumBoost") && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={premiumBoost}
+              onChange={(e) => update({ premiumBoost: e.target.checked })}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+            />
+            <span className="text-sm text-zinc-300">💎 Premium Boost</span>
+            <span className="text-zinc-500 text-xs cursor-help" title="Injeta: high-end commercial advertisement, shot on phantom flex camera, ultra slow motion, luxury brand aesthetic">i</span>
           </label>
         )}
 
