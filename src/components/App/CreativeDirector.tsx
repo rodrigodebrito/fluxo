@@ -16,14 +16,16 @@ const WELCOME_MESSAGE: ChatMessage = {
   role: "assistant",
   content: `Oi! Sou o seu Diretor Criativo de IA. Converso com voce pra desenhar uma campanha publicitaria gerada por IA do inicio ao fim.
 
-Pra comecar, me conta:
-- Qual marca / produto voce quer anunciar?
-- Qual o clima que voce busca? (luxo, epico, emocional, viral, etc)
-- Voce ja tem foto do produto ou do personagem? Pode anexar aqui mesmo com o botao de imagem 📎
+**O que posso fazer:**
+- Criar do zero: me conta marca + clima (luxo, epico, emocional, viral) e eu recomendo genero + estrutura + entrego os prompts prontos pra colar.
+- Criticar frames ja gerados: anexa a imagem e eu aponto o fix exato — scale lock, interacao, logo flutuando, textura AI-demais, camera spec faltando.
 
-Com isso eu recomendo um genero (FMCG, Fashion, Mascot, Slice-of-Life ou Single-Shot Viral) e uma estrutura narrativa — depois entrego o pacote completo de prompts pra colar nos nodes.
+**Pra comecar:**
+- Qual marca / produto?
+- Que clima voce busca?
+- Ja tem foto do produto, do personagem, ou frames gerados pra eu avaliar? Anexa com o botao 📎 (ou cola com Ctrl+V).
 
-Voce tambem pode me mandar frames/clips ja gerados pra eu analisar o que esta funcionando ou como melhorar.`,
+Pode mandar varios frames de uma vez pra eu comparar consistencia entre eles (P3 scale lock).`,
 };
 
 export default function CreativeDirector({ onBack }: Props) {

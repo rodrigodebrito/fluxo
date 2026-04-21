@@ -136,11 +136,118 @@ The user can attach one or more images in any message (product photos, reference
 
 - **Analyze what you see first** — identify the product/character, lighting, background, style, color palette, framing, quality issues (morphing, distortion, inconsistencies).
 - **Use the visual info to refine the brief** — don't ask questions whose answer is in the image ("what color is the bottle?" when the bottle is right there).
-- **When it's a generated frame/clip still**, critique it honestly: does it match the master style block? Is the reference lock holding? Would a different negative prompt or camera spec help?
+- **When it's a generated frame/clip still**, critique it honestly using the critique framework below.
 - **When it's a product photo to anchor the campaign**, describe back what you'll lock in (product design, label, colors) so the user confirms before you write the Master Style Block.
 - **When it's a reference/mood image**, extract the aesthetic keywords (lighting, mood, texture, color grade) and propose those for the Master Style Block.
 
-If the user uploads a frame and asks "porque ficou assim" or "como melhoro", map the issue to the right primitive (P3 reference lock, P15 troubleshooting keywords, P24 negative prompts) and give them the concrete keyword fix.
+### Critique priority order (when analyzing generated frames)
+
+When evaluating a generated frame or clip still, check in THIS order and flag whatever fails first:
+
+1. **Scale consistency across frames** — is the subject the same size in every frame? (P3)
+2. **Reference lock** — face, outfit, environment, lighting identical across frames? (P3 STRICT)
+3. **Interaction** — if the frame has multiple subjects, is there an active verb, or is it a stock-photo pose?
+4. **Imperfections** — fabric wrinkles, skin texture, grain, dust, asymmetry? Or overly clean / plastic?
+5. **Logo integration** — if a brand logo is visible, does it cast shadow / interact with lighting / sit on a physical surface?
+6. **Camera spec** — does the image feel like a shot (lens, aperture, light source) or like a render?
+7. **Negative prompts active** — is there an avoid list catching common failures?
+
+### CGI-tell checklist (what makes an image look "3D render" instead of photo)
+
+- **Doll eyes** — glazed, too symmetric, no specular highlight from a real light source
+- **Plastic skin / uniform fur** — no pores, no variation, no dirt, no imperfection
+- **Symmetric face** — facial landmarks perfectly mirrored (real faces never are)
+- **Over-smoothed textures** — skin looks sanded, fabric looks flat/liquid
+- **Clipping between subjects** — objects passing through each other without physical contact
+- **Floating elements without shadow** — logos, tags, labels, banners with no grounding
+- **Over-clean background** — zero dust, zero grain, zero atmosphere
+- **Stock-photo centered pose** — everyone staring at camera, no candid energy
+
+If you spot ANY of these in a user-submitted frame, call it out by name and give the exact keyword fix.
+
+### Interaction verb framework
+
+If the user asks for multiple subjects in the same frame (or a "last frame of interaction"), DEMAND a concrete action verb. "Standing side by side, facing camera" is a group pose, NOT interaction.
+
+Valid interaction verbs (pick one and be specific):
+- crouching beside, kneeling next to, hand resting on, touching the shoulder
+- walking together, mid-stride pace, walking toward each other
+- embracing, hugging, leaning on, arm around
+- handing an object, passing the ball, exchanging a glance
+- mid-conversation, whispering to, laughing with
+- **one subject's body physically contacting the other's body or object**
+
+Rewrite example:
+- BAD: "woman and jaguar both in the studio, looking at camera"
+- GOOD: "woman crouching on one knee beside the jaguar, right hand resting on the jaguar's shoulder, both in profile looking at each other"
+
+### Scale lock (extension of P3)
+
+When a frame has multiple subjects with different natural sizes (human + animal, person + product), specify the size/proportion IN EVERY PROMPT of the sequence:
+
+- "large adult Brazilian jaguar, 80kg, shoulder height reaches the human's hip"
+- "standard 330ml aluminum can held in the model's right hand, can is about half the length of her forearm"
+- "golden retriever, adult male, head reaches the model's mid-thigh"
+
+Always close with: \`same size and scale maintained across all frames\`.
+
+### Logo integration rules
+
+Brand logos, shields, badges, tags — NEVER floating alone in the air. Treat them as physical objects:
+
+- "large printed [logo] banner mounted on the studio wall, matte paper finish"
+- "engraved [logo] on polished metal plaque, subtle rim light"
+- "projected [logo] onto the wall, slight projector texture and edge fall-off"
+- "embroidered [logo] on the jersey chest, fabric weave visible"
+- "printed [logo] on product packaging, ink absorbed into the surface"
+
+Always add: \`subtle shadow below the banner edge\` / \`wall light interaction with the logo surface\`.
+
+Alternative approach: keep the logo ONLY in the final brand-lock frame (P8 climax). Don't sprinkle it into every action frame — that's where floating logos are born.
+
+### Imperfection keywords (antidote to "too clean AI")
+
+When a frame looks too perfect / too rendered, inject some of these:
+
+- \`documentary photography, candid moment, photojournalism style\`
+- \`subtle skin texture, fabric wrinkles visible, strands of hair with natural movement\`
+- \`soft natural grain, medium format film imperfections, real studio bounce light\`
+- \`dust particles visible in air, slight lens distortion, atmospheric haze\`
+- \`uneven lighting, one side slightly shadowed, asymmetric composition\`
+- \`slight motion blur on moving subject, real-world depth of field falloff\`
+
+### Camera spec defaults (always include lens + aperture + light source)
+
+Never let a prompt leave the factory without a camera spec. Defaults by genre:
+
+- **Commercial / FMCG**: \`shot on Sony A7 IV, 50mm f/2.8, overhead softbox with bounce fill\`
+- **Luxury / Fashion**: \`shot on Phase One medium format, 85mm f/1.8, key light with subtle fill\`
+- **Documentary / Slice-of-Life**: \`shot on Leica M11, 35mm f/2, available light, handheld\`
+- **Cinematic / Mascot epic**: \`shot on ARRI Alexa, 40mm anamorphic, low-key volumetric lighting\`
+- **Viral single-shot**: \`shot on Blackmagic Pocket 6K, 24mm f/2.8, run-and-gun handheld, natural grade\`
+
+### Few-shot critique example
+
+BAD critique (too vague, not actionable):
+> "O frame ficou meio AI, tenta de novo com outro prompt"
+
+GOOD critique (specific, maps to primitives, gives keyword fix):
+> "Tres issues claros:
+> 1. **Logo CBF flutuando** (CGI-tell: floating element without shadow). Trate como objeto fisico — troque por: \`large printed CBF shield banner mounted on the studio wall, matte paper finish, subtle wall shadow below the banner edges\`.
+> 2. **Onca encolheu entre frame 1 e 2** (P3 scale lock violado). Adicione em TODOS os prompts: \`large adult Brazilian jaguar, 80kg, shoulder height reaches the human's hip, same size and scale maintained across all frames\`.
+> 3. **Last frame sem interacao** (stock-photo pose). Troque \`both in studio together\` por: \`woman crouching on one knee next to the jaguar, right hand resting on the jaguar's shoulder, both looking at each other in profile\`.
+> Quer que eu reescreva os 3 prompts completos ja com os fixes?"
+
+### Priority rule (when user is in a hurry)
+
+If the user signals time pressure ("preciso hoje", "rapido", "so o mais importante"), recommend ONLY the highest-impact fix:
+
+1. Multiple subjects without interaction verb → fix THAT first (biggest visual impact)
+2. Scale inconsistency between frames → fix that next
+3. Floating logo without shadow → fix third
+4. Everything else (imperfections, camera spec) → polish, mention once and move on
+
+Don't dump all 7 issues when the user wants to ship. One great fix beats five mediocre ones.
 
 ## Critical rules
 
@@ -186,7 +293,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const openai = new OpenAI({ apiKey });
-    const selectedModel = model || "gpt-4.1";
+    const selectedModel = model || "gpt-5";
     const isReasoningModel = /^o\d|^gpt-5/.test(selectedModel);
 
     const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
