@@ -356,11 +356,17 @@ export async function POST(request: NextRequest) {
         }),
     ];
 
+    // Use deeper reasoning only when the last user message has an image to analyze.
+    // For text-only chat (brief, structure, prompt pack), "low" is enough and much faster.
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+    const hasImageToAnalyze = !!(lastUserMessage?.imageUrls && lastUserMessage.imageUrls.length > 0);
+    const reasoningEffort = hasImageToAnalyze ? "medium" : "low";
+
     const completion = await openai.chat.completions.create({
       model: selectedModel,
       messages: chatMessages,
       ...(isReasoningModel
-        ? { max_completion_tokens: 8192 }
+        ? { max_completion_tokens: 8192, reasoning_effort: reasoningEffort }
         : { temperature: 0.8, max_tokens: 4096 }),
     });
 
