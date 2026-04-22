@@ -47,6 +47,7 @@
 | Nano Banana Pro | Imagem | 18 fixo | 24 em 4K |
 | GPT Image 1.5 (low) | Imagem | 4 fixo | |
 | GPT Image 1.5 (high) | Imagem | 22 fixo | |
+| GPT Image 2 | Imagem | 12 fixo | T2I/I2I auto (ate 16 refs, nsfw off) |
 
 ## fal.ai
 

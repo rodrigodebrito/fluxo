@@ -730,6 +730,25 @@ export async function startGeneration(
     return data.taskId;
   }
 
+  // GPT Image 2 (auto-switch t2i/i2i baseado em input de imagem)
+  if (options?.model === "gpt-image-2") {
+    const response = await fetch("/api/generate-gpt-image-2", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        inputUrls: publicUrls.length > 0 ? publicUrls : undefined,
+        aspectRatio: options?.aspectRatio || "1:1",
+        cost: options?.cost,
+      }),
+    });
+    const gpt2Text = await response.text();
+    let data;
+    try { data = JSON.parse(gpt2Text); } catch { throw new Error(`Resposta invalida do servidor: ${gpt2Text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao GPT Image 2");
+    return data.taskId;
+  }
+
   // Seedream 4.5 Edit (Kie AI) — multi-image edit, ate 4 imagens
   if (options?.model === "seedream-edit") {
     if (publicUrls.length === 0) {

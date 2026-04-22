@@ -301,7 +301,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const fixedLens = (node.data.fixedLens as boolean) ?? false;
   const isSeedance = model === "seedance";
   const isKling = model === "kling" || model === "kling-o3-i2v" || model === "kling-o3-edit" || model === "kling-o1-ref";
-  const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img";
+  const isGptImage = model === "gpt-image-txt" || model === "gpt-image-img" || model === "gpt-image-2";
   const isMotion = model === "kling-motion";
   const isSeedream = model === "seedream-edit";
 

@@ -60,6 +60,7 @@ const MODEL_LABELS: Record<string, string> = {
   "nano-banana-pro": "Nano Banana",
   "gpt-image-txt": "GPT Image",
   "gpt-image-img": "GPT Image",
+  "gpt-image-2": "GPT Image 2",
   "flux-2-pro": "Flux 2 Pro",
   "flux-2-edit": "Flux 2 Edit",
   "bg-removal": "BG Removal",

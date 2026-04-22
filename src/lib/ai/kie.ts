@@ -291,6 +291,43 @@ export async function createGptImageTask(
   return safeJson(response);
 }
 
+// === GPT Image 2 ===
+
+interface CreateGptImage2Input {
+  prompt: string;
+  inputUrls?: string[];
+  aspectRatio?: string;
+}
+
+export async function createGptImage2Task(
+  apiKey: string,
+  input: CreateGptImage2Input
+): Promise<CreateTaskResponse> {
+  const isEdit = input.inputUrls && input.inputUrls.length > 0;
+  const model = isEdit ? "gpt-image-2-image-to-image" : "gpt-image-2-text-to-image";
+
+  const inputBody: Record<string, unknown> = {
+    prompt: input.prompt,
+    aspect_ratio: input.aspectRatio || "1:1",
+    nsfw_checker: false,
+  };
+
+  if (isEdit) {
+    inputBody.input_urls = input.inputUrls!.slice(0, 16);
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model, input: inputBody }),
+  });
+
+  return safeJson(response);
+}
+
 // === Seedream 4.5 Edit ===
 
 interface CreateSeedreamEditInput {
