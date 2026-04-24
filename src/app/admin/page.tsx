@@ -309,10 +309,36 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, amount }),
+        body: JSON.stringify({ userId, amount, action: "add" }),
       });
 
       if (!res.ok) throw new Error("Erro ao adicionar creditos");
+
+      const data = await res.json();
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, credits: data.credits } : u))
+      );
+      setCreditAmounts((prev) => ({ ...prev, [userId]: "" }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro");
+    }
+  };
+
+  const handleRemoveCredits = async (userId: string) => {
+    const amount = parseInt(creditAmounts[userId] || "0");
+    if (amount <= 0) return;
+
+    const user = users.find((u) => u.id === userId);
+    if (!confirm(`Remover ${amount} creditos de ${user?.name || user?.email || userId}?`)) return;
+
+    try {
+      const res = await fetch("/api/admin/credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, amount, action: "remove" }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao remover creditos");
 
       const data = await res.json();
       setUsers((prev) =>
@@ -707,9 +733,15 @@ export default function AdminPage() {
                           />
                           <button
                             onClick={() => handleAddCredits(user.id)}
-                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded transition-colors"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition-colors"
                           >
                             +Add
+                          </button>
+                          <button
+                            onClick={() => handleRemoveCredits(user.id)}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded transition-colors"
+                          >
+                            −Rem
                           </button>
                         </div>
                       </td>

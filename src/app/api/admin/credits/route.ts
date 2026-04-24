@@ -23,12 +23,43 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { userId, amount } = body;
+  const { userId, amount, action } = body;
 
   if (!userId || !amount || amount <= 0) {
     return NextResponse.json({ error: "userId e amount (> 0) sao obrigatorios" }, { status: 400 });
   }
 
+  if (action === "remove") {
+    // Remover creditos (admin) — debita diretamente, mesmo que fique 0
+    const { data: userProfile } = await serviceClient
+      .from("profiles")
+      .select("credits")
+      .eq("id", userId)
+      .single();
+
+    const current = userProfile?.credits || 0;
+    const toRemove = Math.min(amount, current); // Nao deixa ficar negativo
+    const newCredits = current - toRemove;
+
+    await serviceClient
+      .from("profiles")
+      .update({ credits: newCredits })
+      .eq("id", userId);
+
+    // Log da remocao
+    await serviceClient.from("credit_logs").insert({
+      user_id: userId,
+      amount: -toRemove,
+      reason: "admin_remove",
+      model: null,
+      status: "admin_remove",
+      metadata: { admin_id: user.id, requested: amount, removed: toRemove },
+    });
+
+    return NextResponse.json({ credits: newCredits, removed: toRemove });
+  }
+
+  // Default: adicionar creditos
   const newCredits = await addCredits(userId, amount, "admin_grant");
 
   return NextResponse.json({ credits: newCredits });
