@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createGptImage2Task } from "@/lib/ai/kie";
 import { getAuthUser, unauthorizedResponse, insufficientCreditsResponse, verifyCredits, chargeCredits, checkRateLimit, rateLimitResponse } from "@/lib/auth-guard";
+import { getGptImage2Cost } from "@/lib/credits";
 
 export const maxDuration = 60;
+
+type Resolution = "1K" | "2K" | "4K";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser();
@@ -13,9 +16,29 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { prompt, inputUrls, aspectRatio } = body;
+  const resolution: Resolution = (body.resolution as Resolution) || "1K";
+  const finalAspectRatio = aspectRatio || "1:1";
+
+  // Restricoes da API Kie:
+  // - aspect_ratio "auto" so suporta 1K
+  // - aspect_ratio "1:1" nao suporta 4K
+  if (finalAspectRatio === "auto" && resolution !== "1K") {
+    return NextResponse.json(
+      { error: "Aspect ratio 'auto' so suporta resolution 1K. Selecione um aspect ratio especifico para usar 2K ou 4K." },
+      { status: 400 }
+    );
+  }
+  if (finalAspectRatio === "1:1" && resolution === "4K") {
+    return NextResponse.json(
+      { error: "Aspect ratio 1:1 nao suporta 4K. Use 1K ou 2K com 1:1, ou outro aspect ratio para 4K." },
+      { status: 400 }
+    );
+  }
 
   const model = "gpt-image-2";
-  const { hasCredits, cost } = await verifyCredits(user.id, model, body.cost);
+  // Custo varia por resolution: 1K=6, 2K=10, 4K=16. body.cost (do client) e validado contra o esperado.
+  const expectedCost = getGptImage2Cost(resolution);
+  const { hasCredits, cost } = await verifyCredits(user.id, model, expectedCost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -31,7 +54,8 @@ export async function POST(request: NextRequest) {
     const result = await createGptImage2Task(apiKey, {
       prompt,
       inputUrls,
-      aspectRatio: aspectRatio || "1:1",
+      aspectRatio: finalAspectRatio,
+      resolution,
     });
 
     if (result.code !== 200 || !result.data) {

@@ -739,6 +739,7 @@ export async function startGeneration(
         prompt,
         inputUrls: publicUrls.length > 0 ? publicUrls : undefined,
         aspectRatio: options?.aspectRatio || "1:1",
+        resolution: options?.resolution || "1K",
         cost: options?.cost,
       }),
     });

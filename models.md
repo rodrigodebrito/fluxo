@@ -36,8 +36,8 @@
 | Veo 3 Lite | Video | 30 fixo | por video |
 | Veo 3 Fast | Video | 60 fixo | por video |
 | Veo 3 Quality | Video | 250 fixo | por video |
-| Kling Motion 2.6 (720p) | Video | 6/s | |
-| Kling Motion 2.6 (1080p) | Video | 9/s | |
+| Kling Motion 2.6 (720p) | Video | 11/s | $0.055/s (atualizado abr/2026) |
+| Kling Motion 2.6 (1080p) | Video | 18/s | $0.09/s (atualizado abr/2026) |
 | Kling Motion 3.0 (720p) | Video | 20/s | |
 | Kling Motion 3.0 (1080p) | Video | 27/s | |
 | Kling Avatar Standard | Video | 8/s | TTS/audio |
@@ -47,7 +47,7 @@
 | Nano Banana Pro | Imagem | 18 fixo | 24 em 4K |
 | GPT Image 1.5 (low) | Imagem | 4 fixo | |
 | GPT Image 1.5 (high) | Imagem | 22 fixo | |
-| GPT Image 2 | Imagem | 12 fixo | T2I/I2I auto (ate 16 refs, nsfw off) |
+| GPT Image 2 | Imagem | 6 / 10 / 16 | 1K / 2K / 4K — T2I/I2I auto (ate 16 refs, nsfw off) |
 
 ## fal.ai
 

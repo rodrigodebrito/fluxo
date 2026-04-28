@@ -107,6 +107,13 @@ export async function addCredits(
   return newCredits;
 }
 
+// Custo do GPT Image 2 varia por resolution: 1K=6, 2K=10, 4K=16
+export function getGptImage2Cost(resolution?: string): number {
+  if (resolution === "4K") return 16;
+  if (resolution === "2K") return 10;
+  return 6;
+}
+
 // Base credit costs per model (minimum)
 export function getModelCost(model: string): number {
   switch (model) {
@@ -121,7 +128,7 @@ export function getModelCost(model: string): number {
     case "kling-motion": return 50;
     case "gpt-image-txt": return 4;
     case "gpt-image-img": return 4;
-    case "gpt-image-2": return 12;
+    case "gpt-image-2": return 6;
     case "seedream-edit": return 8;
     case "flux-2-pro": return 6;
     case "flux-2-edit": return 6;

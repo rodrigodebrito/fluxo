@@ -97,7 +97,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-gpt-image-img":
       return { label: "GPT Image 1.5 Edit", model: "gpt-image-img", isRunning: false, results: [], imageInputCount: 1, aspectRatio: "9:16", gptQuality: "medium" };
     case "model-gpt-image-2":
-      return { label: "GPT Image 2", model: "gpt-image-2", isRunning: false, results: [], imageInputCount: 4, aspectRatio: "1:1" };
+      return { label: "GPT Image 2", model: "gpt-image-2", isRunning: false, results: [], imageInputCount: 4, aspectRatio: "1:1", resolution: "1K" };
     case "model-seedream-edit":
       return { label: "Seedream 4.5 Edit", model: "seedream-edit", isRunning: false, results: [], imageInputCount: 4, aspectRatio: "9:16", seedreamQuality: "basic" };
     case "model-flux-2-pro":
@@ -997,7 +997,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
       const m = pipeline.model;
       if (m === "nano-banana-pro") costPerRun = pipeline.resolution === "4K" ? 24 : 18;
       else if (m === "gpt-image-txt" || m === "gpt-image-img") costPerRun = pipeline.gptQuality === "high" ? 22 : 4;
-      else if (m === "gpt-image-2") costPerRun = 12;
+      else if (m === "gpt-image-2") costPerRun = pipeline.resolution === "4K" ? 16 : pipeline.resolution === "2K" ? 10 : 6;
       else if (m === "seedream-edit") costPerRun = 8;
       else if (m === "veo3") {
         if (pipeline.veoModel === "veo3_lite") costPerRun = 30;
@@ -1040,11 +1040,11 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
           : (pipeline.klingO1Duration || 5);
         costPerRun = perSec * refDur;
       } else if (m === "kling-motion") {
-        // 2.6: 720p=$0.03/s, 1080p=$0.045/s → 5/s, 8/s credits (50% margin)
-        // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 17/s, 23/s credits (50% margin)
+        // 2.6: 720p=$0.055/s, 1080p=$0.09/s → 11/s, 18/s credits (repasse 1:1)
+        // 3.0: 720p=$0.10/s, 1080p=$0.135/s → 20/s, 27/s credits (repasse 1:1)
         const is3 = pipeline.motionVersion === "3.0";
         const is1080 = pipeline.motionMode === "1080p";
-        const perSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 9 : 6);
+        const perSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 18 : 11);
         const motionDur = pipeline.videoDuration || 10;
         costPerRun = perSec * motionDur;
       } else if (m === "flux-2-pro" || m === "flux-2-edit") {

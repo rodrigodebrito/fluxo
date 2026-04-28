@@ -155,7 +155,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     name: "GPT Image 2",
     type: "image",
     description: "T2I/I2I auto (GPT Image 2) — usa image-to-image se tiver imagem, senao text-to-image",
-    costPerRun: 12,
+    costPerRun: 6,
     handles: [
       { id: "prompt", label: "Prompt*", required: true },
       { id: "image-1", label: "Image 1", required: false },
@@ -163,7 +163,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-3", label: "Image 3", required: false },
       { id: "image-4", label: "Image 4", required: false },
     ],
-    params: ["aspectRatio", "runs"],
+    params: ["resolution", "aspectRatio", "runs"],
   },
   {
     id: "seedream-edit",

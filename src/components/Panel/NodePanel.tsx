@@ -392,6 +392,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const baseCost = selectedModel?.costPerRun || 18;
   let costPerRun = baseCost;
   if (model === "nano-banana-pro" && resolution === "4K") costPerRun = 24;
+  if (model === "gpt-image-2") costPerRun = resolution === "4K" ? 16 : resolution === "2K" ? 10 : 6;
   if ((model === "gpt-image-txt" || model === "gpt-image-img") && gptQuality === "high") costPerRun = 22;
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
@@ -464,7 +465,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (isMotion) {
     const is3 = motionVersion === "3.0";
     const is1080 = motionMode === "1080p";
-    const motionPerSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 9 : 6);
+    const motionPerSec = is3 ? (is1080 ? 27 : 20) : (is1080 ? 18 : 11);
     costPerRun = motionPerSec * (connectedVideoDuration || 10);
   }
   const multiplier = iteratorCount > 0 ? iteratorCount : 1;
@@ -776,7 +777,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
         {/* Motion cost info */}
         {isMotion && (
           <div className="text-xs text-zinc-500 bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2">
-            <span className="text-zinc-400">{motionVersion === "3.0" ? (motionMode === "1080p" ? 27 : 20) : (motionMode === "1080p" ? 9 : 6)}</span> credits/s
+            <span className="text-zinc-400">{motionVersion === "3.0" ? (motionMode === "1080p" ? 27 : 20) : (motionMode === "1080p" ? 18 : 11)}</span> credits/s
             {connectedVideoDuration > 0
               ? <> × <span className="text-zinc-300">{connectedVideoDuration}s</span> = <span className="text-purple-400">{costPerRun}</span> credits</>
               : <> — conecte um video pra ver o custo exato</>

@@ -297,6 +297,7 @@ interface CreateGptImage2Input {
   prompt: string;
   inputUrls?: string[];
   aspectRatio?: string;
+  resolution?: "1K" | "2K" | "4K";
 }
 
 export async function createGptImage2Task(
@@ -309,6 +310,7 @@ export async function createGptImage2Task(
   const inputBody: Record<string, unknown> = {
     prompt: input.prompt,
     aspect_ratio: input.aspectRatio || "1:1",
+    resolution: input.resolution || "1K",
     nsfw_checker: false,
   };
 
