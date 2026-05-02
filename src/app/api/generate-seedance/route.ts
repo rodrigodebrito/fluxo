@@ -139,10 +139,16 @@ export async function POST(request: NextRequest) {
   const { hasCredits, cost } = await verifyCredits(user.id, costModel, body.cost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
-  const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, referenceVideoUrl, referenceAudioUrl, resolution, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
+  const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, referenceVideoUrl, referenceAudioUrl, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
+  let { resolution } = body;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
+  }
+
+  // Seedance 2 Fast nao suporta 1080p — degrada pra 720p antes de chamar a API
+  if (sdModel === "bytedance/seedance-2-fast" && resolution === "1080p") {
+    resolution = "720p";
   }
 
   // --- Seedance 2.0 via PiAPI (alternativo — ativar passando sdModel com "piapi") ---

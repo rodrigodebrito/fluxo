@@ -35,7 +35,8 @@ const VEO_MODELS = [
   { value: "veo3_lite", label: "Lite" },
 ];
 const VEO_DURATIONS = ["4s", "6s", "8s"];
-const SD_RESOLUTIONS = ["480p", "720p"];
+const SD_RESOLUTIONS_ALL = ["480p", "720p", "1080p"];
+const SD_RESOLUTIONS_FAST = ["480p", "720p"];
 const SD_MODELS = [
   { value: "bytedance/seedance-2", label: "Seedance 2.0" },
   { value: "bytedance/seedance-2-fast", label: "Seedance Fast" },
@@ -397,7 +398,18 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
-    const perSec = isFast ? 33 : 41;
+    // Pricing kie.ai Seedance 2 (Normal confirmado pelo usuario; Fast inferido com discount ~0.80x).
+    // Coluna depende de generateAudio (audio nativo aumenta ~1.65x).
+    let perSec: number;
+    if (isFast) {
+      // Fast nao suporta 1080p — UI ja blinda; aqui defensivo cai em 720p.
+      if (sdResolution === "480p") perSec = generateAudio ? 15 : 9;
+      else perSec = generateAudio ? 33 : 20; // 720p (e qualquer outro caso defensivo)
+    } else {
+      if (sdResolution === "480p") perSec = generateAudio ? 19 : 11.5;
+      else if (sdResolution === "1080p") perSec = generateAudio ? 102 : 62;
+      else perSec = generateAudio ? 41 : 25; // 720p
+    }
     costPerRun = perSec * sdDuration;
   }
   if (model === "kling") {
@@ -1326,17 +1338,25 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Resolution</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Resolucao do video">i</span>
+              <span
+                className="text-zinc-500 text-xs cursor-help"
+                title="Resolucao do video. 1080p disponivel apenas no modelo Seedance 2.0 Normal (Fast suporta ate 720p)."
+              >i</span>
             </div>
             <select
               value={sdResolution}
               onChange={(e) => update({ sdResolution: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {SD_RESOLUTIONS.map((r) => (
+              {(sdModel === "bytedance/seedance-2-fast" ? SD_RESOLUTIONS_FAST : SD_RESOLUTIONS_ALL).map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
+            {sdModel === "bytedance/seedance-2-fast" && (
+              <p className="text-[11px] text-zinc-500 mt-1">
+                1080p so disponivel no modelo Normal
+              </p>
+            )}
           </div>
         )}
 
@@ -1345,11 +1365,19 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           <div>
             <div className="flex items-center gap-1 mb-2">
               <span className="text-sm text-zinc-300">Model</span>
-              <span className="text-zinc-500 text-xs cursor-help" title="Seedance 2.0 = melhor qualidade, Fast = mais rapido e barato">i</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Seedance 2.0 Normal = melhor qualidade + suporta 1080p. Fast = mais rapido e barato, suporta ate 720p.">i</span>
             </div>
             <select
               value={sdModel}
-              onChange={(e) => update({ sdModel: e.target.value })}
+              onChange={(e) => {
+                const newModel = e.target.value;
+                const patch: Record<string, unknown> = { sdModel: newModel };
+                // Fast nao suporta 1080p — derruba pra 720p ao trocar
+                if (newModel === "bytedance/seedance-2-fast" && sdResolution === "1080p") {
+                  patch.sdResolution = "720p";
+                }
+                update(patch);
+              }}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
               {SD_MODELS.map((m) => (
