@@ -398,17 +398,18 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
-    // Pricing kie.ai Seedance 2 (Normal confirmado pelo usuario; Fast inferido com discount ~0.80x).
-    // Coluna depende de generateAudio (audio nativo aumenta ~1.65x).
+    // Pricing kie.ai Seedance 2 — coluna "sem video input" (caso comum, T2V e I2V from image).
+    // Modo "com video input" (reference_video_urls) tem rate menor mas multiplica por (input+output).
+    // TODO: detectar referenceVideoUrls e usar rates 11.5/25/62 (Normal) com (input+output) duracao.
     let perSec: number;
     if (isFast) {
       // Fast nao suporta 1080p — UI ja blinda; aqui defensivo cai em 720p.
-      if (sdResolution === "480p") perSec = generateAudio ? 15 : 9;
-      else perSec = generateAudio ? 33 : 20; // 720p (e qualquer outro caso defensivo)
+      if (sdResolution === "480p") perSec = 15; // inferido ~0.80x do Normal
+      else perSec = 33; // 720p (e qualquer outro caso defensivo)
     } else {
-      if (sdResolution === "480p") perSec = generateAudio ? 19 : 11.5;
-      else if (sdResolution === "1080p") perSec = generateAudio ? 102 : 62;
-      else perSec = generateAudio ? 41 : 25; // 720p
+      if (sdResolution === "480p") perSec = 19;
+      else if (sdResolution === "1080p") perSec = 102;
+      else perSec = 41; // 720p
     }
     costPerRun = perSec * sdDuration;
   }

@@ -1007,18 +1007,17 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         costPerRun = 120;
       } else if (m === "seedance") {
         const isFast = pipeline.sdModel === "bytedance/seedance-2-fast";
-        // Pricing kie.ai Seedance 2 (Normal confirmado; Fast inferido com discount ~0.80x).
-        // Coluna depende de generateAudio (audio nativo aumenta ~1.65x).
-        const withAudio = pipeline.generateAudio ?? true;
+        // Pricing kie.ai Seedance 2 — coluna "sem video input" (T2V e I2V from image — caso comum).
+        // Modo "com video input" tem rate menor mas multiplica por (input+output) — TODO: implementar.
         const sdRes = pipeline.sdResolution || "720p";
         let perSec: number;
         if (isFast) {
-          if (sdRes === "480p") perSec = withAudio ? 15 : 9;
-          else perSec = withAudio ? 33 : 20; // 720p (e defensivo)
+          if (sdRes === "480p") perSec = 15; // inferido ~0.80x do Normal
+          else perSec = 33; // 720p (e defensivo)
         } else {
-          if (sdRes === "480p") perSec = withAudio ? 19 : 11.5;
-          else if (sdRes === "1080p") perSec = withAudio ? 102 : 62;
-          else perSec = withAudio ? 41 : 25; // 720p
+          if (sdRes === "480p") perSec = 19;
+          else if (sdRes === "1080p") perSec = 102;
+          else perSec = 41; // 720p
         }
         costPerRun = perSec * (pipeline.sdDuration || 8);
       } else if (m === "kling") {
