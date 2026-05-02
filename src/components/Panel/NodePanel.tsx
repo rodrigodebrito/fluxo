@@ -398,20 +398,24 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
-    // Pricing kie.ai Seedance 2 — coluna "sem video input" (caso comum, T2V e I2V from image).
-    // Modo "com video input" (reference_video_urls) tem rate menor mas multiplica por (input+output).
-    // TODO: detectar referenceVideoUrls e usar rates 11.5/25/62 (Normal) com (input+output) duracao.
+    // Pricing kie.ai Seedance 2 — duas colunas:
+    //   "sem video input" (T2V/I2V from image): rate alto * output_duration
+    //   "com video input" (reference_video_urls): rate baixo * (input + output) duration
+    // connectedVideoDuration > 0 indica que ha um VideoInputNode conectado ao handle video-1.
+    const inputVideoDur = (node.data.connectedVideoDuration as number) || 0;
+    const hasVideoInput = inputVideoDur > 0;
     let perSec: number;
     if (isFast) {
       // Fast nao suporta 1080p — UI ja blinda; aqui defensivo cai em 720p.
-      if (sdResolution === "480p") perSec = 15; // inferido ~0.80x do Normal
-      else perSec = 33; // 720p (e qualquer outro caso defensivo)
+      if (sdResolution === "480p") perSec = hasVideoInput ? 9 : 15; // inferido ~0.80x do Normal
+      else perSec = hasVideoInput ? 20 : 33; // 720p
     } else {
-      if (sdResolution === "480p") perSec = 19;
-      else if (sdResolution === "1080p") perSec = 102;
-      else perSec = 41; // 720p
+      if (sdResolution === "480p") perSec = hasVideoInput ? 11.5 : 19;
+      else if (sdResolution === "1080p") perSec = hasVideoInput ? 62 : 102;
+      else perSec = hasVideoInput ? 25 : 41; // 720p
     }
-    costPerRun = perSec * sdDuration;
+    const billableDur = hasVideoInput ? inputVideoDur + sdDuration : sdDuration;
+    costPerRun = perSec * billableDur;
   }
   if (model === "kling") {
     const perSec = klingMode === "pro" ? (generateAudio ? 27 : 18) : (generateAudio ? 20 : 14);

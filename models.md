@@ -44,14 +44,15 @@
 | Kling Avatar Pro | Video | 16/s | TTS/audio |
 | Wan 2.7 (720p) | Video | 16/s | |
 | Wan 2.7 (1080p) | Video | 24/s | |
-| Seedance 2 Normal (480p) | Video | 19/s | sem video input ($0.095/s) |
-| Seedance 2 Normal (720p) | Video | 41/s | sem video input ($0.205/s) |
-| Seedance 2 Normal (1080p) | Video | 102/s | sem video input ($0.51/s) |
-| Seedance 2 Fast (480p) | Video | 15/s | inferido ~0.80x do Normal |
-| Seedance 2 Fast (720p) | Video | 33/s | 1080p nao suportado pelo modelo |
+| Seedance 2 Normal (480p) | Video | 19/s sem · 11.5/s com video | × output (sem) ou × (input+output) (com) |
+| Seedance 2 Normal (720p) | Video | 41/s sem · 25/s com video | $0.205/s vs $0.125/s |
+| Seedance 2 Normal (1080p) | Video | 102/s sem · 62/s com video | $0.51/s vs $0.31/s |
+| Seedance 2 Fast (480p) | Video | 15/s sem · 9/s com video | inferido ~0.80x do Normal |
+| Seedance 2 Fast (720p) | Video | 33/s sem · 20/s com video | 1080p nao suportado pelo modelo |
 
-> **Nota Seedance 2:** Pricing acima e o modo "sem video input" (T2V ou I2V from image — caso comum).
-> No modo "com video input" (reference_video_urls), a kie.ai cobra `rate_baixo × (input_duration + output_duration)` com rates 11.5/25/62 (Normal 480/720/1080). Nao implementado no estimador da UI ainda — usuarios desse modo veem custo maior do que real.
+> **Nota Seedance 2:** O estimador detecta automaticamente se ha um VideoInputNode conectado ao handle `video-1` do nó (campo `connectedVideoDuration` propagado pelo `FlowEditor`).
+> Sem video input: `rate_alto × output_seconds` (caso comum: T2V ou I2V from image).
+> Com video input: `rate_baixo × (input_seconds + output_seconds)` — duracao do input vem de `videoDuration` extraido via HTML5 `onLoadedMetadata`.
 | Nano Banana Pro | Imagem | 18 fixo | 24 em 4K |
 | GPT Image 1.5 (low) | Imagem | 4 fixo | |
 | GPT Image 1.5 (high) | Imagem | 22 fixo | |
