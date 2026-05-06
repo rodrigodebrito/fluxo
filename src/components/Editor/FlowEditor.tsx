@@ -1943,6 +1943,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-kling-o1-ref", label: "Kling O3 Reference" },
       { type: "model-wan-i2v", label: "Wan 2.7 I2V" },
       { type: "model-grok-i2v", label: "Grok Imagine" },
+      { type: "model-happyhorse", label: "Happy Horse" },
       { type: "klingElement", label: "Kling Element" },
     ],
   },

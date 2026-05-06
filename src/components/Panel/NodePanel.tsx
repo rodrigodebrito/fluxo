@@ -354,7 +354,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const isHappyHorse = model === "happyhorse";
 
   // Happy Horse
-  const happyhorseResolution = (node.data.happyhorseResolution as string) || "720p";
+  const happyhorseResolution = (node.data.happyhorseResolution as string) || "1080p";
   const happyhorseDuration = (node.data.happyhorseDuration as number) || 5;
 
   // Grok Imagine
