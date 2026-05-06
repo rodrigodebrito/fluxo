@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "gpt-image-2" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora" | "seedream-edit";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "gpt-image-2" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora" | "seedream-edit" | "happyhorse";
 
 export interface ModelInfo {
   id: AIModel;
@@ -345,6 +345,18 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image*", required: true },
     ],
     params: ["zimageSize", "zimageSteps", "zimageStrength", "zimageAcceleration", "zimageSafety", "zimageLoras", "seed", "runs"],
+  },
+  {
+    id: "happyhorse",
+    name: "Happy Horse",
+    type: "video",
+    description: "Image to Video (Happy Horse via Kie AI)",
+    costPerRun: 265,
+    handles: [
+      { id: "prompt", label: "Prompt", required: false },
+      { id: "image-1", label: "Image*", required: true },
+    ],
+    params: ["happyhorseResolution", "happyhorseDuration", "seed", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "runs"],
   },
 ];
 

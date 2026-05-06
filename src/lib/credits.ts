@@ -147,3 +147,9 @@ export function getModelCost(model: string): number {
     default: return 18;
   }
 }
+
+// Happy Horse: custo dinamico por resolucao e duracao
+export function getHappyHorseCost(resolution?: string, duration?: number): number {
+  const perSec = resolution === "1080p" ? 53 : 31;
+  return perSec * (duration || 5);
+}

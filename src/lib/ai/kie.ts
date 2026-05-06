@@ -717,6 +717,46 @@ export async function createGrokImagineTask(
   return safeJson(response);
 }
 
+export interface CreateHappyHorseInput {
+  prompt?: string;
+  imageUrls: string[];
+  resolution?: "720p" | "1080p";
+  duration?: number;
+  seed?: number | null;
+}
+
+export async function createHappyHorseTask(
+  apiKey: string,
+  input: CreateHappyHorseInput
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    image_urls: input.imageUrls.slice(0, 1),
+    resolution: input.resolution || "1080p",
+    duration: input.duration || 5,
+  };
+
+  if (input.prompt) {
+    inputBody.prompt = input.prompt;
+  }
+  if (input.seed != null) {
+    inputBody.seed = input.seed;
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "happyhorse/image-to-video",
+      input: inputBody,
+    }),
+  });
+
+  return safeJson(response);
+}
+
 // Veo status endpoint (diferente do Nano Banana)
 interface VeoStatusResponse {
   code: number;

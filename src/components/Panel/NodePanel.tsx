@@ -351,6 +351,11 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const wanDuration = (node.data.wanDuration as number) || 5;
   const promptExtend = (node.data.promptExtend as boolean) ?? true;
   const isWan = model === "wan-i2v";
+  const isHappyHorse = model === "happyhorse";
+
+  // Happy Horse
+  const happyhorseResolution = (node.data.happyhorseResolution as string) || "720p";
+  const happyhorseDuration = (node.data.happyhorseDuration as number) || 5;
 
   // Grok Imagine
   const grokResolution = (node.data.grokResolution as string) || "480p";
@@ -478,6 +483,12 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     const hdSizes = ["square_hd", "portrait_16_9", "landscape_16_9"];
     costPerRun = hdSizes.includes(zimageSize) ? 5 : 3;
   }
+  // Happy Horse cost: 31 cred/s (720p) · 53 cred/s (1080p)
+  if (model === "happyhorse") {
+    const perSec = happyhorseResolution === "1080p" ? 53 : 31;
+    costPerRun = perSec * happyhorseDuration;
+  }
+
   const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
     const is3 = motionVersion === "3.0";

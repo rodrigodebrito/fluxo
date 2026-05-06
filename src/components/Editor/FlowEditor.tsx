@@ -118,6 +118,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Kling Avatar TTS", model: "kling-avatar", isRunning: false, results: [], imageInputCount: 1, avatarTier: "standard", avatarText: "", avatarVoice: "pFZP5JQG7iQjIQuC4Bku", avatarSpeed: 1.0 };
     case "model-grok-i2v":
       return { label: "Grok Imagine", model: "grok-i2v", isRunning: false, results: [], imageInputCount: 1, grokResolution: "480p", grokDuration: 6, grokMode: "normal", aspectRatio: "9:16" };
+    case "model-happyhorse":
+      return { label: "Happy Horse", model: "happyhorse", isRunning: false, results: [], imageInputCount: 1, happyhorseResolution: "1080p", happyhorseDuration: 5, seed: null };
     case "model-zimage-t2i":
       return { label: "Z-Image Turbo", model: "zimage-t2i", isRunning: false, results: [], imageInputCount: 0, zimageSize: "portrait_9_16", zimageSteps: 8, zimageAcceleration: "regular", zimageSafety: false, seed: null };
     case "model-zimage-i2i":

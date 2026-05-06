@@ -107,6 +107,9 @@ interface PipelineData {
   zimageStrength?: number;
   zimageSize?: string;
   zimageLoras?: { path: string; scale: number }[];
+  // Happy Horse
+  happyhorseResolution?: string;
+  happyhorseDuration?: number;
   // Kling Avatar
   avatarTier?: string;
   avatarText?: string;
@@ -661,6 +664,9 @@ export async function startGeneration(
     zimageSize?: string;
     sourceTaskId?: string;
     zimageLoras?: { path: string; scale: number }[];
+    // Happy Horse
+    happyhorseResolution?: string;
+    happyhorseDuration?: number;
     cost?: number;
   }
 ): Promise<string> {
@@ -1124,6 +1130,30 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(sdText); } catch { throw new Error(`Resposta invalida do servidor: ${sdText.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Seedance");
+    return data.taskId;
+  }
+
+  // Happy Horse (Kie AI Image-to-Video)
+  if (options?.model === "happyhorse") {
+    if (publicUrls.length === 0) {
+      throw new Error("Happy Horse precisa de pelo menos 1 imagem de entrada");
+    }
+    const response = await fetch("/api/generate-happyhorse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        imageUrls: publicUrls.slice(0, 1),
+        resolution: options?.happyhorseResolution || "1080p",
+        duration: options?.happyhorseDuration || 5,
+        seed: options?.seed ?? undefined,
+        cost: options?.cost,
+      }),
+    });
+    const hhText = await response.text();
+    let data;
+    try { data = JSON.parse(hhText); } catch { throw new Error(`Resposta invalida do servidor: ${hhText.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao iniciar geracao Happy Horse");
     return data.taskId;
   }
 
