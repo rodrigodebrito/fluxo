@@ -1270,8 +1270,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         const msg = errors.length > 0
           ? `Erro na geração: ${errors[0]}`
           : `Nenhum resultado gerado (provedor retornou vazio)`;
-        // Refund toast ja mostra o motivo; so reforca aqui se nao houve refund (errors vazio)
-        if (errors.length === 0) showToast(msg, "error");
+        showToast(msg, "error");
         setNodes((nds) =>
           nds.map((n) =>
             n.id === pipeline.modelNodeId

@@ -36,7 +36,7 @@ export default function ImageInputNode({ id, data }: NodeProps) {
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+      const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
       const allFiles = Array.from(e.target.files || []);
       if (allFiles.length === 0) return;
       e.target.value = "";
@@ -46,7 +46,7 @@ export default function ImageInputNode({ id, data }: NodeProps) {
 
       if (rejected.length > 0) {
         const names = rejected.map((f) => `${f.name} (${Math.round(f.size / 1024 / 1024)}MB)`).join(", ");
-        showToast(`Imagem muito grande (max 30MB): ${names} — Use o Resize Tool ou a imagem sem upscale`, "error");
+        showToast(`Imagem muito grande (max 20MB): ${names} — Use o Resize Tool ou a imagem sem upscale`, "error");
         if (files.length === 0) return;
       }
 
