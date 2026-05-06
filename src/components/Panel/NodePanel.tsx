@@ -655,6 +655,48 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
           </div>
         )}
 
+        {/* Happy Horse Resolution */}
+        {params.includes("happyhorseResolution") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Resolution</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="720p = mais barato, 1080p = melhor qualidade">i</span>
+            </div>
+            <select
+              value={happyhorseResolution}
+              onChange={(e) => update({ happyhorseResolution: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
+            >
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+          </div>
+        )}
+
+        {/* Happy Horse Duration */}
+        {params.includes("happyhorseDuration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duration</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Duracao do video em segundos (3-15)">i</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={3}
+                max={15}
+                step={1}
+                value={happyhorseDuration}
+                onChange={(e) => update({ happyhorseDuration: parseInt(e.target.value) })}
+                className="flex-1 accent-purple-500"
+              />
+              <span className="text-sm text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 min-w-[40px] text-center">
+                {happyhorseDuration}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Multi-Shot */}
         {params.includes("multiShots") && (
           <div className="space-y-3">
