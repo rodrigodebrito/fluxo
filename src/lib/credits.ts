@@ -19,38 +19,16 @@ export async function debitCredits(
 ): Promise<{ success: boolean; remaining: number }> {
   const supabase = await createServiceClient();
 
-  // Debit atômico via RPC (evita race condition)
   const { data: remaining, error: rpcError } = await supabase.rpc("debit_credits", {
     p_user_id: userId,
     p_amount: amount,
   });
 
   if (rpcError) {
-    console.error("[debitCredits] RPC error, falling back:", rpcError.message);
-    // Fallback: método não-atômico (caso RPC não exista ainda)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("credits")
-      .eq("id", userId)
-      .single();
-    const current = profile?.credits || 0;
-    if (current < amount) return { success: false, remaining: current };
-    const newCredits = current - amount;
-    await supabase.from("profiles").update({ credits: newCredits }).eq("id", userId);
-
-    await supabase.from("credit_logs").insert({
-      user_id: userId,
-      amount: -amount,
-      reason,
-      model: details?.model || reason.replace("generation_", "") || null,
-      prompt: details?.prompt?.slice(0, 500) || null,
-      status: details?.status || "pending",
-      metadata: details?.metadata || null,
-    });
-    return { success: true, remaining: newCredits };
+    console.error("[debitCredits] RPC error:", rpcError.message);
+    throw new Error("Falha ao debitar creditos de forma atomica");
   }
 
-  // RPC retorna -1 se créditos insuficientes
   if (remaining === -1) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -60,8 +38,7 @@ export async function debitCredits(
     return { success: false, remaining: profile?.credits || 0 };
   }
 
-  // Log the debit
-  await supabase.from("credit_logs").insert({
+  const { error: logError } = await supabase.from("credit_logs").insert({
     user_id: userId,
     amount: -amount,
     reason,
@@ -71,7 +48,65 @@ export async function debitCredits(
     metadata: details?.metadata || null,
   });
 
+  if (logError) {
+    console.error("[debitCredits] log insert error:", logError.message);
+    throw new Error("Falha ao registrar debito de creditos");
+  }
+
   return { success: true, remaining: remaining as number };
+}
+
+export interface CreditLogEntry {
+  id: string;
+  amount: number;
+  model: string | null;
+  reason: string;
+  metadata: Record<string, unknown> | null;
+  created_at?: string;
+}
+
+export async function findDebitLogByTaskId(userId: string, taskId: string): Promise<CreditLogEntry | null> {
+  const supabase = await createServiceClient();
+
+  const debitByTask = await supabase
+    .from("credit_logs")
+    .select("id, amount, model, reason, metadata, created_at")
+    .eq("user_id", userId)
+    .lt("amount", 0)
+    .contains("metadata", { taskId })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (debitByTask.data) return debitByTask.data as CreditLogEntry;
+
+  const debitBySourceTask = await supabase
+    .from("credit_logs")
+    .select("id, amount, model, reason, metadata, created_at")
+    .eq("user_id", userId)
+    .lt("amount", 0)
+    .contains("metadata", { sourceTaskId: taskId })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return (debitBySourceTask.data as CreditLogEntry | null) || null;
+}
+
+export async function findRefundLogByTaskId(userId: string, taskId: string): Promise<CreditLogEntry | null> {
+  const supabase = await createServiceClient();
+
+  const { data } = await supabase
+    .from("credit_logs")
+    .select("id, amount, model, reason, metadata, created_at")
+    .eq("user_id", userId)
+    .gt("amount", 0)
+    .contains("metadata", { refundForTaskId: taskId })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return (data as CreditLogEntry | null) || null;
 }
 
 export async function addCredits(

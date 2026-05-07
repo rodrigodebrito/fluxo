@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
-  const { hasCredits, cost } = await verifyCredits(user.id, "llm", body.cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, "llm");
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -62,7 +62,14 @@ export async function POST(request: NextRequest) {
         max_tokens: 16384,
       });
       const text = completion.choices[0]?.text || "";
-      await chargeCredits(user.id, "llm", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+      const charge = await chargeCredits(user.id, "llm", cost, {
+        prompt: (prompt || "").slice(0, 500),
+        status: "pending",
+        metadata: { provider: "openai", model: selectedModel },
+      });
+      if (!charge.success) {
+        return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+      }
       return NextResponse.json({ text });
     }
 
@@ -76,7 +83,14 @@ export async function POST(request: NextRequest) {
 
     const text = completion.choices[0]?.message?.content || "";
 
-    await chargeCredits(user.id, "llm", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, "llm", cost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { provider: "openai", model: selectedModel },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ text });
   } catch (err) {

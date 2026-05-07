@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
   }
 
   const model = "gpt-image-2";
-  // Custo varia por resolution: 1K=6, 2K=10, 4K=16. body.cost (do client) e validado contra o esperado.
   const expectedCost = getGptImage2Cost(resolution);
   const { hasCredits, cost } = await verifyCredits(user.id, model, expectedCost);
   if (!hasCredits) return insufficientCreditsResponse(cost);
@@ -65,7 +64,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, model, cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, model, cost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.data.taskId, provider: "kie" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

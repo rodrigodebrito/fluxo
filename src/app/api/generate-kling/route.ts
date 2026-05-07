@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   const creditModel = body.model === "kling-motion" ? "kling-motion" : "kling";
-  const { hasCredits, cost } = await verifyCredits(user.id, creditModel, body.cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, creditModel);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -55,7 +55,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await chargeCredits(user.id, "kling-motion", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+      const charge = await chargeCredits(user.id, "kling-motion", cost, {
+        prompt: (prompt || "").slice(0, 500),
+        status: "pending",
+        metadata: { taskId: result.data.taskId, provider: "kie" },
+      });
+      if (!charge.success) {
+        return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+      }
       return NextResponse.json({ taskId: result.data.taskId });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
@@ -92,7 +99,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "kling", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, "kling", cost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.data.taskId, provider: "kie" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

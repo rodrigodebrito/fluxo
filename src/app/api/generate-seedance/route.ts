@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
   const sdModel = body.sdModel || "bytedance/seedance-2";
 
   const costModel = "seedance";
-  const { hasCredits, cost } = await verifyCredits(user.id, costModel, body.cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, costModel);
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const { prompt, firstFrameUrl, lastFrameUrl, referenceImageUrls, referenceVideoUrl, referenceAudioUrl, aspectRatio, duration, generateAudio, seed, fixedLens, webSearch } = body;
@@ -219,10 +219,17 @@ export async function POST(request: NextRequest) {
         audioUrls: audioUrls.length > 0 ? audioUrls : undefined,
       });
 
-      await chargeCredits(user.id, costModel, cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+      const publicTaskId = `piapi:${taskId}`;
+      const charge = await chargeCredits(user.id, costModel, cost, {
+        prompt: (prompt || "").slice(0, 500),
+        status: "pending",
+        metadata: { taskId: publicTaskId, provider: "piapi" },
+      });
+      if (!charge.success) {
+        return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+      }
 
-      // Return with piapi: prefix so status polling knows which provider to use
-      return NextResponse.json({ taskId: `piapi:${taskId}` });
+      return NextResponse.json({ taskId: publicTaskId });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
       console.error("[seedance-piapi] error:", message);
@@ -280,7 +287,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, costModel, cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, costModel, cost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.data.taskId, provider: "kie" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

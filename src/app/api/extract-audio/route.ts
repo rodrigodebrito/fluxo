@@ -24,14 +24,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { videoUrl, format = "mp3", cost = 1 } = body;
+  const { videoUrl, format = "mp3" } = body;
 
   if (!videoUrl) {
     return NextResponse.json({ error: "videoUrl obrigatorio" }, { status: 400 });
   }
 
-  // Check credits
-  const hasCredits = await verifyCredits(user.id, cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, "extract-audio");
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   try {
@@ -79,8 +78,13 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabase.storage.from("upload").getPublicUrl(fileName);
     const audioUrl = urlData.publicUrl;
 
-    // Charge credits
-    await chargeCredits(user.id, "extract-audio", cost, { status: "pending" });
+    const charge = await chargeCredits(user.id, "extract-audio", cost, {
+      status: "pending",
+      metadata: { provider: "local-ffmpeg", format },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ audioUrl });
   } catch (err) {

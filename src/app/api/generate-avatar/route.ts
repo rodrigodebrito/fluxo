@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { imageUrl, audioUrl, text, prompt, voiceId, speed, languageCode, avatarTier, cost } = body;
+  const { imageUrl, audioUrl, text, prompt, voiceId, speed, languageCode, avatarTier } = body;
 
   if (!imageUrl) {
     return NextResponse.json({ error: "Imagem e obrigatoria" }, { status: 400 });
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Audio ou texto e obrigatorio" }, { status: 400 });
   }
 
-  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, "kling-avatar", cost);
+  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, "kling-avatar");
   if (!hasCredits) return insufficientCreditsResponse(finalCost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -95,7 +95,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "kling-avatar", finalCost, { prompt: (text || prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, "kling-avatar", finalCost, {
+      prompt: (text || prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.data.taskId, provider: "kie" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {

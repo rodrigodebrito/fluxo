@@ -56,11 +56,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await chargeCredits(user.id, "happyhorse", cost, {
+  const charge = await chargeCredits(user.id, "happyhorse", cost, {
     prompt: (prompt || "").slice(0, 500),
     status: "pending",
-    metadata: { resolution: finalResolution, duration: finalDuration },
+    metadata: { taskId: result.data.taskId, provider: "kie", resolution: finalResolution, duration: finalDuration },
   });
+  if (!charge.success) {
+    return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+  }
 
   return NextResponse.json({ taskId: result.data.taskId });
 }

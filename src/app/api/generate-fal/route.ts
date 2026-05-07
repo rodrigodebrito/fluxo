@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { model, cost, tier } = body;
+  const { model, tier } = body;
 
   if (!model || !FAL_MODELS.has(model)) {
     return NextResponse.json({ error: `Modelo fal.ai invalido: ${model}` }, { status: 400 });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Endpoint fal.ai nao encontrado: ${model}/${tier}` }, { status: 400 });
   }
 
-  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, model, cost);
+  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, model);
   if (!hasCredits) return insufficientCreditsResponse(finalCost);
 
   const falKey = process.env.FAL_KEY;
@@ -79,7 +79,14 @@ export async function POST(request: NextRequest) {
 
     const result = await submitFalTask(falKey, endpoint, input);
 
-    await chargeCredits(user.id, model, finalCost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, model, finalCost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.request_id, provider: "fal", falEndpoint: endpoint },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({
       taskId: result.request_id,

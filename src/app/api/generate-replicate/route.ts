@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { trainedModelId, prompt, aspectRatio, numOutputs, cost, extraLoraIds, nsfwEnabled, nsfwScale, realismEnabled, realismScale, mainLoraScale, guidanceScale, numInferenceSteps } = body;
+  const { trainedModelId, prompt, aspectRatio, numOutputs, extraLoraIds, nsfwEnabled, nsfwScale, realismEnabled, realismScale, mainLoraScale, guidanceScale, numInferenceSteps } = body;
 
   if (!trainedModelId) {
     return NextResponse.json(
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
-  const finalCost = cost || 20;
+  const finalCost = 20;
   const { hasCredits } = await verifyCredits(user.id, "custom-model", finalCost);
   if (!hasCredits) return insufficientCreditsResponse(finalCost);
 
@@ -176,8 +176,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Charge credits
-    await chargeCredits(user.id, "custom-model", finalCost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, "custom-model", finalCost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { provider: "replicate", trainedModelId },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     // Save to generations
     await supabase.from("generations").insert({

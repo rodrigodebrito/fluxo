@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Body JSON invalido" }, { status: 400 });
   }
 
-  const { sourceTaskId, index, cost } = body;
+  const { sourceTaskId, index } = body;
   if (!sourceTaskId || typeof sourceTaskId !== "string") {
     return NextResponse.json({ error: "sourceTaskId obrigatorio (taskId do Veo 3.1 original)" }, { status: 400 });
   }
 
-  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, "veo-4k", cost);
+  const { hasCredits, cost: finalCost } = await verifyCredits(user.id, "veo-4k");
   if (!hasCredits) return insufficientCreditsResponse(finalCost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -44,9 +44,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Kie rejeitou: ${result.msg || "erro desconhecido"} (code ${result.code})` }, { status: 400 });
     }
 
-    await chargeCredits(user.id, "veo-4k", finalCost, { status: "pending", metadata: { sourceTaskId } });
+    const charge = await chargeCredits(user.id, "veo-4k", finalCost, {
+      status: "pending",
+      metadata: { taskId: sourceTaskId, sourceTaskId, provider: "kie-veo-4k" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
-    // Reusa o mesmo taskId pro polling
     return NextResponse.json({ taskId: sourceTaskId });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";

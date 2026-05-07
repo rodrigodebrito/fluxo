@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { prompt, imageUrls, aspectRatio, quality } = body;
 
-  const { hasCredits, cost } = await verifyCredits(user.id, "seedream-edit", body.cost);
+  const { hasCredits, cost } = await verifyCredits(user.id, "seedream-edit");
   if (!hasCredits) return insufficientCreditsResponse(cost);
 
   const apiKey = process.env.KIE_API_KEY;
@@ -49,7 +49,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await chargeCredits(user.id, "seedream-edit", cost, { prompt: (prompt || "").slice(0, 500), status: "pending" });
+    const charge = await chargeCredits(user.id, "seedream-edit", cost, {
+      prompt: (prompt || "").slice(0, 500),
+      status: "pending",
+      metadata: { taskId: result.data.taskId, provider: "kie" },
+    });
+    if (!charge.success) {
+      return NextResponse.json({ error: "Falha ao debitar creditos" }, { status: 500 });
+    }
 
     return NextResponse.json({ taskId: result.data.taskId });
   } catch (err) {
