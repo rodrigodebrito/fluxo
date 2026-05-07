@@ -1179,12 +1179,12 @@ export async function startGeneration(
 }
 
 // Salva geracao no historico
-async function saveGeneration(model: string, prompt: string, resultUrls: string[], cost: number, type: "image" | "video") {
+async function saveGeneration(model: string, prompt: string, resultUrls: string[], cost: number, type: "image" | "video", taskId?: string) {
   try {
     await fetch("/api/generations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt, resultUrls, cost, type }),
+      body: JSON.stringify({ model, prompt, resultUrls, cost, type, taskId }),
     });
   } catch (err) {
     console.error("[saveGeneration] Falha ao salvar historico:", err);
@@ -1192,12 +1192,12 @@ async function saveGeneration(model: string, prompt: string, resultUrls: string[
 }
 
 // Solicita reembolso de creditos quando geracao falha
-async function refundCredits(model: string, taskId: string, cost?: number, reason?: string) {
+async function refundCredits(model: string, taskId: string, _cost?: number, reason?: string) {
   try {
     await fetch("/api/credits/refund", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, taskId, cost }),
+      body: JSON.stringify({ model, taskId }),
     });
     window.dispatchEvent(new Event("fluxo-credits-update"));
     const { showToast } = await import("@/components/Toast");
@@ -1280,7 +1280,7 @@ export async function pollTaskStatus(
         window.dispatchEvent(new Event("fluxo-credits-update"));
         // Salvar no historico
         if (model && data.resultUrls?.length > 0) {
-          saveGeneration(model, prompt || "", data.resultUrls, cost || 0, type);
+          saveGeneration(model, prompt || "", data.resultUrls, cost || 0, type, taskId);
         }
         return { resultUrls: data.resultUrls, error: null };
       }

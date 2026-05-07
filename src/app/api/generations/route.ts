@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorizedResponse();
 
   const body = await request.json();
-  const { model, prompt, resultUrls, cost, type } = body;
+  const { model, prompt, resultUrls, cost, type, taskId } = body;
 
   if (!resultUrls || resultUrls.length === 0) {
     return NextResponse.json({ error: "Sem resultados para salvar" }, { status: 400 });
@@ -16,14 +16,29 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createServiceClient();
 
-  const { error } = await supabase.from("generations").insert({
+  const payload = {
     user_id: user.id,
     model: model || "unknown",
     prompt: (prompt || "").slice(0, 2000),
     result_urls: resultUrls,
     cost: cost || 0,
     type: type || "image",
-  });
+    ...(taskId ? { task_id: taskId } : {}),
+  };
+
+  let { error } = await supabase.from("generations").insert(payload);
+
+  if (error && taskId && /task_id/i.test(error.message || "")) {
+    const fallbackPayload = {
+      user_id: user.id,
+      model: model || "unknown",
+      prompt: (prompt || "").slice(0, 2000),
+      result_urls: resultUrls,
+      cost: cost || 0,
+      type: type || "image",
+    };
+    ({ error } = await supabase.from("generations").insert(fallbackPayload));
+  }
 
   if (error) {
     console.error("[generations] insert error:", error.message);
