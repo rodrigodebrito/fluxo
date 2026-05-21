@@ -772,6 +772,7 @@ export interface CreateGeminiOmniVideoInput {
   videoStart?: number;
   videoEnd?: number;
   aspectRatio?: string;
+  duration?: number | string;
 }
 
 export async function createGeminiOmniVideoTask(
@@ -781,10 +782,12 @@ export async function createGeminiOmniVideoTask(
   const inputBody: Record<string, unknown> = {
     prompt: input.prompt,
     aspect_ratio: input.aspectRatio === "16:9" ? "16:9" : "9:16",
+    duration: String(input.duration ?? 4),
   };
 
   if (input.imageUrls && input.imageUrls.length > 0) {
-    inputBody.image_urls = input.imageUrls.slice(0, 7);
+    const maxImages = input.videoUrl ? 5 : 7;
+    inputBody.image_urls = input.imageUrls.slice(0, maxImages);
   }
 
   if (input.videoUrl) {

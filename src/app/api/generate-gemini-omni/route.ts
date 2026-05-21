@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     videoStart: hasVideoInput ? 0 : undefined,
     videoEnd,
     aspectRatio: finalAspectRatio,
+    duration: finalDuration,
   });
 
   if (result.code !== 200 || !result.data) {
