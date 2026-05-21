@@ -156,6 +156,7 @@ export function getModelCost(model: string): number {
     case "veo3": return 60;
     case "veo-4k": return 120;
     case "seedance": return 165;
+    case "gemini-omni-video": return 90;
     case "kling": return 70;
     case "kling-o3-i2v": return 120;
     case "kling-o3-edit": return 180;
@@ -187,4 +188,23 @@ export function getModelCost(model: string): number {
 export function getHappyHorseCost(resolution?: string, duration?: number): number {
   const perSec = resolution === "1080p" ? 53 : 31;
   return perSec * (duration || 5);
+}
+
+export function getGeminiOmniVideoCost(resolution?: string, duration?: number, hasVideoInput?: boolean): number {
+  if (hasVideoInput) {
+    return resolution === "4K" ? 360 : 240;
+  }
+
+  const dur = duration || 4;
+  if (resolution === "4K") {
+    if (dur === 10) return 300;
+    if (dur === 8) return 270;
+    if (dur === 6) return 240;
+    return 210;
+  }
+
+  if (dur === 10) return 180;
+  if (dur === 8) return 150;
+  if (dur === 6) return 120;
+  return 90;
 }

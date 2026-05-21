@@ -138,12 +138,20 @@ export async function createByteDanceAsset(
   return safeJson(response);
 }
 
+interface AssetStatusResponse {
+  status?: string;
+  errorMsg?: string;
+  data?: {
+    status?: string;
+    errorMsg?: string;
+  } | string;
+}
+
 // Verificar status de um asset na ByteDance
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getAssetStatus(
   apiKey: string,
   assetId: string
-): Promise<any> {
+): Promise<AssetStatusResponse> {
   const response = await fetch(
     `https://api.kie.ai/api/v1/playground/getAsset?assetId=${encodeURIComponent(assetId)}`,
     {
@@ -750,6 +758,52 @@ export async function createHappyHorseTask(
     },
     body: JSON.stringify({
       model: "happyhorse/image-to-video",
+      input: inputBody,
+    }),
+  });
+
+  return safeJson(response);
+}
+
+export interface CreateGeminiOmniVideoInput {
+  prompt: string;
+  imageUrls?: string[];
+  videoUrl?: string;
+  videoStart?: number;
+  videoEnd?: number;
+}
+
+export async function createGeminiOmniVideoTask(
+  apiKey: string,
+  input: CreateGeminiOmniVideoInput
+): Promise<CreateTaskResponse> {
+  const inputBody: Record<string, unknown> = {
+    prompt: input.prompt,
+  };
+
+  if (input.imageUrls && input.imageUrls.length > 0) {
+    inputBody.image_urls = input.imageUrls.slice(0, 7);
+  }
+
+  if (input.videoUrl) {
+    const start = Math.max(0, Math.floor(input.videoStart ?? 0));
+    const requestedEnd = Math.floor(input.videoEnd ?? 10);
+    const ends = Math.max(start + 1, Math.min(10, requestedEnd));
+    inputBody.video_list = [{
+      url: input.videoUrl,
+      start,
+      ends,
+    }];
+  }
+
+  const response = await fetchWithRetry(`${API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gemini-omni-video",
       input: inputBody,
     }),
   });

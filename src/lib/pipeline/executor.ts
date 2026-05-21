@@ -37,6 +37,8 @@ interface PipelineData {
   veoModel?: string;
   duration?: string;
   enhancePrompt?: boolean;
+  // Gemini Omni Video
+  geminiOmniDuration?: number;
   // Seedance-specific
   sdModel?: string;
   sdResolution?: string;
@@ -161,6 +163,7 @@ export function extractPipelineData(nodes: Node[], edges: Edge[], modelNodeId?: 
   result.klingDuration = (modelNode.data.klingDuration as number) || 5;
   result.gptQuality = (modelNode.data.gptQuality as string) || "medium";
   result.gptBackground = (modelNode.data.gptBackground as string) || "opaque";
+  result.geminiOmniDuration = (modelNode.data.geminiOmniDuration as number) || 4;
   result.seedreamQuality = (modelNode.data.seedreamQuality as "basic" | "high") || "basic";
   result.fixedLens = (modelNode.data.fixedLens as boolean) ?? false;
   result.cfgScale = (modelNode.data.cfgScale as number) ?? 0.5;
@@ -617,8 +620,10 @@ export async function startGeneration(
     gptQuality?: string;
     gptBackground?: string;
     seedreamQuality?: "basic" | "high";
+    geminiOmniDuration?: number;
     fixedLens?: boolean;
     videoUrl?: string;
+    videoDuration?: number;
     cfgScale?: number;
     keepAudio?: boolean;
     klingO3Duration?: number;
@@ -807,6 +812,34 @@ export async function startGeneration(
     let data;
     try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
     if (!response.ok) throw new Error(data.error || "Erro ao gerar avatar");
+    return data.taskId;
+  }
+
+  // Gemini Omni Video (Kie.ai) — polling padrao
+  if (options?.model === "gemini-omni-video") {
+    let videoUrl = options.videoUrl;
+    if (videoUrl && videoUrl.startsWith("blob:")) {
+      const uploaded = await uploadImages([videoUrl]);
+      videoUrl = uploaded[0] || videoUrl;
+    }
+
+    const response = await fetch("/api/generate-gemini-omni", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        imageUrls: publicUrls.length > 0 ? publicUrls.slice(0, 7) : undefined,
+        videoUrl: videoUrl || undefined,
+        videoDuration: options.videoUrl ? options.videoDuration : undefined,
+        resolution: options.resolution || "1080p",
+        duration: options.geminiOmniDuration || 4,
+        cost: options.cost,
+      }),
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Resposta invalida: ${text.slice(0, 200)}`); }
+    if (!response.ok) throw new Error(data.error || "Erro ao criar task Gemini Omni Video");
     return data.taskId;
   }
 

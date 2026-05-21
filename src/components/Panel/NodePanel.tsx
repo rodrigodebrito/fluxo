@@ -14,6 +14,7 @@ interface NodePanelProps {
 
 const IMAGE_RESOLUTIONS = ["1K", "2K", "4K"];
 const VIDEO_RESOLUTIONS = ["720p", "1080p"];
+const GEMINI_OMNI_RESOLUTIONS = ["720p", "1080p", "4K"];
 const VEO_KIE_RESOLUTIONS = ["1080p"]; // Kie Veo endpoint padrao so suporta 1080p (4k e endpoint separado)
 const IMAGE_ASPECT_RATIOS = [
   { value: "auto", label: "Default" },
@@ -361,6 +362,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   const grokResolution = (node.data.grokResolution as string) || "480p";
   const grokDuration = (node.data.grokDuration as number) || 6;
   const grokMode = (node.data.grokMode as string) || "normal";
+  const geminiOmniDuration = (node.data.geminiOmniDuration as number) || 4;
 
   // Z-Image Turbo
   const isZimage = model === "zimage-t2i" || model === "zimage-i2i" || model === "zimage-lora" || model === "zimage-i2i-lora";
@@ -394,6 +396,7 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
 
   const selectedModel = AVAILABLE_MODELS.find((m) => m.id === model);
   const isVideo = selectedModel?.type === "video";
+  const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   // Custo dinamico
   const baseCost = selectedModel?.costPerRun || 18;
   let costPerRun = baseCost;
@@ -401,6 +404,23 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
   if (model === "gpt-image-2") costPerRun = resolution === "4K" ? 16 : resolution === "2K" ? 10 : 6;
   if ((model === "gpt-image-txt" || model === "gpt-image-img") && gptQuality === "high") costPerRun = 22;
   if (model === "veo3") { if (veoModel === "veo3_lite") costPerRun = 30; else if (veoModel === "veo3") costPerRun = 250; }
+  if (model === "gemini-omni-video") {
+    const hasVideoInput = connectedVideoDuration > 0;
+    const omniResolution = resolution === "4K" ? "4K" : resolution === "720p" ? "720p" : "1080p";
+    if (hasVideoInput) {
+      costPerRun = omniResolution === "4K" ? 360 : 240;
+    } else if (omniResolution === "4K") {
+      if (geminiOmniDuration === 10) costPerRun = 300;
+      else if (geminiOmniDuration === 8) costPerRun = 270;
+      else if (geminiOmniDuration === 6) costPerRun = 240;
+      else costPerRun = 210;
+    } else {
+      if (geminiOmniDuration === 10) costPerRun = 180;
+      else if (geminiOmniDuration === 8) costPerRun = 150;
+      else if (geminiOmniDuration === 6) costPerRun = 120;
+      else costPerRun = 90;
+    }
+  }
   if (model === "seedance") {
     const isFast = sdModel === "bytedance/seedance-2-fast";
     // Pricing kie.ai Seedance 2 — duas colunas:
@@ -489,7 +509,6 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
     costPerRun = perSec * happyhorseDuration;
   }
 
-  const connectedVideoDuration = (node.data.connectedVideoDuration as number) || 0;
   if (isMotion) {
     const is3 = motionVersion === "3.0";
     const is1080 = motionMode === "1080p";
@@ -841,6 +860,16 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               <option value="image">Image</option>
               <option value="video">Video</option>
             </select>
+          </div>
+        )}
+
+        {/* Gemini Omni cost info */}
+        {model === "gemini-omni-video" && (
+          <div className="text-xs text-zinc-500 bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2">
+            {connectedVideoDuration > 0
+              ? <>Com video conectado: <span className="text-zinc-300">{resolution === "4K" ? "360" : "240"}</span> credits por geracao</>
+              : <>Sem video: <span className="text-zinc-300">{resolution === "4K" ? (geminiOmniDuration === 10 ? 300 : geminiOmniDuration === 8 ? 270 : geminiOmniDuration === 6 ? 240 : 210) : (geminiOmniDuration === 10 ? 180 : geminiOmniDuration === 8 ? 150 : geminiOmniDuration === 6 ? 120 : 90)}</span> credits por geracao</>
+            }
           </div>
         )}
 
@@ -1384,10 +1413,33 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
               onChange={(e) => update({ resolution: e.target.value })}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500"
             >
-              {(model === "veo3" ? VEO_KIE_RESOLUTIONS : isVideo ? VIDEO_RESOLUTIONS : IMAGE_RESOLUTIONS).map((r) => (
+              {(model === "veo3" ? VEO_KIE_RESOLUTIONS : model === "gemini-omni-video" ? GEMINI_OMNI_RESOLUTIONS : isVideo ? VIDEO_RESOLUTIONS : IMAGE_RESOLUTIONS).map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Gemini Omni Duration */}
+        {params.includes("geminiOmniDuration") && (
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm text-zinc-300">Duration</span>
+              <span className="text-zinc-500 text-xs cursor-help" title="Sem video: 4s=90, 6s=120, 8s=150, 10s=180 em 720p/1080p. Em 4K: 210/240/270/300. Com video conectado o custo vira fixo por resolucao.">i</span>
+            </div>
+            <select
+              value={geminiOmniDuration}
+              onChange={(e) => update({ geminiOmniDuration: parseInt(e.target.value) })}
+              disabled={connectedVideoDuration > 0}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-purple-500 disabled:opacity-50"
+            >
+              {[4, 6, 8, 10].map((d) => (
+                <option key={d} value={d}>{d}s</option>
+              ))}
+            </select>
+            {connectedVideoDuration > 0 && (
+              <p className="text-[11px] text-zinc-500 mt-1">Com video conectado, a cobranca e fixa por resolucao.</p>
+            )}
           </div>
         )}
 

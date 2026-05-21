@@ -26,6 +26,7 @@ const MODEL_LABELS: Record<string, string> = {
   veo3: "Veo 3.1",
   kling: "Kling 3.0",
   seedance: "Seedance 2.0",
+  "gemini-omni-video": "Gemini Omni Video",
   llm: "LLM",
   "custom-model": "Modelo Treinado",
 };
@@ -42,6 +43,7 @@ const MODEL_COLORS: Record<string, string> = {
   veo3: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   kling: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   seedance: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  "gemini-omni-video": "bg-sky-500/10 text-sky-400 border-sky-500/20",
   llm: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   "custom-model": "bg-violet-500/10 text-violet-400 border-violet-500/20",
 };

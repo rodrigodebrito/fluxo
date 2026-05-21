@@ -21,14 +21,15 @@ async function registerAndWaitAsset(apiKey: string, url: string, assetType: "Ima
     const status = await getAssetStatus(apiKey, assetId);
     console.log("[seedance] Asset status raw:", JSON.stringify(status));
 
-    const st = status.status || status.data?.status || (typeof status.data === 'string' ? status.data : null);
+    const statusData = typeof status.data === "string" ? null : status.data;
+    const st = status.status || statusData?.status || (typeof status.data === "string" ? status.data : null);
 
     if (st === "Active" || st === "active") {
       console.log("[seedance] Asset pronto:", assetId);
       return `asset://${assetId}`;
     }
     if (st === "Failed" || st === "failed") {
-      throw new Error(status.errorMsg || status.data?.errorMsg || "Asset processing failed");
+      throw new Error(status.errorMsg || statusData?.errorMsg || "Asset processing failed");
     }
   }
   throw new Error("Timeout: asset demorou muito para processar");

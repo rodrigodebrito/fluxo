@@ -68,6 +68,7 @@ const MODEL_LABELS: Record<string, string> = {
   veo3: "Veo 3.1",
   kling: "Kling 3.0",
   seedance: "Seedance 2.0",
+  "gemini-omni-video": "Gemini Omni Video",
   llm: "LLM",
   "custom-model": "Modelo Treinado",
 };

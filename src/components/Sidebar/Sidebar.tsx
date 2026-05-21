@@ -123,6 +123,14 @@ const MODEL_CARDS: ModelCard[] = [
     category: "video",
   },
   {
+    type: "model-gemini-omni-video",
+    label: "Gemini Omni Video",
+    icon: (
+      <span className="text-lg font-bold" style={{ color: "#8AB4F8" }}>G</span>
+    ),
+    category: "video",
+  },
+  {
     type: "model-kling",
     label: "Kling 3",
     icon: (

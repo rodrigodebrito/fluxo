@@ -33,6 +33,7 @@ const MODEL_LABELS: Record<string, string> = {
   "kling-motion": "Kling Motion",
   "kling-avatar": "Kling Avatar",
   seedance: "Seedance 2.0",
+  "gemini-omni-video": "Gemini Omni Video",
   "wan-i2v": "Wan 2.7 I2V",
   "grok-i2v": "Grok Imagine",
   llm: "LLM",

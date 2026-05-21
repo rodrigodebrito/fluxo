@@ -2,7 +2,7 @@ import { Node } from "@xyflow/react";
 
 export type NodeType = "prompt" | "imageInput" | "model" | "output";
 
-export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gpt-image-txt" | "gpt-image-img" | "gpt-image-2" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora" | "seedream-edit" | "happyhorse";
+export type AIModel = "nano-banana-pro" | "kling" | "veo3" | "veo-4k" | "seedance" | "gemini-omni-video" | "gpt-image-txt" | "gpt-image-img" | "gpt-image-2" | "kling-o3-i2v" | "kling-o3-edit" | "kling-o1-ref" | "kling-motion" | "flux-2-pro" | "flux-2-edit" | "bg-removal" | "upscale" | "custom-model" | "wan-i2v" | "kling-avatar" | "grok-i2v" | "extract-audio" | "zimage-t2i" | "zimage-i2i" | "zimage-lora" | "zimage-i2i-lora" | "seedream-edit" | "happyhorse";
 
 export interface ModelInfo {
   id: AIModel;
@@ -69,6 +69,19 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     ],
     params: ["sdResolution", "aspectRatio", "sdDuration", "generateAudio", "webSearch", "masterMotionBlock", "physicsKeywords", "microMovements", "premiumBoost", "seed", "runs"],
     dynamicReferences: true, // suporta reference_image_urls (até 9)
+  },
+  {
+    id: "gemini-omni-video",
+    name: "Gemini Omni Video",
+    type: "video",
+    description: "Video multimodal via Kie AI",
+    costPerRun: 90,
+    handles: [
+      { id: "prompt", label: "Prompt*", required: true },
+      { id: "image-1", label: "Image", required: false },
+      { id: "video-1", label: "Video Ref", required: false },
+    ],
+    params: ["resolution", "geminiOmniDuration", "runs"],
   },
   {
     id: "kling",

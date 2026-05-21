@@ -82,6 +82,8 @@ const getDefaultData = (type: string): Record<string, unknown> => {
       return { label: "Veo 3.1 Upscale 4K", model: "veo-4k", isRunning: false, results: [], imageInputCount: 0 };
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "9:16", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
+    case "model-gemini-omni-video":
+      return { label: "Gemini Omni Video", model: "gemini-omni-video", isRunning: false, results: [], imageInputCount: 1, resolution: "1080p", geminiOmniDuration: 4 };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "9:16", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":
@@ -1028,6 +1030,23 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         }
         const billableDur = hasVideoInput ? inputVideoDur + sdOutputDur : sdOutputDur;
         costPerRun = perSec * billableDur;
+      } else if (m === "gemini-omni-video") {
+        const hasVideoInput = Boolean(pipeline.videoUrl);
+        const omniResolution = pipeline.resolution === "4K" ? "4K" : pipeline.resolution === "720p" ? "720p" : "1080p";
+        const omniDuration = pipeline.geminiOmniDuration || 4;
+        if (hasVideoInput) {
+          costPerRun = omniResolution === "4K" ? 360 : 240;
+        } else if (omniResolution === "4K") {
+          if (omniDuration === 10) costPerRun = 300;
+          else if (omniDuration === 8) costPerRun = 270;
+          else if (omniDuration === 6) costPerRun = 240;
+          else costPerRun = 210;
+        } else {
+          if (omniDuration === 10) costPerRun = 180;
+          else if (omniDuration === 8) costPerRun = 150;
+          else if (omniDuration === 6) costPerRun = 120;
+          else costPerRun = 90;
+        }
       } else if (m === "kling") {
         const perSec = pipeline.klingMode === "pro"
           ? (pipeline.generateAudio ? 27 : 18)
@@ -1125,8 +1144,10 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         referenceImageUrls: pipeline.referenceImageUrls,
         gptQuality: pipeline.gptQuality,
         gptBackground: pipeline.gptBackground,
+        geminiOmniDuration: pipeline.geminiOmniDuration,
         fixedLens: pipeline.fixedLens,
         videoUrl: pipeline.videoUrl,
+        videoDuration: pipeline.videoDuration,
         cfgScale: pipeline.cfgScale,
         keepAudio: pipeline.keepAudio,
         klingO3Duration: pipeline.klingO3Duration,
@@ -1226,7 +1247,7 @@ const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(function FlowEd
         return;
       }
 
-      const videoModels = ["veo3", "veo-4k", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "wan-i2v", "grok-i2v", "kling-avatar"];
+      const videoModels = ["veo3", "veo-4k", "kling", "kling-o3-i2v", "kling-o3-edit", "kling-o1-ref", "kling-motion", "seedance", "gemini-omni-video", "wan-i2v", "grok-i2v", "kling-avatar"];
       const pollType = videoModels.includes(pipeline.model) ? "video" : "image";
 
       // Salvar tasks pendentes no localStorage para recuperar após refresh
@@ -1936,6 +1957,7 @@ const MENU_STRUCTURE: MenuItem[] = [
       { type: "model-veo3", label: "Veo 3.1 Image to Video" },
       { type: "model-veo-4k", label: "Veo 3.1 Upscale 4K" },
       { type: "model-seedance", label: "Seedance 2.0" },
+      { type: "model-gemini-omni-video", label: "Gemini Omni Video" },
       { type: "model-kling", label: "Kling 3" },
       { type: "model-kling-o3-i2v", label: "Kling O3" },
       { type: "model-kling-o3-edit", label: "Kling O3 Edit Video" },
