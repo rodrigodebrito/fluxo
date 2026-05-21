@@ -1379,6 +1379,9 @@ export default function NodePanel({ node, onRun, onClose, onUpdateData, iterator
                 <option key={ar.value} value={ar.value}>{ar.label}</option>
               ))}
             </select>
+            {model === "gemini-omni-video" && (
+              <p className="text-[11px] text-zinc-500 mt-1">Gemini Omni aceita apenas 16:9 e 9:16.</p>
+            )}
           </div>
         )}
 

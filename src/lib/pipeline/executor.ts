@@ -817,21 +817,29 @@ export async function startGeneration(
 
   // Gemini Omni Video (Kie.ai) — polling padrao
   if (options?.model === "gemini-omni-video") {
+    let referencePublicUrls: string[] | undefined;
+    if (options.referenceImageUrls && options.referenceImageUrls.length > 0) {
+      referencePublicUrls = await uploadImages(options.referenceImageUrls);
+    }
+
     let videoUrl = options.videoUrl;
     if (videoUrl && videoUrl.startsWith("blob:")) {
       const uploaded = await uploadImages([videoUrl]);
       videoUrl = uploaded[0] || videoUrl;
     }
 
+    const mergedImageUrls = [...publicUrls, ...(referencePublicUrls || [])].slice(0, 7);
+
     const response = await fetch("/api/generate-gemini-omni", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        imageUrls: publicUrls.length > 0 ? publicUrls.slice(0, 7) : undefined,
+        imageUrls: mergedImageUrls.length > 0 ? mergedImageUrls : undefined,
         videoUrl: videoUrl || undefined,
         videoDuration: options.videoUrl ? options.videoDuration : undefined,
         resolution: options.resolution || "1080p",
+        aspectRatio: options.aspectRatio || "9:16",
         duration: options.geminiOmniDuration || 4,
         cost: options.cost,
       }),

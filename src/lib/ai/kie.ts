@@ -771,6 +771,7 @@ export interface CreateGeminiOmniVideoInput {
   videoUrl?: string;
   videoStart?: number;
   videoEnd?: number;
+  aspectRatio?: string;
 }
 
 export async function createGeminiOmniVideoTask(
@@ -779,6 +780,7 @@ export async function createGeminiOmniVideoTask(
 ): Promise<CreateTaskResponse> {
   const inputBody: Record<string, unknown> = {
     prompt: input.prompt,
+    aspect_ratio: input.aspectRatio === "16:9" ? "16:9" : "9:16",
   };
 
   if (input.imageUrls && input.imageUrls.length > 0) {

@@ -65,6 +65,7 @@ export default function ModelNode({ id, data }: NodeProps) {
   const elementCount = (data.elementCount as number) || 0;
   const hasDynamicRefs = selectedModel?.dynamicReferences ?? false;
   const refCount = (data.refCount as number) || 0;
+  const maxReferenceCount = model === "gemini-omni-video" ? 6 : 9;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -400,7 +401,7 @@ export default function ModelNode({ id, data }: NodeProps) {
             + Add element
           </button>
         )}
-        {hasDynamicRefs && refCount < 9 && (
+        {hasDynamicRefs && refCount < maxReferenceCount && (
           <button
             onClick={() => updateNodeData(id, { refCount: refCount + 1 })}
             className="text-[10px] text-amber-400 cursor-pointer hover:text-amber-300 nodrag shrink-0"

@@ -83,7 +83,7 @@ const getDefaultData = (type: string): Record<string, unknown> => {
     case "model-seedance":
       return { label: "Seedance 2.0", model: "seedance", isRunning: false, results: [], imageInputCount: 1, sdModel: "bytedance/seedance-2", sdResolution: "720p", aspectRatio: "9:16", sdDuration: 8, generateAudio: true, webSearch: false, refCount: 0 };
     case "model-gemini-omni-video":
-      return { label: "Gemini Omni Video", model: "gemini-omni-video", isRunning: false, results: [], imageInputCount: 1, resolution: "1080p", geminiOmniDuration: 4 };
+      return { label: "Gemini Omni Video", model: "gemini-omni-video", isRunning: false, results: [], imageInputCount: 1, resolution: "1080p", aspectRatio: "9:16", geminiOmniDuration: 4, refCount: 0 };
     case "model-kling":
       return { label: "Kling 3", model: "kling", isRunning: false, results: [], imageInputCount: 1, klingMode: "std", aspectRatio: "9:16", klingDuration: 5, generateAudio: false, elementCount: 0, multiShotEnabled: false, multiShots: [] };
     case "model-kling-o3-i2v":

@@ -81,7 +81,8 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       { id: "image-1", label: "Image", required: false },
       { id: "video-1", label: "Video Ref", required: false },
     ],
-    params: ["resolution", "geminiOmniDuration", "runs"],
+    params: ["resolution", "aspectRatio", "geminiOmniDuration", "runs"],
+    dynamicReferences: true,
   },
   {
     id: "kling",

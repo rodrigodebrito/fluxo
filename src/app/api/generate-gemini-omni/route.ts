@@ -13,13 +13,14 @@ export async function POST(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl.resetIn);
 
   const body = await request.json();
-  const { prompt, imageUrls, videoUrl, resolution, duration, videoDuration } = body;
+  const { prompt, imageUrls, videoUrl, resolution, aspectRatio, duration, videoDuration } = body;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt e obrigatorio" }, { status: 400 });
   }
 
   const finalResolution = resolution === "4K" ? "4K" : resolution === "720p" ? "720p" : "1080p";
+  const finalAspectRatio = aspectRatio === "16:9" ? "16:9" : "9:16";
   const finalDuration = duration === 10 || duration === 8 || duration === 6 ? duration : 4;
   const hasVideoInput = Boolean(videoUrl);
   const cost = getGeminiOmniVideoCost(finalResolution, finalDuration, hasVideoInput);
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     videoUrl: typeof videoUrl === "string" && videoUrl ? videoUrl : undefined,
     videoStart: hasVideoInput ? 0 : undefined,
     videoEnd,
+    aspectRatio: finalAspectRatio,
   });
 
   if (result.code !== 200 || !result.data) {
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest) {
       taskId: result.data.taskId,
       provider: "kie",
       resolution: finalResolution,
+      aspectRatio: finalAspectRatio,
       duration: finalDuration,
       hasVideoInput,
     },
